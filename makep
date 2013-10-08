@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# copy the plugin.xml file
+cp -v plugin.xml out/production/ScriptAT
+
+cd out/production/ScriptAT
+
+zip -rv scriptAT.zip . -i \*.class *.bsh *.xml
+
+mv -v scriptAT.zip ../../../../
+
+# create a zip of the source code
+cd ../../../
+
+zip -vr scriptAT_src.zip src -x "*.svn*" "*.DS_Store*"

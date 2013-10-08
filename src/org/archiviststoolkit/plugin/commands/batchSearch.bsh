@@ -1,0 +1,348 @@
+/**
+Simple Beanshell script that iterates through the resource components
+of the resource record and replaces the box number.
+
+It's must be executed within the ScriptAT environment
+
+@author Nathan Stevens
+@version 1.1 03/21/2012
+
+Specify the script needs to run RDE drop down
+@RDE
+*/
+
+int count = 0; // keep track of the components processed
+int icount = 0; // keep track of the number of instances
+
+String command = ""; // what task to do
+String searchFor = ""; // the box number to search for
+String replaceWith = ""; // the box number to replace with 
+String[] searchForList = null; // used to store multiple search for items 
+
+// hashmap to store the item labels and new box number
+HashMap replaceMap = null;
+
+// stores the list of boxes
+ArrayList boxList = new ArrayList();
+
+// stores the log text for the selected operation
+StringBuilder logSB = new StringBuilder();
+
+// boolean to see if to process digital object instances only
+boolean processDO = false;
+
+// this boolean is used to test the script functionality
+boolean stop = false;
+
+// Method to check to see if a box number is part of the search for
+// will add support for checking multiple box numbers, but for now just 
+// return the equals to
+boolean inSearchList(String boxNum) {
+	if(searchForList != null) {
+		for(String bn: searchForList) {
+			if(boxNum.equals(bn)) {
+				return true;
+			}		
+		}
+		
+		return false; // we got here so just return false
+	} else {
+		return boxNum.equals(searchFor);
+	}
+}
+
+// Method to perform the particular operation on an analog instance
+void processAnalogInstance(ArchDescriptionAnalogInstances analogInstance) {
+	String boxNum = analogInstance.getContainer1Indicator();
+	String instanceLabel = analogInstance.getInstanceLabel();
+			
+	// alert the user which instance is being processed
+	print("Processing instance : " + instanceLabel);
+               
+	if(command.equals("List Instances")) {
+		// check to see if we only want to return certain box number
+		if(!searchFor.equals("") && !inSearchList(boxNum)) {
+			return;
+		}
+				
+		if (boxNum.matches("\\d{1}")) {
+			boxNum = "000" + boxNum + "\t";	
+		} else if(boxNum.matches("\\d{2}")) {
+			boxNum = "00" + boxNum + "\t";	
+		} else if(boxNum.matches("\\d{3}")) {
+			boxNum = "0" + boxNum + "\t";	
+		} else if(boxNum.matches("\\d{4}") || boxNum.matches("\\d{2}-\\d{2}")) {
+			boxNum = boxNum + "\t";
+		} else {
+			boxNum = "?\t";
+		}
+		
+		boxList.add(boxNum + analogInstance.getInstanceLabel());				
+	} else if(command.equals("Finalize Changes")) {
+		if(boxNum.contains("=>")) {
+			icount++; // increment the count
+			String[] sa = boxNum.split("=>");
+			String nboxNum = sa[1];
+					
+			logSB.append(icount).append("\t").append(instanceLabel);
+			analogInstance.setContainer1Indicator(nboxNum);
+			logSB.append("\t").append(analogInstance.getInstanceLabel()).append("\n");	
+		}
+	} else if(command.equals("Undo Changes")) {
+		if(boxNum.contains("=>")) {
+			icount++; // increment the count
+			String[] sa = boxNum.split("=>");
+			String nboxNum = sa[0];
+					
+			logSB.append(icount).append("\t").append(instanceLabel);
+			analogInstance.setContainer1Indicator(nboxNum);
+			logSB.append("\t").append(analogInstance.getInstanceLabel()).append("\n");	
+		}
+	} else if(command.equals("Load Batch File")) {
+		String key = instanceLabel + "_1";
+		
+		print("Setting instance for " + key);
+		if(replaceMap.containsKey(key)) {
+			icount++; // increment the count
+			logSB.append(icount).append("\t").append(instanceLabel);
+			
+			// replace the box number
+			String nboxNum = replaceMap.get(key);
+			analogInstance.setContainer1Indicator(nboxNum);
+			print("Setting indicator 1 ...");
+			
+			// see if to replace the folder number
+			key = instanceLabel + "_2";
+			String folderNum = replaceMap.get(key);
+			if(folderNum != null) {
+				analogInstance.setContainer2Indicator(folderNum);
+				print("Setting indicator 2 ...");
+			}
+			
+			// see if to replace the item number
+			key = instanceLabel + "_3";
+			String itemNum = replaceMap.get(key);
+			if(itemNum != null) {
+				analogInstance.setContainer3Indicator(itemNum);
+				print("Setting indicator 3 ...");
+			}
+			
+			logSB.append("\t").append(analogInstance.getInstanceLabel()).append("\n");
+		}
+	} else { // we doing search and replace
+		if(boxNum.equals(searchFor)) {
+			icount++; // increment the count
+			logSB.append(icount).append("\t").append(instanceLabel);
+			analogInstance.setContainer1Indicator(boxNum + "=>" + replaceWith);
+			logSB.append("\t").append(analogInstance.getInstanceLabel()).append("\n");
+		}
+	}		
+}
+
+// Method to process digital instances
+void processDigitalInstance(ArchDescriptionDigitalInstances digitalInstance) {
+	// get the digital object and the filevreion which contains the URI
+	DigitalObjects digitalObject = digitalInstance.getDigitalObject();
+	String metsId = digitalObject.getMetsIdentifier();
+	
+	// for all the file versions add the URI
+	Set fileVersions = digitalObject.getFileVersions();
+	for(FileVersions fileVersion: fileVersions) {
+		Long id = fileVersion.getFileVersionId();
+		String uri = fileVersion.getUri();
+		boxList.add(metsId + "\t" + id + "\t" + uri);	
+	}
+}
+
+// Method to process instances of a resource component
+void processInstances(ResourcesComponents component) {	
+	Set instances = component.getInstances();
+	
+	for (ArchDescriptionInstances instance : instances) {
+		if (instance instanceof ArchDescriptionAnalogInstances) {
+			ArchDescriptionAnalogInstances analogInstance = (ArchDescriptionAnalogInstances) instance;
+			processAnalogInstance(analogInstance);
+        } else if(processDO && instance instanceof ArchDescriptionDigitalInstances) {
+        	ArchDescriptionDigitalInstances digitalInstance = (ArchDescriptionDigitalInstances) instance;
+        	processDigitalInstance(digitalInstance);
+        }
+    }
+}
+
+// Method to recursively process all children components
+void processComponent(ResourcesComponents component) {
+	// check to see if the stop button was pressed
+	if(workspaceDialog.isStopScript() || stop) {
+		return;
+	}
+	
+	if (component.isHasChild()) {
+		for (ResourcesComponents childComponent : component.getResourcesComponents()) {
+			processComponent(childComponent);
+		}
+	}
+	
+    //print(component.getTitle());
+    count++;
+    print("Processing Component # " + count);
+    processInstances(component);
+}
+
+// Method to process the record
+void processRecord() {
+	print("\nProcessing Record ...");
+        
+	// get the resource components either from the resource record or
+	Set components = null;
+
+	if(resource != void) {
+		components = resource.getResourcesComponents();
+	} else {
+		components = parentComponent.getResourcesComponents();
+	}
+
+	// now iterate through the components
+	for(ResourcesComponents component: components) {
+		// check to see if the stop button was pressed
+		if(workspaceDialog.isStopScript() || stop) {
+			break;
+		}
+		
+		processComponent(component);
+	}
+  
+	print("Done Processing Record ...");
+}
+
+// Method to load batch search and replace information from a tab 
+// delimited text file
+boolean loadBatchFile() {
+	File file = workspaceDialog.displayFileChooser(null);
+	
+	if(file != null) {
+		replaceMap = new HashMap();
+		
+		BufferedReader input = new BufferedReader(new FileReader(file));
+		
+		try {
+			String line = input.readLine(); // skip the first line
+			
+         	while ((line = input.readLine()) != null) {
+         		String nline = line.trim().replaceAll("\"","");
+         		String[] sa = nline.split("\\s*\\t\\s*");
+         		String instanceLabel = sa[1];
+         		String key = "";
+         		
+         		if(sa.length == 3) { // replacing box number only
+         			key = instanceLabel  + "_1";
+         			replaceMap.put(key, sa[2]);
+         		} else if(sa.length == 4) { // replace box, and folder numbers
+         			key = instanceLabel  + "_1";
+         			replaceMap.put(key, sa[2]);
+         			key = instanceLabel  + "_2"; 
+         			replaceMap.put(key, sa[3]);
+         		} else if(sa.length == 5) { // replace box, folder, and item numbers 
+         			key = instanceLabel  + "_1";
+         			replaceMap.put(key, sa[2]);
+         			key = instanceLabel  + "_2"; 
+         			replaceMap.put(key, sa[3]);
+         			key = instanceLabel  + "_3"; 
+         			replaceMap.put(key, sa[4]);
+         		}
+         		
+         		print("Line Content: " + line);
+            }
+            
+            input.close();
+            return true;
+        } catch (Exception ex) {
+        		print("Error reading Batch file");
+        		ex.printStackTrace();
+        		return false;
+        }	
+	} else {
+		return false;
+	}
+}
+
+// Method to display the input dialog which lets users upload stuff
+void getUserInput() {
+	// initiate the choices instruction
+	String[] choices = new String[]{"Select Command::List Instances::Replace Box #::Undo Changes::Finalize Changes::Load Batch File", "Search For", "Replace With"};
+	String instruction = "Please enter appropriate choices below ...";
+        
+	// display the input dialog
+	String[] sa = workspaceDialog.displayInputDialog("Instance Search & Replace", instruction, choices);
+        
+	if(sa != null) {
+		// create and start the stop watch object
+		workspaceDialog.startWatch();
+		
+		// clear the arraylist that stores information for exporting
+		boxList = new ArrayList();
+		
+		// set process DO variable to false
+		processDO = false;
+		
+    	command = sa[0];
+    	searchFor = sa[1].trim();
+    	replaceWith = sa[2].trim();
+        	
+    	// see whether to create a search for list
+    	if(command.equals("List Instances") && searchFor.contains(",")) {
+    		searchForList = searchFor.split("\\s*,\\s*");	
+    	} else if(command.equals("List Instances") && searchFor.equals("DO")) {
+    		processDO = true;
+    	} else if(command.equals("Load Batch File")) {
+    		if(!loadBatchFile()) {
+    			print ("Loading of Batchfile Cancelled ...");
+    			return;
+    		}
+    	}
+    		
+    	// process the resource record now
+    	processRecord();
+     	
+    	// print the time it took to run the command
+     	print("\n\nCommand completed in " + workspaceDialog.stopWatch());
+    		
+     	// display the log from running the previos command if needed
+     	if(command.equals("List Instances")) {
+     		StringBuilder sb = new StringBuilder();	
+     		Collections.sort(boxList);
+     		
+     		// if we processing digital objects then print the correct header
+     		if(processDO) {
+     			sb.append("URI #\tDO METS Identifier\tURI ID\tURI Link\n");
+     			
+     			for(String linkInfo: boxList) {
+     				icount++;
+     				sb.append(icount).append("\t").append(linkInfo).append("\n");	
+     			}
+     		} else {
+     			sb.append("Box #\tInstance Label\tCount\n");
+     			for(String boxName: boxList) {
+     				icount++;
+     				sb.append(boxName).append("\t").append(icount).append("\n");	
+     			}
+     		}
+     		
+     		workspaceDialog.displayLogDialog("List of Instance", sb.toString());
+     	} else {
+     		String log = "Count\tOld Label\tNew Label\n" + logSB.toString();
+     		workspaceDialog.displayLogDialog("Search and Replace Log", log);
+     		
+     		// set the record dirty
+     		workspaceDialog.setRecordDirty();
+     	}
+     	
+     	// call this method again to redisplay the input dialog
+     	getUserInput();
+    } else {
+    		print ("Batch Search and Replaced Cancelled/Closed ...");
+    		//workspaceDialog.setVisible(false); // uncomment in production
+    }
+}
+
+// This is where code execution starts
+getUserInput();

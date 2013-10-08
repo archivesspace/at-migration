@@ -1,0 +1,271 @@
+/**
+Simple Beanshell script that iterates through the resource components
+of the resource and automatically adds resource components, instances, and 
+digital objects to those components which are specified in an input file.
+
+It primary meant as a demo script to show potential use of the ScriptAT
+plugin.
+
+It's must be executed within the ScriptAT plugin
+
+@author Nathan Stevens
+@version 1.0 08/15/2011
+
+Specify that this script can be run from the tools menu directly
+@TOOL
+*/
+
+/* variables that keep track of the location of data in the tab delimitted csv file */
+int idIndex = 0; // index for the persistent id of the parent component
+int typeIndex = 1;  // index for type of analog instance
+int instance1Index = 2; // index for instance 1 type and indicator
+int instance2Index = 3; // index for instance 2 type and indicator
+int instance3Index = 4; // index for instance 3 type and indicator
+int levelIndex = 5; // index for the Level of the resource component
+int titleIndex = 6; // index for the title of the resource component
+int doIndex = 7; // index for the first digital object use statement, default url and filename
+
+// keep track of the number of components processed
+int count = 0; 
+
+// String builder to hold information for components that were found
+StringBuilder sb = new StringBuilder();
+
+// HashMap to hold the parent components keyed by there persistent IDs
+HashMap parentComponents = new HashMap();
+
+// String array that holds header on first line of input file.  It information 
+// contains the instance types (i.e box, folder, etc), and digital object 
+// base url and service image
+String[] headerInfo = null;
+
+// Method to create a resource component from parameters provided
+ResourcesComponents createComponent(ResourcesComponents parentComponent, String[] values) {
+	// get the relevant values from values array
+	String level = values[levelIndex];
+	String title = values[titleIndex];
+	
+	// create the resource component
+	ResourcesComponents newComponent = new ResourcesComponents(parentComponent);
+	newComponent.setPersistentId(resource.getNextPersistentIdAndIncrement());
+	newComponent.setTitle(title);
+	newComponent.setLevel(level);
+	parentComponent.addChild(newComponent);
+	parentComponent.resortComponents();
+        
+        // create the audit info to add to the component
+        Date now = new Date();
+        AuditInfo auditInfo = new AuditInfo();
+        auditInfo.setCreated(now);
+        auditInfo.setLastUpdated(now);
+	newComponent.setAuditInfo(auditInfo);
+        
+	return newComponent;
+}
+
+// Method to create an analog instance from parameters provided
+void createAndAttachInstance(ResourcesComponents component, String[] values) {
+	// get the relevant values from values array
+	String instanceType = values[typeIndex];
+	String indicator1 = values[instance1Index];
+	String indicator2 = values[instance2Index];
+	String indicator3 = values[instance3Index];
+	
+	// get the instance type from header information
+	String indicator1Type = headerInfo[instance1Index];
+	String indicator2Type = headerInfo[instance2Index];
+	String indicator3Type = headerInfo[instance3Index];
+	
+	ArchDescriptionAnalogInstances newInstance = new ArchDescriptionAnalogInstances(component);
+	newInstance.setInstanceType(instanceType);
+	newInstance.setContainer1Type(indicator1Type);
+	newInstance.setContainer1Indicator(indicator1);
+	
+	// see if to add a container 2
+	if(indicator2.length() != 0) {
+		newInstance.setContainer2Type(indicator2Type);
+		newInstance.setContainer2Indicator(indicator2);
+	}
+	
+	// see if the add a container 3
+	if(indicator3.length() != 0) {
+		newInstance.setContainer3Type(indicator3Type);
+		newInstance.setContainer3Indicator(indicator3);
+	}
+	
+	component.addInstance(newInstance);
+}
+
+// Method to create a digitial object from information provided
+void createAndAttachDigitalObject(ResourcesComponents component, String doInfo, String filename, int sequence) {
+	// get the use statement and uri from doInfo string.
+	String[] sa = doInfo.split("\\s*::\\s*");
+	String useStatement = sa[0];
+	String uri = sa[1] + filename; // assume sa[1] contains base URI
+		
+	// create DO and attach to resource component
+        ArchDescriptionDigitalInstances digitalInstance = new ArchDescriptionDigitalInstances();
+        DigitalObjects dObjects = new DigitalObjects();
+        dObjects.setTitle(component.getTitle());
+        dObjects.setDateExpression(component.getDateExpression());
+        dObjects.setDateBegin(component.getDateBegin());
+        dObjects.setDateEnd(component.getDateEnd());
+
+        digitalInstance.setInstanceType(ArchDescriptionInstances.DIGITAL_OBJECT_INSTANCE);
+        digitalInstance.setDigitalObject(dObjects);
+        dObjects.setDigitalInstance(digitalInstance);
+
+        // create the file versions now
+        
+        FileVersions fileVersion = new FileVersions();
+        fileVersion.setUseStatement(useStatement);
+        fileVersion.setUri(uri);
+        fileVersion.setDigitalObject(dObjects);
+        dObjects.addFileVersion(fileVersion);
+
+        // add the digital instance to the resource component
+        component.addInstance(digitalInstance);
+        digitalInstance.setResourcesComponents(component);
+
+        // set the repository, metsid, and parent resource record
+        dObjects.setRepository(resource.getRepository());
+        digitalInstance.setParentResource(resource); // set parent resource to used when searching
+
+        // set the mets id to the resource identifier + component persistent identifier and the sequence number
+        dObjects.setMetsIdentifier(resource.getResourceIdentifier() + "." + component.getPersistentId() + "." + sequence);
+}
+
+// Method to creat a component from the information loading in
+String processComponentInformation(String[] values) {
+	// the status of converting information into an actual resource component
+	String status = "SUCCESS";
+	
+	// get the parent resource component
+	String key = values[idIndex];
+	ResourcesComponents parentComponent = parentComponents.get(key);
+	
+	if(parentComponent == null) {
+		print("No parent component found ... " + key);
+		return "FAIL";
+	}
+	
+	// create the resource component
+	print("Creating Resource Component " + values[titleIndex] + " ...");
+	ResourcesComponents newComponent = createComponent(parentComponent, values);
+	
+	// create the analog instance record
+	print("Creating the instance record ...");
+	createAndAttachInstance(newComponent, values);
+	
+	// the process any digital objects that are in infile
+        int sequence = 1; // this is used to create a unique id for the digital object
+	
+        for(int i = doIndex; i < values.length; i++) {
+		String doInfo = headerInfo[i];
+		String filename = values[i];
+		
+		print("Creating digital object for " + filename + " ...");
+		createAndAttachDigitalObject(newComponent, doInfo, filename, sequence);
+                
+                // increment J now
+                sequence++;
+	}
+	
+	return "SUCCESS";
+}
+
+// Method to go through the import file processing each line 
+void createAndAttachResourceComponents(File file) {
+        // get the buffered reader
+        BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+        
+        // the text in the line in the file
+        String line = null;
+         
+        // keep track of the line count
+        int lineCount = 1;
+        
+        // Read in each tab delimited line from and create Resource Component, Instance, 
+        // and digital object.
+        while ((line = in.readLine()) != null) {
+                print("Processing Line # " + lineCount);
+                
+                // if line number is one then add place for newly created handle
+                if (lineCount == 1) {
+			sb.append(line);
+                      	sb.append("\tImport Status\n");
+			headerInfo = line.split("\\s*\t\\s*");
+                } else {
+                       String[] values = line.split("\\s*\t\\s*");
+                        
+                       if(line.length() > 10 && values[0].contains("ref")) {
+                               String status = processComponentInformation(values);
+                               sb.append(line);
+                               sb.append("\t").append(status).append("\n");
+                       }
+                }
+                
+                lineCount++; // increment the line count
+        }
+        
+	// save the resource record
+	print("Saving record ...");
+	workspaceDialog.saveCurrentResourceRecord();
+	print("Done saving record ...");
+	
+        // now display the log dialog to let users know what components
+        // were created, and which ones where not
+        workspaceDialog.displayLogDialog("Component Creation Log", sb.toString());
+}
+
+// Method to recursively process all children components
+void indexComponent(ResourcesComponents component) {
+	if (component.isHasChild()) {
+            for (ResourcesComponents childComponent : component.getResourcesComponents()) {
+                indexComponent(childComponent);
+            }
+        }
+	
+	// store the component in the hash map keyed by the persistent id
+        String key = component.getPersistentId();
+        parentComponents.put(key, component);
+        
+        count++;
+        print("Indexing Component # " + count + " : " + key);
+}
+
+// Method to process the resource record indexing the resource components by the
+// persistent id
+void indexResourceComponents() {
+        print("\nIndexing Resource Components ...");
+        
+	// get the resource components either from the resource record or
+	Set components = null;
+
+	if(resource != null) {
+		components = resource.getResourcesComponents();
+	}
+
+	// now interate through the components
+	for(ResourcesComponents component: components) {
+		indexComponent(component);
+	}
+        
+        print("Done Indexing Resource Components ...");
+}
+
+// Method to display the input dialog which lets users upload stuff
+void getInputFile() {
+        File file = workspaceDialog.displayFileChooser(null);
+        
+        if(file != null && file.exists()) {
+               print ("Processing input file: " + file);
+               indexResourceComponents();
+               createAndAttachResourceComponents(file);
+        } else {
+                print ("Processing of Record Cancelled ...");
+        }
+}
+
+// This is where code execution starts
+getInputFile();
