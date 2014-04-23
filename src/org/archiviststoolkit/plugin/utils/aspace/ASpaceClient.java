@@ -3,17 +3,14 @@ package org.archiviststoolkit.plugin.utils.aspace;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.NameValuePair;
-import org.apache.commons.httpclient.methods.DeleteMethod;
-import org.apache.commons.httpclient.methods.GetMethod;
-import org.apache.commons.httpclient.methods.PostMethod;
-import org.apache.commons.httpclient.methods.StringRequestEntity;
+import org.apache.commons.httpclient.methods.*;
 import org.apache.commons.httpclient.methods.multipart.MultipartRequestEntity;
 import org.apache.commons.httpclient.methods.multipart.Part;
 import org.apache.commons.httpclient.methods.multipart.StringPart;
+import org.archiviststoolkit.plugin.utils.StopWatch;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 
 /**
@@ -22,7 +19,7 @@ import java.util.HashMap;
  * Date: 9/6/12
  * Time: 3:59 PM
  *
- * This class hanldes all posting and reading from the ASpace project
+ * This class handles all posting and reading from the ASpace project
  */
 public class ASpaceClient {
     public static final String ADMIN_LOGIN_ENDPOINT = "/users/admin/login";
@@ -46,6 +43,7 @@ public class ASpaceClient {
     public static final String AGENT_SOFTWARE_ENDPOINT = "/agents/software";
     public static final String ENUM_ENDPOINT = "/config/enumerations";
     public static final String BATCH_IMPORT_ENDPOINT = "/batch_imports";
+    public static final String INDEXER_ENDPOINT = "/aspace-indexer/";
 
     private HttpClient httpclient = new HttpClient();
     private String host = "";
@@ -57,6 +55,14 @@ public class ASpaceClient {
 
     // let keep all the errors we encounter so we can have a log
     private StringBuilder errorBuffer = new StringBuilder();
+
+    // a stop watch object to allowing pausing of the indexer
+    private String indexerHost = "";
+    private long pauseTimeInSec = 43200; // pause indexer for 12 hours initially
+    private StopWatch stopWatch = new StopWatch();
+
+    private boolean doPause = false;
+    private boolean firstTimePaused = true;
 
     // boolean to use when one once debug stuff
     private boolean debug = false;
@@ -109,10 +115,17 @@ public class ASpaceClient {
             if(!id.isEmpty()) {
                 session = id;
                 haveSession = true;
+
+                // set the indexer host here for convenience sake. This assumes that the
+                // default indexer port of 8090 was not changed
+                indexerHost = host.replace("89", "90");
             }
         } catch (Exception e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         }
+
+        // start the stop watch object
+        stopWatch.start();
 
         // session was generated so return true
         return haveSession;
@@ -227,14 +240,20 @@ public class ASpaceClient {
 
                 if (debug) System.out.println(response.toString(2));
             } else {
-                // if it a 500 error the ASpace then we need to add the JSON text
+                // if it a 500 error the ASpace then we may need to add the JSON text
                 if(statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR) {
-                    responseBody = "JSON: " + jsonText + "\n\n" + responseBody;
+                    if(responseBody.contains("PoolTimeout")) {
+                        responseBody = "Error: Sequel Pool Timeout ...";
+                    } else if(responseBody.contains("OutOfMemory")) {
+                        responseBody = "Fatal Error: ArchivesSpace Backend Crashed (OutOfMemoryError)\nPlease Restart ...";
+                    } else if(responseBody.contains("ThreadError")) {
+                        responseBody = "Fatal Error: ArchivesSpace Backend Crashed (OutOfStackSpaceError)\nPlease Restart ...";
+                    }
                 }
 
                 errorBuffer.append("Endpoint: ").append(post.getURI()).append("\n").
                         append("AT Identifier:").append(atId).append("\n").
-                        append(statusMessage).append("\n\n").append(responseBody).append("\n");
+                        append(statusMessage).append("\n").append(responseBody).append("\n\n");
 
                 post.releaseConnection();
                 throw new Exception(statusMessage);
@@ -370,7 +389,12 @@ public class ASpaceClient {
             params[0] = new NameValuePair("page", "1");
 
             String jsonText = get(fullUrl, params);
-            JSONArray groups = new JSONArray(jsonText);
+            JSONArray groups = new JSONArray();
+
+            // make this null safe in case we are in test mode
+            if(jsonText != null) {
+                groups = new JSONArray(jsonText);
+            }
 
             return groups;
         } catch (Exception e) {
@@ -408,21 +432,35 @@ public class ASpaceClient {
     }
 
     /**
-     * Method to load the admin groups only
-     *
-     * @return
-     */
-    public JSONArray loadAdminGroups() {
-        return loadRepositoryGroups(ADMIN_REPOSITORY_ENDPOINT);
-    }
-
-    /**
      * Method to get any error messages that occurred while talking to the AT backend
      *
      * @return String containing error messages
      */
     public String getErrorMessages() {
         return errorBuffer.toString();
+    }
+
+    /**
+     * Method to return information about the archives space backend
+     *
+     * @return
+     */
+    public String getArchivesSpaceInformation() {
+        String info = "Unknown Archives Space Version ...";
+
+        try {
+            info = get("", null);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // if we running ASpace greater that version 1.0.9 then pausing if indexer
+        // is supported
+        if(info.contains("{") && info.contains("}")) {
+            doPause = true;
+        }
+
+        return info;
     }
 
     /**
@@ -498,9 +536,75 @@ public class ASpaceClient {
         errorBuffer.append(errorMessage);
     }
 
-    // convert from internal Java String format -> UTF-8
-    private String convertToUTF8(String input) throws UnsupportedEncodingException {
-        String out = new String(input.getBytes("UTF-8"), "ISO-8859-1");
-        return out;
+    /**
+     * A hack to send a pause signal to indexer if a certain amount of time has passed
+     */
+    public synchronized void pauseIndexer() {
+        if(!doPause) return;
+
+        long timeElapsed = stopWatch.getElapsedTimeSecs() + 10;
+
+        if(timeElapsed > pauseTimeInSec || firstTimePaused) {
+            firstTimePaused = false;
+
+            try {
+                Part[] parts = {new StringPart("duration", Long.toString(pauseTimeInSec))};
+                put(indexerHost, INDEXER_ENDPOINT, parts);
+
+                // reset the stop watch object
+                stopWatch.stop();
+                stopWatch.start();
+
+                System.out.println("Indexer paused ...");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Method to set the indexer to start in 10 seconds
+     */
+    public synchronized void startIndexer() {
+        if (!doPause) return;
+
+        try {
+            Part[] parts = {new StringPart("duration", "10")};
+            put(indexerHost, INDEXER_ENDPOINT, parts);
+            System.out.println("Indexer restarted ...");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Put method, used only to suspend the indexer for now
+     * @param host
+     * @param endpoint
+     * @param
+     */
+    private String put(String host, String endpoint, Part[] parts) {
+        String fullUrl = host + endpoint;
+        PutMethod put = new PutMethod(fullUrl);
+        put.setRequestEntity(new MultipartRequestEntity(parts, put.getParams()));
+
+        String responseBody = "";
+        try {
+            System.out.println("put: " + fullUrl);
+
+            int statusCode = httpclient.executeMethod(put);
+            responseBody = put.getResponseBodyAsString();
+
+            String statusMessage = "Status code: " + statusCode +
+                    "\nStatus text: " + put.getStatusText() + "\nResponse Body: " + responseBody;
+
+            System.out.println(statusMessage);
+        } catch (Exception e) {
+            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+        } finally {
+            put.releaseConnection();
+        }
+
+        return responseBody;
     }
 }

@@ -4,20 +4,21 @@
 
 package org.archiviststoolkit.plugin.utils;
 
-import java.awt.event.*;
-import com.jgoodies.forms.factories.*;
+import com.jgoodies.forms.factories.FormFactory;
 import com.jgoodies.forms.layout.*;
 import org.archiviststoolkit.plugin.utils.aspace.ASpaceClient;
 import org.archiviststoolkit.plugin.utils.aspace.RecordTestServletClient;
-import org.json.JSONArray;
-import org.json.JSONException;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.awt.*;
 import javax.swing.*;
-import javax.swing.border.*;
+import javax.swing.border.EmptyBorder;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 /**
  * Simple dialog for viewing or editing source code with syntax highlighting
@@ -26,9 +27,11 @@ import javax.swing.border.*;
  */
 public class CodeViewerDialog extends JDialog {
     private RSyntaxTextArea textArea;
+
     private boolean editable = false;
 
     private RecordTestServletClient recordTestServletClient;
+
     private boolean testMultipleRecords = false;
 
     private ASpaceClient aspaceClient;
@@ -40,7 +43,7 @@ public class CodeViewerDialog extends JDialog {
      * @param code
      * @param syntaxStyle
      */
-    public CodeViewerDialog(Frame owner, String syntaxStyle,  String code, boolean editable, boolean allowRecordTest) {
+    public CodeViewerDialog(Frame owner, String syntaxStyle, String code, boolean editable, boolean allowRecordTest) {
         super(owner);
         initComponents();
 
@@ -66,6 +69,9 @@ public class CodeViewerDialog extends JDialog {
             testHostUrlTextField.setText(RecordTestServletClient.DEFAULT_URL);
 
             recordTestServletClient = new RecordTestServletClient();
+        } else {
+            scrollPane1.setVisible(false);
+            recordTestPanel.setVisible(false);
         }
 
         // make sure we open this window somewhere that make sense
@@ -162,6 +168,13 @@ public class CodeViewerDialog extends JDialog {
                 e.printStackTrace();
             }
         }
+    }
+
+    /**
+     * Method that is executed when testing bean shells
+     */
+    private void testBeanshellScript() {
+
     }
 
     /**

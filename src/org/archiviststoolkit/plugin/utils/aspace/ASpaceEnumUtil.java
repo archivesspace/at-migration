@@ -46,6 +46,7 @@ public class ASpaceEnumUtil {
     private String[] ASpaceCollectionManagementRecordEnums = null;
     private String[] ASpaceDigitalObjectTypes = null;
     private String[] ASpaceNoteTypes = null;
+    private String[] ASpaceIndexItemTypes = null;
     private String[] ASpaceResourceLevels = null;
     private String[] ASpaceFindingAidDescriptionRules = null;
     private String[] ASpaceFindingAidStatus = null;
@@ -76,6 +77,7 @@ public class ASpaceEnumUtil {
         initASpaceDigitalObjectType();
         initASpaceFileVersionUseStatements();
         initASpaceNoteTypes();
+        initASpaceIndexItemTypes();
         initASpaceResourceLevels();
         initASpaceFindingAidDescriptionRules();
         initASpaceFindingAidStatus();
@@ -124,7 +126,7 @@ public class ASpaceEnumUtil {
      * @return
      */
     public String getASpaceTermType(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "";
+        if(atValue == null || atValue.isEmpty()) return UNMAPPED;
 
         atValue = atValue.toLowerCase();
 
@@ -140,10 +142,6 @@ public class ASpaceEnumUtil {
             return ASpaceTermTypes[8];
         } else if(atValue.contains("uniform")) {
             return ASpaceTermTypes[9];
-        } else if(atValue.contains("production")) { // This is in the AT sandbox
-            return ASpaceTermTypes[8];
-        } else if (returnATValue) {
-            return atValue;
         } else { // return others unknown
             return UNMAPPED;
         }
@@ -236,6 +234,20 @@ public class ASpaceEnumUtil {
             return atValue;
         } else {
             return UNMAPPED;
+        }
+    }
+
+    /**
+     * Method to return if a name is direct or inverted order
+     *
+     * @param directOrder
+     * @return
+     */
+    public String getASpaceNameOrder(Boolean directOrder) {
+        if(directOrder) {
+            return "direct";
+        } else {
+            return "inverted";
         }
     }
 
@@ -481,7 +493,7 @@ public class ASpaceEnumUtil {
      */
     public String getASpaceDateType(ArchDescriptionDates archDescriptionDate) {
         // TODO 12/10/2012 archivist will need to provide logic for mapping this
-        return ASpaceDateEnums[1];
+        return ASpaceDateEnums[2];
     }
 
     /**
@@ -513,8 +525,10 @@ public class ASpaceEnumUtil {
             return ASpaceCollectionManagementRecordEnums[1];
         } else if(atValue.equals("low")) {
             return ASpaceCollectionManagementRecordEnums[2];
+        } else if(returnATValue) {
+            return atValue;
         } else {
-            return "low";
+            return UNMAPPED;
         }
     }
 
@@ -526,11 +540,11 @@ public class ASpaceEnumUtil {
     public String getASpaceCollectionManagementRecordProcessingStatus(String atValue) {
         atValue = atValue.toLowerCase();
 
-        if (atValue.contains("new")) {
+        if (atValue.equals("new")) {
             return ASpaceCollectionManagementRecordEnums[3];
-        } else if(atValue.contains("in progress")) {
+        } else if(atValue.equals("in progress")) {
             return ASpaceCollectionManagementRecordEnums[4];
-        } else if(atValue.contains("processed")) {
+        } else if(atValue.equals("processed")) {
             return ASpaceCollectionManagementRecordEnums[5];
         } else if(returnATValue) {
             return atValue;
@@ -815,6 +829,7 @@ public class ASpaceEnumUtil {
                 "separatedmaterial",                    // 31
                 "summary",                              // 32
                 "odd",                                  // 33
+                "bibliography"                          // 34
         };
     }
 
@@ -883,6 +898,8 @@ public class ASpaceEnumUtil {
             return ASpaceNoteTypes[3];
         } else if(atValue.contains("biographical/historical")) {
             return ASpaceNoteTypes[4];
+        } else if(atValue.contains("bibliography")) {
+            return ASpaceNoteTypes[34];
         } else if(atValue.contains("conditions governing access")) {
             return ASpaceNoteTypes[5];
         } else if(atValue.contains("conditions governing use")) {
@@ -961,6 +978,59 @@ public class ASpaceEnumUtil {
             return "null";
         } else {
             return atValue;
+        }
+    }
+
+    /**
+     * initialize array containing the ASpace index note item type
+     */
+    private void initASpaceIndexItemTypes() {
+        ASpaceIndexItemTypes = new String[] {
+                "corporate_entity", // 0
+                "family",           // 1
+                "function",         // 2
+                "geographic_name",  // 3
+                "name",             // 4
+                "occupation",       // 5
+                "person",           // 6
+                "subject",          // 7
+                "title"             // 8
+        };
+    }
+
+    /**
+     * Method to convert AT index item types to ASpace note index types
+     *
+     * @param atValue
+     * @return
+     */
+    public String getASpaceIndexItemType(String atValue) {
+        if(atValue == null || atValue.isEmpty()) return "";
+
+        atValue = atValue.toLowerCase();
+
+        if (atValue.contains("corporate name")) {
+            return ASpaceIndexItemTypes[0];
+        } else if(atValue.contains("genre form")) {
+            return ASpaceIndexItemTypes[7];
+        } else if(atValue.contains("name")) {
+            return ASpaceIndexItemTypes[4];
+        } else if(atValue.contains("occupation")) {
+            return ASpaceIndexItemTypes[5];
+        } else if(atValue.contains("personal name")) {
+            return ASpaceIndexItemTypes[6];
+        } else if(atValue.contains("subject")) {
+            return ASpaceIndexItemTypes[7];
+        } else if(atValue.contains("family name")) {
+            return ASpaceIndexItemTypes[1];
+        } else if(atValue.contains("function")) {
+            return ASpaceIndexItemTypes[2];
+        } else if(atValue.contains("geographic name")) {
+            return ASpaceIndexItemTypes[3];
+        }else if(atValue.contains("Title")) {
+            return ASpaceIndexItemTypes[8];
+        } else {
+            return ASpaceIndexItemTypes[8];
         }
     }
 

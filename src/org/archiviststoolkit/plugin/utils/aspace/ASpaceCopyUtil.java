@@ -3,6 +3,7 @@ package org.archiviststoolkit.plugin.utils.aspace;
 import org.apache.commons.httpclient.NameValuePair;
 import org.archiviststoolkit.ApplicationFrame;
 import org.archiviststoolkit.model.*;
+import org.archiviststoolkit.plugin.dbCopyFrame;
 import org.archiviststoolkit.plugin.dbdialog.RemoteDBConnectDialogLight;
 import org.archiviststoolkit.plugin.utils.ScriptDataUtils;
 import org.archiviststoolkit.plugin.utils.StopWatch;
@@ -45,6 +46,9 @@ public class ASpaceCopyUtil {
 
     // used to make REST calls to archive space backend service
     private ASpaceClient aspaceClient = null;
+
+    // used to store information about the archives space backend
+    private String aspaceInformation = "Simulator";
 
     // hashmap that maps repository from old database with copy in new database
     private HashMap<String, String> repositoryURIMap = new HashMap<String, String>();
@@ -152,6 +156,14 @@ public class ASpaceCopyUtil {
 
     // this list is used to copy a specific resource
     private ArrayList<String> resourcesIDsList;
+
+    // Booleans to specify whether to copy over unlinked Names and Subject records
+    private boolean ignoreNames = false;
+    private boolean ignoreSubjects = false;
+
+    // used to keep track of the number of records rejected by a mapper script
+    // loaded by the user
+    private int mapperScriptRejects = 0;
 
     // A string builder object to track errors
     private StringBuilder errorBuffer = new StringBuilder();
@@ -261,7 +273,16 @@ public class ASpaceCopyUtil {
      * @return
      */
     public boolean getSession() {
-        return aspaceClient.getSession();
+        if(simulateRESTCalls) return true;
+
+        boolean connected = aspaceClient.getSession();
+
+        if(connected) {
+            aspaceInformation = aspaceClient.getArchivesSpaceInformation();
+            aspaceClient.pauseIndexer();
+        }
+
+        return connected;
     }
 
     /**
@@ -269,6 +290,8 @@ public class ASpaceCopyUtil {
      * user defined values to be migrated to ASpace.
      */
     public void copyLookupList() throws Exception {
+        if(simulateRESTCalls) return;
+
         // first load the dynamic enums current is ASpace
         HashMap<String, JSONObject> dynamicEnums = aspaceClient.loadDynamicEnums();
         mapper.setASpaceDynamicEnums(dynamicEnums);
@@ -286,6 +309,7 @@ public class ASpaceCopyUtil {
         eventList.setListName("Events");
         eventList.addListItem("processing_started");
         eventList.addListItem("processing_completed");
+        eventList.addListItem("rights_transferred");
         records.add(eventList);
 
         // these are used to update the progress bar
@@ -337,6 +361,8 @@ public class ASpaceCopyUtil {
      * @return
      */
     public void loadRepositories() {
+        if(simulateRESTCalls) return;
+
         HashMap<String, String> repos = aspaceClient.loadRepositories();
 
         if (repos != null) {
@@ -377,7 +403,7 @@ public class ASpaceCopyUtil {
                     agentURI = ASpaceClient.AGENT_CORPORATE_ENTITY_ENDPOINT + "/" + id;
                 }
 
-                jsonText = mapper.convertRepository(repository, agentURI);
+                jsonText = mapper.convertRepository(repository);
                 id = saveRecord(ASpaceClient.REPOSITORY_ENDPOINT, jsonText, "Repository->" + shortName);
 
                 if (!id.equalsIgnoreCase(NO_ID)) {
@@ -407,6 +433,8 @@ public class ASpaceCopyUtil {
      * then place them in a hashmap
      */
     public void mapRepositoryGroups() {
+        if(simulateRESTCalls) return;
+
         print("Mapping repository user group records ...");
 
         // these are used to update the progress bar
@@ -451,13 +479,19 @@ public class ASpaceCopyUtil {
         print("Copying locations records ...");
         ArrayList<Locations> records = sourceRCD.getLocations();
 
-        // these are used to update the progress bar
+        // these are used to update the progress bar and import log
         int total = records.size();
         int count = 0;
         int success = 0;
 
         for (Locations location : records) {
             if(stopCopy) return;
+
+            // check to see if we are using a mapper script to filter some records
+            if(mapper.runLocationMapperScript && !mapper.canCopyRecord(location)) {
+                print("Mapper Script -- Not Copying Location: " + location);
+                continue;
+            }
 
             String jsonText = (String) mapper.convert(location);
             if (jsonText != null) {
@@ -503,6 +537,12 @@ public class ASpaceCopyUtil {
 
         for (Users user : records) {
             if(stopCopy) return;
+
+            // check to see if we are using a mapper script to filter some records
+            if(mapper.runUserMapperScript && !mapper.canCopyRecord(user)) {
+                print("Mapper Script -- Not Copying User: " + user);
+                continue;
+            }
 
             // first get the group the user belongs too
             ArrayList<String> groupURIs = getUserGroupURIs(user);
@@ -617,9 +657,23 @@ public class ASpaceCopyUtil {
         int total = records.size();
         int count = 0;
         int success = 0;
+        int unlinkedCount = 0;
 
         for (Names name : records) {
             if(stopCopy) return;
+
+            // check to see if to ignore this record if it has no links
+            if(ignoreNames && name.getArchDescriptionNames().size() == 0) {
+                unlinkedCount++;
+                print("Not Copying Unlinked Name: " + name);
+                continue;
+            }
+
+            // check to see if we are using a mapper script to filter some records
+            if(mapper.runNameMapperScript && !mapper.canCopyRecord(name)) {
+                print("Mapper Script -- Not Copying Name: " + name);
+                continue;
+            }
 
             String type = name.getNameType();
             String jsonText = (String) mapper.convert(name);
@@ -656,6 +710,13 @@ public class ASpaceCopyUtil {
 
         updateRecordTotals("Names", total, success);
 
+        // add error message indicating any records that were not copied because they
+        // were not linked to any other records
+        if(unlinkedCount > 0) {
+            String unlinkMessage = "Did Not Copy " + unlinkedCount + " Unlinked Name Record(s)\n";
+            addErrorMessage(unlinkMessage);
+        }
+
         // refresh the database connection to prevent heap space error
         freeMemory();
     }
@@ -674,9 +735,23 @@ public class ASpaceCopyUtil {
         int total = records.size();
         int count = 0;
         int success = 0;
+        int unlinkedCount = 0;
 
         for (Subjects subject : records) {
             if(stopCopy) return;
+
+            // check to see if to ignore this record if it has no links
+            if(ignoreSubjects && subject.getArchDescriptionSubjects().size() == 0) {
+                unlinkedCount++;
+                print("Not Copying Unlinked Subject: " + subject);
+                continue;
+            }
+
+            // check to see if we are using a mapper script to filter some records
+            if(mapper.runSubjectMapperScript && !mapper.canCopyRecord(subject)) {
+                print("Mapper Script -- Not Copying Subject: " + subject);
+                continue;
+            }
 
             String jsonText = (String) mapper.convert(subject);
             if (jsonText != null) {
@@ -700,6 +775,13 @@ public class ASpaceCopyUtil {
 
         updateRecordTotals("Subjects", total, success);
 
+        // add error message indicating any records that were not copied because they
+        // were not linked to any other records
+        if(unlinkedCount > 0) {
+            String unlinkMessage = "Did Not Copy " + unlinkedCount + " Unlinked Subject Record(s)\n";
+            addErrorMessage(unlinkMessage);
+        }
+
         // refresh the database connection to prevent heap space error
         freeMemory();
     }
@@ -722,6 +804,12 @@ public class ASpaceCopyUtil {
         for (Accessions accession : records) {
             if(stopCopy) return;
 
+            // check to see if we are using a mapper script to filter some records
+            if(mapper.runAccessionMapperScript && !mapper.canCopyRecord(accession)) {
+                print("Mapper Script -- Not Copying Accession: " + accession);
+                continue;
+            }
+
             JSONObject accessionJS = (JSONObject) mapper.convert(accession);
 
             if (accessionJS != null) {
@@ -733,8 +821,6 @@ public class ASpaceCopyUtil {
 
                 // add an instance that holds the location information
                 addInstance(accession, accessionJS);
-
-
 
                 String repoURI = getRemappedRepositoryURI("accession", accession.getIdentifier(), accession.getRepository());
                 String uri = repoURI + ASpaceClient.ACCESSION_ENDPOINT;
@@ -830,6 +916,12 @@ public class ASpaceCopyUtil {
 
         for (DigitalObjects digitalObject : records) {
             if(stopCopy) return;
+
+            // check to see if we are using a mapper script to filter some records
+            if(mapper.runDigitalObjectMapperScript && !mapper.canCopyRecord(digitalObject)) {
+                print("Mapper Script -- Not Copying Digital Object: " + digitalObject);
+                continue;
+            }
 
             String atId = digitalObject.getMetsIdentifier(); // used to see what record an error occurred for
 
@@ -982,9 +1074,6 @@ public class ASpaceCopyUtil {
 
         copyCount = 0; // keep track of the number of resource records copied
 
-        // a batch_import JSON object. Only used when doing batch imports
-        JSONObject batchImportJS;
-
         // these are used to update the progress bar
         int total = records.size();
         int count = 0;
@@ -993,12 +1082,21 @@ public class ASpaceCopyUtil {
         if(debug && max < total) total = max;
 
         for (Resources resource : records) {
+            // we need to update the progress bar here
+            updateProgress("Resource Records", total, count);
+
             count++;
 
             // check if to stop copy process
             if(stopCopy) {
                 updateRecordTotals("Resource Records", total, copyCount);
                 return;
+            }
+
+            // check to see if we are using a mapper script to filter some records
+            if(mapper.runResourceMapperScript && !mapper.canCopyRecord(resource)) {
+                print("Mapper Script -- Not Copying Resource: " + resource.getTitle());
+                continue;
             }
 
             // get the parent repository
@@ -1020,6 +1118,7 @@ public class ASpaceCopyUtil {
             }
 
             if (resourceURIMap.containsKey(resource.getIdentifier())) {
+                incrementCopyCount();
                 print("Not Copied: Resource already in database " + resource);
                 updateProgress("Resource Records", total, count);
                 continue;
@@ -1027,9 +1126,6 @@ public class ASpaceCopyUtil {
 
             // create the batch import JSON array in case we need it
             JSONArray batchJA = new JSONArray();
-
-            // we need to update the progress bar here
-            updateProgress("Resource Records", total, count);
 
             // indicate we are copying the resource record
             print("Copying Resource: " + resource.getTitle());
@@ -1076,6 +1172,12 @@ public class ASpaceCopyUtil {
                     // add any archival objects here
                     Set<ResourcesComponents> resourceComponents = resource.getResourcesComponents();
                     for (ResourcesComponents component : resourceComponents) {
+                        // check to see if we are using a mapper script to filter some records
+                        if(mapper.runComponentMapperScript && !mapper.canCopyRecord(component)) {
+                            print("Mapper Script -- Not Copying Resource Component: " + component);
+                            continue;
+                        }
+
                         JSONObject componentJS = (JSONObject) mapper.convert(component);
 
                         if (componentJS != null) {
@@ -1143,7 +1245,7 @@ public class ASpaceCopyUtil {
                             }
                         } else {
                             // copy this in a separate thread
-                            copyResourceRecordInThread(batchEndpoint, resourceURI, resourceTitle, batchJA.toString(2), atId, dbId, threads);
+                            copyResourceRecordInThread(batchEndpoint, resourceURI, resourceTitle, batchJA.toString(2), atId, dbId, threads, total);
                         }
                     } else {
                         print("Copied Resource: " + resource.getTitle() + " :: " + id);
@@ -1153,6 +1255,7 @@ public class ASpaceCopyUtil {
                     if(threads == 1) {
                         updateResourceURIMap(resource.getIdentifier(), resourceURI);
                         incrementCopyCount();
+                        updateRecordTotals("Resource Records", total, copyCount);
                     }
                 } else {
                     print("Fail -- Resource: " + resource.getTitle());
@@ -1178,7 +1281,7 @@ public class ASpaceCopyUtil {
         }
 
         // update the number of resource actually copied
-        updateRecordTotals("Resource Records", total, copyCount);
+        //updateRecordTotals("Resource Records", total, copyCount);
     }
 
     /**
@@ -1195,6 +1298,12 @@ public class ASpaceCopyUtil {
         if (component.isHasChild()) {
             for (ResourcesComponents childComponent : component.getResourcesComponents()) {
                 if(stopCopy) return;
+
+                // check to see if we are using a mapper script to filter some records
+                if(mapper.runComponentMapperScript && !mapper.canCopyRecord(childComponent)) {
+                    print("Mapper Script -- Not Copying Child Resource Component: " + childComponent);
+                    continue;
+                }
 
                 JSONObject componentJS = (JSONObject) mapper.convert(childComponent);
 
@@ -1237,7 +1346,6 @@ public class ASpaceCopyUtil {
             }
         }
     }
-
 
     /**
      * Add the subjects to the json resource, or resource component record
@@ -1489,7 +1597,7 @@ public class ASpaceCopyUtil {
      */
     public void copyResourceRecordInThread(final String endpoint, final String tempResourceURI,
                                            final String resourceTitle, final String jsonText,
-                                           final String atId, final Long dbId, int maxClients) throws Exception {
+                                           final String atId, final Long dbId, int maxClients, final int totalRecords) throws Exception {
 
         // start the controller thread that goe through list of records
         Thread performer = new Thread(new Runnable() {
@@ -1530,6 +1638,7 @@ public class ASpaceCopyUtil {
 
                         updateResourceURIMap(dbId, resourceURI);
                         incrementCopyCount();
+                        updateRecordTotals("Resource Records", totalRecords, copyCount);
 
                         print("Thread Client # " + clientNumber + " -- Batch Copied Resource: " + resourceTitle + " :: " + resourceURI);
                     } catch(Exception e) {
@@ -1551,7 +1660,7 @@ public class ASpaceCopyUtil {
             while (totalASpaceClients >= maxClients && !stopCopy) {
                 timeCount++;
 
-                if(timeCount <= 10) {
+                if(timeCount <= 30) {
                     print("Waiting on response from backend to copy: " + atId + "\n");
                 } else {
                     // if waiting more than ten minuets then inform user to
@@ -1560,7 +1669,7 @@ public class ASpaceCopyUtil {
                     print("Make sure the backend has not crashed ...\n");
                 }
 
-                Thread.sleep(60000); // wait 60 seconds before checking again
+                Thread.sleep(20000); // wait 20 seconds before checking again
             }
 
             // start the thread now
@@ -1753,7 +1862,10 @@ public class ASpaceCopyUtil {
      */
     private synchronized void incrementErrorCount() {
         saveErrorCount++;
-        errorCountLabel.setText(saveErrorCount + " and counting ...");
+
+        if(errorCountLabel != null) {
+            errorCountLabel.setText(saveErrorCount + " and counting ...");
+        }
     }
 
     /**
@@ -1767,20 +1879,25 @@ public class ASpaceCopyUtil {
     /**
      * Convenient print method for printing string in the text console in the future
      *
-     * @param string
+     * @param message
      */
-    private synchronized void print(String string) {
+    public synchronized void print(String message) {
         if(outputConsole != null) {
             messageCount++;
 
             if(messageCount < MAX_MESSAGES) {
-                outputConsole.append(string + "\n");
+                outputConsole.append(message + "\n");
             } else {
                 messageCount = 0;
-                outputConsole.setText(string + "\n");
+                outputConsole.setText(message + "\n");
             }
         } else {
-            System.out.println(string);
+            System.out.println(message);
+        }
+
+        // now see if to increment the count on the number of records that were rejects
+        if(message.contains("Mapper Script --")) {
+            mapperScriptRejects++;
         }
     }
 
@@ -1794,18 +1911,22 @@ public class ASpaceCopyUtil {
     private synchronized void updateProgress(String recordType, int total, int count) {
         if(progressBar == null) return;
 
-        if(count == 1 || count == -1) {
+        if(count == -1) {
+            progressBar.setMinimum(0);
+            progressBar.setMaximum(total);
+            progressBar.setString("Deleting " + total + " " + recordType);
+        } else if(count == 0) {
+            progressBar.setMinimum(0);
+            progressBar.setMaximum(1);
+            progressBar.setString("Loading " + recordType);
+        } else if(count == 1) {
             progressBar.setMinimum(0);
             progressBar.setMaximum(total);
 
-            if(count == 1) {
-                if(!checkRepositoryMismatch) {
-                    progressBar.setString("Copying " + total + " " + recordType);
-                } else {
-                    progressBar.setString("Checking " + total + " " + recordType);
-                }
-            } else { // -1, so print out deleting message
-                progressBar.setString("Deleting " + total + " " + recordType);
+            if(checkRepositoryMismatch) {
+                progressBar.setString("Checking " + total + " " + recordType);
+            } else {
+                progressBar.setString("Copying " + total + " " + recordType);
             }
         }
 
@@ -1819,9 +1940,15 @@ public class ASpaceCopyUtil {
      * @param total
      * @param success
      */
-    private void updateRecordTotals(String recordType, int total, int success) {
+    private synchronized void updateRecordTotals(String recordType, int total, int success) {
         float percent = (new Float(success)/new Float(total))*100.0f;
-        recordTotals.add(recordType + " : " + success + " / " + total + " (" + String.format("%.2f", percent) + "%)");
+        String info = recordType + " : " + success + " / " + total + " (" + String.format("%.2f", percent) + "%)";
+
+        if(recordTotals.size() <= 8) {
+            recordTotals.add(info);
+        } else {
+            recordTotals.set(8, info);
+        }
     }
 
     /**
@@ -1852,36 +1979,24 @@ public class ASpaceCopyUtil {
 
     /**
      * Method to return the error messages that occurred during the transfer process
+     *
      * @return
      */
     public String getSaveErrorMessages() {
         int errorsAndWarnings = saveErrorCount - aspaceErrorCount;
 
-        String errorMessage = "RECORD CONVERSION ERRORS/WARNINGS ( " + errorsAndWarnings + " ) ::\n\n" + errorBuffer.toString() +
-                "\n\n\nRECORD SAVE ERRORS ( " + aspaceErrorCount + " ) ::\n\n" + aspaceClient.getErrorMessages() +
-                "\n\nTOTAL COPY TIME: " + stopWatch.getPrettyTime() +
-                "\n\nNUMBER OF RECORDS COPIED: \n" + getTotalRecordsCopiedMessage();
-
-        return errorMessage;
-    }
-
-    /**
-     * Method to do certain task after the copy has completed
-     */
-    public void cleanUp() {
-        copying = false;
-
-        String totalRecordsCopied = getTotalRecordsCopiedMessage();
-
-        if(checkRepositoryMismatch) {
-            print("\n\nFinish checking records ... Total time: " + stopWatch.getPrettyTime());
-            print("\nNumber of Resource Records checked: " + copyCount);
-        } else {
-            print("\n\nFinish coping data ... Total time: " + stopWatch.getPrettyTime());
-            print("\nNumber of Records copied: \n" + totalRecordsCopied);
+        String mapperScriptMessage = "";
+        if(mapperScriptRejects > 0) {
+            mapperScriptMessage = "\n\nMapper Script -- Rejected " + mapperScriptRejects + " records";
         }
 
-        print("\nNumber of errors/warnings: " + saveErrorCount);
+        String errorMessage = "RECORD CONVERSION ERRORS/WARNINGS ( " + errorsAndWarnings + " ) ::\n\n" + errorBuffer.toString() + mapperScriptMessage +
+                "\n\n\nRECORD SAVE ERRORS ( " + aspaceErrorCount + " ) ::\n\n" + aspaceClient.getErrorMessages() +
+                "\n\nTOTAL COPY TIME: " + stopWatch.getPrettyTime() +
+                "\n\nNUMBER OF RECORDS COPIED: \n" + getTotalRecordsCopiedMessage() +
+                "\n\n" + getSystemInformation();
+
+        return errorMessage;
     }
 
     /**
@@ -1892,14 +2007,20 @@ public class ASpaceCopyUtil {
     public String getCurrentProgressMessage() {
         int errorsAndWarnings = saveErrorCount - aspaceErrorCount;
 
+        String mapperScriptMessage = "";
+        if(mapperScriptRejects > 0) {
+            mapperScriptMessage = "\n\nMapper Script -- Rejected " + mapperScriptRejects + " records";
+        }
+
         String totalRecordsCopied = getTotalRecordsCopiedMessage();
 
-        String errorMessages = "RECORD CONVERSION ERRORS/WARNINGS ( " + errorsAndWarnings + " ) ::\n\n" + errorBuffer.toString() +
+        String errorMessages = "RECORD CONVERSION ERRORS/WARNINGS ( " + errorsAndWarnings + " ) ::\n\n" + errorBuffer.toString() + mapperScriptMessage +
                 "\n\n\nRECORD SAVE ERRORS ( " + aspaceErrorCount + " ) ::\n\n" + aspaceClient.getErrorMessages();
 
         String message = errorMessages +
                 "\n\nRunning for: " + stopWatch.getPrettyTime() +
-                "\n\nCurrent # of Records Copied: \n" + totalRecordsCopied;
+                "\n\nCurrent # of Records Copied: \n" + totalRecordsCopied +
+                "\n\n" + getSystemInformation();
 
         return message;
     }
@@ -1949,6 +2070,35 @@ public class ASpaceCopyUtil {
         return message;
     }
 
+    /**
+     * Method to do certain task after the copy has completed
+     */
+    public void cleanUp() {
+        copying = false;
+
+        aspaceClient.startIndexer();
+
+        String totalRecordsCopied = getTotalRecordsCopiedMessage();
+
+        if(checkRepositoryMismatch) {
+            print("\n\nFinish checking records ... Total time: " + stopWatch.getPrettyTime());
+            print("\nNumber of Resource Records checked: " + copyCount);
+        } else {
+            print("\n\nFinish coping data ... Total time: " + stopWatch.getPrettyTime());
+            print("\nNumber of Records copied: \n" + totalRecordsCopied);
+        }
+
+        print("\nNumber of errors/warnings: " + saveErrorCount);
+    }
+
+    /**
+     * Method to return information about the ASpace and Migration tool version
+     *
+     * @return
+     */
+    public String getSystemInformation() {
+        return dbCopyFrame.VERSION + "\n" + aspaceInformation;
+    }
 
     /**
      * Method to set the boolean which specifies whether to stop copying the resources
@@ -1980,7 +2130,13 @@ public class ASpaceCopyUtil {
      */
     private void freeMemory() {
         sourceRCD.refreshSession();
-        outputConsole.setText("");
+
+        if(outputConsole != null) {
+            outputConsole.setText("");
+        }
+
+        // we may need to reset the the pause setting on the ASpace Indexer
+        aspaceClient.pauseIndexer();
 
         Runtime runtime = Runtime.getRuntime();
 
@@ -2134,6 +2290,26 @@ public class ASpaceCopyUtil {
         } else {
             this.resourcesIDsList = null;
         }
+    }
+
+    /**
+     * Method to see whether to set the extent in parts for BYU plugin
+     *
+     * @param b
+     */
+    public void setExtentPortionInParts(boolean b) {
+        mapper.setExtentPortionInParts(b);
+    }
+
+    /**
+     * Method to specify whether un-linked names and subject records should be copied
+     *
+     * @param ignoreNames
+     * @param ignoreSubjects
+     */
+    public void setIgnoreUnlinkedRecords(boolean ignoreNames, boolean ignoreSubjects) {
+        this.ignoreNames = ignoreNames;
+        this.ignoreSubjects = ignoreSubjects;
     }
 
     /**

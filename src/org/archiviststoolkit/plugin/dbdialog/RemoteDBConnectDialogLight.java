@@ -68,6 +68,15 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
 
     private String connectionMessage = "";
 
+    /**
+     * Constructor that doesn't take a parent owner used when running on the command line
+     */
+    public RemoteDBConnectDialogLight() {
+        super();
+        initComponents();
+        loadDatabaseConnectionInformation();
+    }
+
     public RemoteDBConnectDialogLight(Frame owner) {
         super(owner, "Remote Database Connection");
         initComponents();
@@ -526,6 +535,7 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
             criteria.setFetchMode("subjects", FetchMode.JOIN);
             criteria.add(Restrictions.idEq(identifier));
             resource = (Resources)criteria.uniqueResult();
+            session.setReadOnly(resource, true);
             tx.commit();
         } catch (RuntimeException ex) {
             try {
@@ -981,7 +991,11 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
      * @return
      */
     public String getConnectionUrl() {
-        return connectionUrl.getSelectedItem().toString();
+        if(connectionUrl.getSelectedItem() != null) {
+            return connectionUrl.getSelectedItem().toString();
+        } else {
+            return "Current AT Database";
+        }
     }
 
     /**

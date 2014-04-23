@@ -29,6 +29,15 @@ mode for testing purposes. To run in standalone mode:
 1. Create a directory call "logs" in the project directory.
 2. Run the "dbCopyFrame" class making sure all the *.jar files in "lib" are in the Classpath.
 
+
+NOTES ON RUNNING THE PLUGIN IN COMMAND LINE MODE
+
+1. Edit the dbcopy.properties to point to the desired AT database and ASpace Instance
+2. Run the "dbCopyCLI" class making sure all the *.jar files in "lib" are in the Classpath.
+
+
+NOTE ON CPU AND MEMORY USAGE
+
 Data migration is a memory intensive task due to the large amounts of objects being created.
 As such, it’s recommended running the plugin on a machine with at list 2GB memory, and setting
 the max heap space to 1024m.
