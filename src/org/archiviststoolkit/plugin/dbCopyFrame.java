@@ -33,7 +33,7 @@ import java.util.HashMap;
  * @author Nathan Stevens
  */
 public class dbCopyFrame extends JFrame {
-    public static final String VERSION = "Archives Space Data Migrator v1.0.9B (04-23-2014)";
+    public static final String VERSION = "Archives Space Data Migrator v1.0.9.1 (05-29-2014)";
 
     // The application when running within the AT
     private ApplicationFrame mainFrame = null;
@@ -117,6 +117,7 @@ public class dbCopyFrame extends JFrame {
         //ignoreUnlinkedRecordsLabel.setVisible(false);
         //ignoreUnlinkedNamesCheckBox.setVisible(false);
         //ignoreUnlinkedSubjectsCheckBox.setVisible(false);
+        //publishPanel.setVisible(false);
         batchImportCheckBox.setVisible(false);
         deleteResourcesCheckBox.setVisible(false);
         numResourceToCopyLabel.setVisible(false);
@@ -264,7 +265,16 @@ public class dbCopyFrame extends JFrame {
                     boolean ignoreUnlinkedNames = ignoreUnlinkedNamesCheckBox.isSelected();
                     boolean ignoreUnlinkedSubjects = ignoreUnlinkedSubjectsCheckBox.isSelected();
 
+                    // create the hash map use to see if a certain record should be exported automatically
+                    HashMap <String, Boolean> publishMap = new HashMap<String, Boolean>();
+                    publishMap.put("names", publishNamesCheckBox.isSelected());
+                    publishMap.put("subjects", publishSubjectsCheckBox.isSelected());
+                    publishMap.put("accessions", publishAccessionsCheckBox.isSelected());
+                    publishMap.put("digitalObjects", publishDigitalObjectsCheckBox.isSelected());
+                    publishMap.put("resources", publishResourcesCheckBox.isSelected());
+
                     ascopy = new ASpaceCopyUtil(sourceRCD, host, admin, adminPassword);
+                    ascopy.setPublishHashMap(publishMap);
                     ascopy.setRepositoryMismatchMap(repositoryMismatchMap);
                     ascopy.setSimulateRESTCalls(simulateRESTCalls);
                     ascopy.setExtentPortionInParts(extentPortionInParts);
@@ -417,8 +427,18 @@ public class dbCopyFrame extends JFrame {
                     String admin = adminTextField.getText();
                     String adminPassword = adminPasswordTextField.getText();
 
+                    // create the hash map use to see if a certain record should be exported automatically
+                    // this is needed here otherwise an null pointer error is thrown
+                    HashMap <String, Boolean> publishMap = new HashMap<String, Boolean>();
+                    publishMap.put("names", publishNamesCheckBox.isSelected());
+                    publishMap.put("subjects", publishSubjectsCheckBox.isSelected());
+                    publishMap.put("accessions", publishAccessionsCheckBox.isSelected());
+                    publishMap.put("digitalObjects", publishDigitalObjectsCheckBox.isSelected());
+                    publishMap.put("resources", publishResourcesCheckBox.isSelected());
+
                     ascopyREC = new ASpaceCopyUtil(sourceRCD, host, admin, adminPassword);
                     ascopyREC.setCheckRepositoryMismatch();
+                    ascopyREC.setPublishHashMap(publishMap);
 
                     // set the reset password, and output console and progress bar
                     ascopyREC.setOutputConsole(consoleTextArea);
@@ -709,6 +729,13 @@ public class dbCopyFrame extends JFrame {
         ignoreUnlinkedRecordsLabel = new JLabel();
         ignoreUnlinkedNamesCheckBox = new JCheckBox();
         ignoreUnlinkedSubjectsCheckBox = new JCheckBox();
+        publishPanel = new JPanel();
+        label1 = new JLabel();
+        publishNamesCheckBox = new JCheckBox();
+        publishSubjectsCheckBox = new JCheckBox();
+        publishAccessionsCheckBox = new JCheckBox();
+        publishDigitalObjectsCheckBox = new JCheckBox();
+        publishResourcesCheckBox = new JCheckBox();
         simulateCheckBox = new JCheckBox();
         useScriptCheckBox = new JCheckBox();
         editScriptButton = new JButton();
@@ -765,6 +792,8 @@ public class dbCopyFrame extends JFrame {
                         FormFactory.DEFAULT_COLSPEC
                     },
                     new RowSpec[] {
+                        FormFactory.DEFAULT_ROWSPEC,
+                        FormFactory.LINE_GAP_ROWSPEC,
                         FormFactory.DEFAULT_ROWSPEC,
                         FormFactory.LINE_GAP_ROWSPEC,
                         FormFactory.DEFAULT_ROWSPEC,
@@ -930,13 +959,59 @@ public class dbCopyFrame extends JFrame {
                 ignoreUnlinkedSubjectsCheckBox.setText("Subject Records");
                 contentPanel.add(ignoreUnlinkedSubjectsCheckBox, cc.xywh(9, 13, 5, 1));
 
+                //======== publishPanel ========
+                {
+                    publishPanel.setLayout(new FormLayout(
+                        new ColumnSpec[] {
+                            new ColumnSpec(ColumnSpec.FILL, Sizes.DEFAULT, FormSpec.DEFAULT_GROW),
+                            FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
+                            FormFactory.DEFAULT_COLSPEC,
+                            FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
+                            FormFactory.DEFAULT_COLSPEC,
+                            FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
+                            FormFactory.DEFAULT_COLSPEC,
+                            FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
+                            FormFactory.DEFAULT_COLSPEC,
+                            FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
+                            FormFactory.DEFAULT_COLSPEC
+                        },
+                        RowSpec.decodeSpecs("default")));
+
+                    //---- label1 ----
+                    label1.setText("  Records To Publish?");
+                    publishPanel.add(label1, cc.xy(1, 1));
+
+                    //---- publishNamesCheckBox ----
+                    publishNamesCheckBox.setText("Names");
+                    publishPanel.add(publishNamesCheckBox, cc.xy(3, 1));
+
+                    //---- publishSubjectsCheckBox ----
+                    publishSubjectsCheckBox.setText("Subjects");
+                    publishPanel.add(publishSubjectsCheckBox, cc.xy(5, 1));
+
+                    //---- publishAccessionsCheckBox ----
+                    publishAccessionsCheckBox.setText("Accessions");
+                    publishPanel.add(publishAccessionsCheckBox, cc.xy(7, 1));
+
+                    //---- publishDigitalObjectsCheckBox ----
+                    publishDigitalObjectsCheckBox.setText("Digital Objects");
+                    publishDigitalObjectsCheckBox.setSelected(true);
+                    publishPanel.add(publishDigitalObjectsCheckBox, cc.xy(9, 1));
+
+                    //---- publishResourcesCheckBox ----
+                    publishResourcesCheckBox.setText("Resources");
+                    publishResourcesCheckBox.setSelected(true);
+                    publishPanel.add(publishResourcesCheckBox, cc.xy(11, 1));
+                }
+                contentPanel.add(publishPanel, cc.xywh(1, 15, 13, 1));
+
                 //---- simulateCheckBox ----
                 simulateCheckBox.setText("Simulate REST Calls");
-                contentPanel.add(simulateCheckBox, cc.xy(1, 15));
+                contentPanel.add(simulateCheckBox, cc.xy(1, 17));
 
                 //---- useScriptCheckBox ----
                 useScriptCheckBox.setText("Use Mapper Script");
-                contentPanel.add(useScriptCheckBox, cc.xywh(3, 15, 5, 1));
+                contentPanel.add(useScriptCheckBox, cc.xywh(3, 17, 5, 1));
 
                 //---- editScriptButton ----
                 editScriptButton.setText("Edit or Load Script");
@@ -945,34 +1020,34 @@ public class dbCopyFrame extends JFrame {
                         editScriptButtonActionPerformed();
                     }
                 });
-                contentPanel.add(editScriptButton, cc.xywh(9, 15, 5, 1));
+                contentPanel.add(editScriptButton, cc.xywh(9, 17, 5, 1));
 
                 //---- batchImportCheckBox ----
                 batchImportCheckBox.setText("Use Batch Import for Resources");
                 batchImportCheckBox.setSelected(true);
-                contentPanel.add(batchImportCheckBox, cc.xy(1, 17));
+                contentPanel.add(batchImportCheckBox, cc.xy(1, 19));
 
                 //---- numResourceToCopyLabel ----
                 numResourceToCopyLabel.setText("Number of  Resources To Copy");
-                contentPanel.add(numResourceToCopyLabel, cc.xywh(3, 17, 5, 1));
+                contentPanel.add(numResourceToCopyLabel, cc.xywh(3, 19, 5, 1));
 
                 //---- numResourceToCopyTextField ----
                 numResourceToCopyTextField.setText("100000");
-                contentPanel.add(numResourceToCopyTextField, cc.xywh(9, 17, 5, 1));
+                contentPanel.add(numResourceToCopyTextField, cc.xywh(9, 19, 5, 1));
 
                 //---- deleteResourcesCheckBox ----
                 deleteResourcesCheckBox.setText("Delete Previously Saved Resources");
-                contentPanel.add(deleteResourcesCheckBox, cc.xy(1, 19));
+                contentPanel.add(deleteResourcesCheckBox, cc.xy(1, 21));
 
                 //---- resourcesToCopyLabel ----
                 resourcesToCopyLabel.setText("Resources To Copy ");
-                contentPanel.add(resourcesToCopyLabel, cc.xywh(3, 19, 5, 1));
-                contentPanel.add(resourcesToCopyTextField, cc.xywh(7, 19, 7, 1));
+                contentPanel.add(resourcesToCopyLabel, cc.xywh(3, 21, 5, 1));
+                contentPanel.add(resourcesToCopyTextField, cc.xywh(7, 21, 7, 1));
 
                 //---- outputConsoleLabel ----
                 outputConsoleLabel.setText("Output Console:");
-                contentPanel.add(outputConsoleLabel, cc.xy(1, 21));
-                contentPanel.add(copyProgressBar, cc.xywh(3, 21, 11, 1));
+                contentPanel.add(outputConsoleLabel, cc.xy(1, 23));
+                contentPanel.add(copyProgressBar, cc.xywh(3, 23, 11, 1));
 
                 //======== scrollPane1 ========
                 {
@@ -981,7 +1056,7 @@ public class dbCopyFrame extends JFrame {
                     consoleTextArea.setRows(12);
                     scrollPane1.setViewportView(consoleTextArea);
                 }
-                contentPanel.add(scrollPane1, cc.xywh(1, 23, 13, 1));
+                contentPanel.add(scrollPane1, cc.xywh(1, 25, 13, 1));
 
                 //---- recordURIComboBox ----
                 recordURIComboBox.setModel(new DefaultComboBoxModel(new String[] {
@@ -997,15 +1072,15 @@ public class dbCopyFrame extends JFrame {
                     "/config/enumerations"
                 }));
                 recordURIComboBox.setEditable(true);
-                contentPanel.add(recordURIComboBox, cc.xy(1, 25));
+                contentPanel.add(recordURIComboBox, cc.xy(1, 27));
 
                 //---- paramsLabel ----
                 paramsLabel.setText("Params");
-                contentPanel.add(paramsLabel, cc.xy(3, 25));
+                contentPanel.add(paramsLabel, cc.xy(3, 27));
 
                 //---- paramsTextField ----
                 paramsTextField.setText("page=1");
-                contentPanel.add(paramsTextField, cc.xywh(5, 25, 5, 1));
+                contentPanel.add(paramsTextField, cc.xywh(5, 27, 5, 1));
 
                 //---- viewRecordButton ----
                 viewRecordButton.setText("View");
@@ -1014,7 +1089,7 @@ public class dbCopyFrame extends JFrame {
                         viewRecordButtonActionPerformed();
                     }
                 });
-                contentPanel.add(viewRecordButton, cc.xywh(11, 25, 2, 1));
+                contentPanel.add(viewRecordButton, cc.xywh(11, 27, 2, 1));
 
                 //---- testRecordButton ----
                 testRecordButton.setText("Test");
@@ -1023,7 +1098,7 @@ public class dbCopyFrame extends JFrame {
                         testRecordButtonActionPerformed();
                     }
                 });
-                contentPanel.add(testRecordButton, cc.xy(13, 25));
+                contentPanel.add(testRecordButton, cc.xy(13, 27));
             }
             dialogPane.add(contentPanel, BorderLayout.CENTER);
 
@@ -1140,6 +1215,13 @@ public class dbCopyFrame extends JFrame {
     private JLabel ignoreUnlinkedRecordsLabel;
     private JCheckBox ignoreUnlinkedNamesCheckBox;
     private JCheckBox ignoreUnlinkedSubjectsCheckBox;
+    private JPanel publishPanel;
+    private JLabel label1;
+    private JCheckBox publishNamesCheckBox;
+    private JCheckBox publishSubjectsCheckBox;
+    private JCheckBox publishAccessionsCheckBox;
+    private JCheckBox publishDigitalObjectsCheckBox;
+    private JCheckBox publishResourcesCheckBox;
     private JCheckBox simulateCheckBox;
     private JCheckBox useScriptCheckBox;
     private JButton editScriptButton;

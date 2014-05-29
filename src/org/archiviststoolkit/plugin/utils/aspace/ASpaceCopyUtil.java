@@ -225,6 +225,14 @@ public class ASpaceCopyUtil {
     }
 
     /**
+     * Method to set the hash map used for testing when records should be published or not
+     * @param publishHashMap
+     */
+    public void setPublishHashMap(HashMap<String, Boolean> publishHashMap) {
+        mapper.setPublishHashMap(publishHashMap);
+    }
+
+    /**
      * Method to set a bean script to use for the data mapping operation instead of the default logic
      */
     public void setMapperScript(String script) {
@@ -2322,4 +2330,22 @@ public class ASpaceCopyUtil {
 
         return info;
     }
+
+    /**
+     * A debug method for checking all ISO dates
+     *
+     * @param checkISODates
+     */
+    public void setCheckISODates(boolean checkISODates) {
+        mapper.setCheckISODates(checkISODates);
+    }
+
+    /**
+     * A debug method to process all ISO dates, making sure they are valid.
+     */
+    public void checkISODates() {
+        mapper.checkISODates();
+    }
+
+
 }

@@ -8,6 +8,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -66,6 +68,9 @@ public class ASpaceMapper {
     public boolean runDigitalObjectMapperScript = false;
     public boolean runNoteMapperScript = false;
 
+    // Boolean hash which specify which records which should have publish = true or false
+    private HashMap<String, Boolean> publishHashMap;
+
     // some code used for testing
     private boolean makeUnique = false;
     private boolean allowTruncation = false;
@@ -80,13 +85,18 @@ public class ASpaceMapper {
     // used when specifying the external ids
     private String connectionUrl = "";
 
-    public static final String DUMMY_DATE = "1001";
-
     // used to store errors
     private ASpaceCopyUtil aspaceCopyUtil;
 
     // used when generating errors
     private String currentResourceRecordIdentifier;
+
+    // used for date comparison of ISO dates
+    private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+
+    // string builder used for finding bad dates
+    private ArrayList<String> datesList = null;
+    private boolean checkISODates = false;
 
     /**
      *  Main constructor
@@ -99,6 +109,14 @@ public class ASpaceMapper {
      */
     public ASpaceMapper(ASpaceCopyUtil aspaceCopyUtil) {
         this.aspaceCopyUtil = aspaceCopyUtil;
+    }
+
+    /**
+     * Method to set the hash map used for testing when records should be published or not
+     * @param publishHashMap
+     */
+    public void setPublishHashMap(HashMap<String, Boolean> publishHashMap) {
+        this.publishHashMap = publishHashMap;
     }
 
     /**
@@ -221,6 +239,8 @@ public class ASpaceMapper {
         // add the AT database Id as an external ID
         addExternalId(record, json, "subject");
 
+        json.put("publish", publishHashMap.get("subjects"));
+
         // set the subject source
         String source = record.getSubjectSource();
         if(!source.isEmpty()) {
@@ -274,6 +294,8 @@ public class ASpaceMapper {
 
         // add the AT database Id as an external ID
         addExternalId(record, agentJS, "name");
+
+        agentJS.put("publish", publishHashMap.get("names"));
 
         // hold name information
         JSONArray namesJA = new JSONArray();
@@ -613,6 +635,8 @@ public class ASpaceMapper {
         // add the AT database Id as an external ID
         addExternalId(record, json, "accession");
 
+        json.put("publish", publishHashMap.get("accessions"));
+
         // check to make sure we have a title
         String title = fixEmptyString(record.getTitle(), null);
         Date date = record.getAccessionDate();
@@ -695,7 +719,7 @@ public class ASpaceMapper {
 
         // add the archdescription dates now
         Set<ArchDescriptionDates> archDescriptionDates = record.getArchDescriptionDates();
-        convertArchDescriptionDates(dateJA, archDescriptionDates);
+        convertArchDescriptionDates(dateJA, archDescriptionDates, record.getAccessionNumber());
 
         // if there are any dates add them to the main json record
         if(dateJA.length() != 0) {
@@ -937,7 +961,8 @@ public class ASpaceMapper {
      * @param dateJA
      * @param archDescriptionDates
      */
-    public void convertArchDescriptionDates(JSONArray dateJA, Set<ArchDescriptionDates> archDescriptionDates) throws JSONException {
+    public void convertArchDescriptionDates(JSONArray dateJA, Set<ArchDescriptionDates> archDescriptionDates,
+                                            String recordIdentifier) throws JSONException {
         if(archDescriptionDates == null && archDescriptionDates.size() == 0) return;
 
         // TODO 12/10/2012 Archivists needs to map this
@@ -950,18 +975,18 @@ public class ASpaceMapper {
             String dateExpression = archDescriptionDate.getDateExpression();
             dateJS.put("expression", dateExpression);
 
-            String beginDate = archDescriptionDate.getIsoDateBegin().trim();
-            String endDate = archDescriptionDate.getIsoDateEnd().trim();
+            String beginDate = normalizeISODate(archDescriptionDate.getIsoDateBegin(), recordIdentifier);
+            String endDate = normalizeISODate(archDescriptionDate.getIsoDateEnd(), recordIdentifier);
 
-            if(!beginDate.isEmpty() && !beginDate.equals("0")) {
+            if(beginDate != null) {
                 dateJS.put("begin", beginDate);
 
-                if(!endDate.isEmpty() && !endDate.equals("0")) {
+                if(endDate != null && endDateValid(beginDate, endDate, recordIdentifier)) {
                     dateJS.put("end", endDate);
                 } else {
                     dateJS.put("end", beginDate);
                 }
-            } else if(dateExpression == null || dateExpression.isEmpty()) {
+            } else if(dateExpression == null || dateExpression.trim().length() < 2) {
                 // check that there is a date expression. If we have no expression then
                 // we need to add one since we have no start date
                 dateJS.put("expression", "unspecified");
@@ -971,6 +996,13 @@ public class ASpaceMapper {
             dateJS.put("calender", enumUtil.getASpaceDateCalender(archDescriptionDate.getCalendar()));
 
             dateJA.put(dateJS);
+
+            // DEBUG Code to store all dates then print them put
+            if(checkISODates) {
+                datesList.add(beginDate + "/" + endDate + "/" + dateExpression + "/" + recordIdentifier);
+            }
+
+            // TODO 04/28/2014 -- create a date object for bulk dates as well
         }
     }
 
@@ -1128,6 +1160,8 @@ public class ASpaceMapper {
         // add the AT database Id as an external ID
         addExternalId(record, json, "digital_object");
 
+        json.put("publish", publishHashMap.get("digitalObjects"));
+
         /* add the fields required for abstract_archival_object.rb */
 
         String title = record.getObjectLabel();
@@ -1243,6 +1277,9 @@ public class ASpaceMapper {
         // add the AT database Id as an external ID
         addExternalId(record, json, "resource");
 
+        // set the publish, restrictions, processing note, container summary
+        json.put("publish", publishHashMap.get("resources"));
+
         /* Add fields needed for abstract_archival_object.rb */
 
         // check to make sure we have a title
@@ -1286,7 +1323,7 @@ public class ASpaceMapper {
         addDate(dateJA, record, "creation", "Resource: " + currentResourceRecordIdentifier);
 
         Set<ArchDescriptionDates> archDescriptionDates = record.getArchDescriptionDates();
-        convertArchDescriptionDates(dateJA, archDescriptionDates);
+        convertArchDescriptionDates(dateJA, archDescriptionDates, "Resource: " + currentResourceRecordIdentifier);
 
         if(dateJA.length() != 0) {
             json.put("dates", dateJA);
@@ -1333,8 +1370,6 @@ public class ASpaceMapper {
             json.put("other_level", fixEmptyString(record.getOtherLevel()));
         }
 
-        // set the publish, restrictions, processing note, container summary
-        json.put("publish", record.getInternalOnly());
         //json.put("restrictions", record.getRestrictionsApply());
         json.put("repository_processing_note", record.getRepositoryProcessingNote());
         json.put("container_summary", record.getContainerSummary());
@@ -1395,7 +1430,7 @@ public class ASpaceMapper {
         addExternalId(record, json, "resource_component");
 
         /* Add fields needed for abstract_archival_object.rb */
-        json.put("publish", record.getInternalOnly());
+        json.put("publish", !record.getInternalOnly());
 
         // check to make sure we have a title
         String title = record.getTitle();
@@ -1411,7 +1446,7 @@ public class ASpaceMapper {
         addDate(dateJA, record, "creation", recordIdentifier);
 
         Set<ArchDescriptionDates> archDescriptionDates = record.getArchDescriptionDates();
-        convertArchDescriptionDates(dateJA, archDescriptionDates);
+        convertArchDescriptionDates(dateJA, archDescriptionDates, recordIdentifier);
 
         if(dateJA.length() != 0) {
             json.put("dates", dateJA);
@@ -1522,11 +1557,18 @@ public class ASpaceMapper {
                 } else {
                     dateJS.put("end", dateBegin.toString());
 
-                    String message = "End date: " + dateEnd + " before begin date: " + dateBegin + ", ignoring end date\n" + recordIdentifier;
+                    String message = "End date: " + dateEnd + " before begin date: " + dateBegin + ", ignoring end date\nRecord:: " + recordIdentifier + "\n";
                     aspaceCopyUtil.addErrorMessage(message);
                 }
             } else {
                 dateJS.put("end", dateBegin.toString());
+            }
+
+            // DEBUG Code to store all dates then print them put
+            if(checkISODates) {
+                String begin = normalizeISODate(dateJS.getString("begin"), recordIdentifier);
+                String end = normalizeISODate(dateJS.getString("end"), recordIdentifier);
+                datesList.add(begin + "/" + end + "/" + recordIdentifier);
             }
         }
 
@@ -1560,6 +1602,13 @@ public class ASpaceMapper {
                 }
 
                 dateJA.put(dateJS);
+
+                // Debug code
+                if(checkISODates) {
+                    String begin = normalizeISODate(dateJS.getString("begin"), recordIdentifier);
+                    String end = normalizeISODate(dateJS.getString("end"), recordIdentifier);
+                    datesList.add(begin + "/" + end + "/" + recordIdentifier);
+                }
             }
         }
     }
@@ -1581,7 +1630,7 @@ public class ASpaceMapper {
         String dateExpression = record.getPersonalDates().trim();
 
         // we may have a date range so check for that. yyyy-yyyy
-        if (dateExpression.matches("\\d\\d\\d\\d\\s*-\\s*\\d\\d\\d\\d")) {
+        if (dateExpression.matches("\\d{4}\\s*-\\s*\\d{4}")) {
             String[] sa = dateExpression.split("\\s*-\\s*");
             Integer dateBegin = Integer.parseInt(sa[0]);
             Integer dateEnd = Integer.parseInt(sa[1]);
@@ -1595,7 +1644,7 @@ public class ASpaceMapper {
             } else {
                 dateJS.put("end", dateBegin.toString());
 
-                String message = "End date: " + dateEnd + " before begin date: " + dateBegin + ", ignoring end date\n" + record.getSortName();
+                String message = "End date: " + dateEnd + " before begin date: " + dateBegin + ", ignoring end date\nRecord:: " + record.getSortName() + "\n";
                 aspaceCopyUtil.addErrorMessage(message);
             }
         } else {
@@ -1703,7 +1752,7 @@ public class ASpaceMapper {
             JSONObject noteJS = new JSONObject();
 
             noteJS.put("label", note.getTitle());
-            noteJS.put("publish", note.getInternalOnly());
+            noteJS.put("publish", !note.getInternalOnly());
 
             // based on the note and record type, add the correct note
             String noteType = "";
@@ -1751,7 +1800,7 @@ public class ASpaceMapper {
             JSONObject noteJS = new JSONObject();
 
             noteJS.put("label", note.getTitle());
-            noteJS.put("publish", note.getInternalOnly());
+            noteJS.put("publish", !note.getInternalOnly());
 
             // se if to add any content
             if(note.getContent() != null && !note.getContent().isEmpty()) {
@@ -2491,7 +2540,63 @@ public class ASpaceMapper {
     }
 
     /**
-     * Method to set the current resource record identifier. Usefull for error
+     * Method that takes an ISO date and normalizes it into the format yyyy-mm-dd
+     *
+     * @param date
+     * @return
+     */
+    private String normalizeISODate(String date, String recordIdentifier) {
+        // trim the date before testing
+        date = date.trim();
+
+        if(date.length() < 4) return null;
+
+        if(date.matches("\\d{4}")) { // matches yyyy
+            return date + "-01-01";
+        } else if (date.matches("\\d{4}-\\d{2}")) { // matches yyyy-mm format
+            String[] sa = date.split("-");
+            return sa[0] + "-" + sa[1] + "-01";
+        } else if (date.matches("\\d{4}-\\d{2}-\\d{2}")) {// matches yyyy-mm-dd
+            return date;
+        } else if(date.matches("\\d{8}")) { // match yyyymmdd
+            return date.substring(0,4) + "-" + date.substring(4,6) + "-" + date.substring(6,8);
+        } else { // return blank
+            String message = "Invalid ISO date " + date + "\n Record:: " + recordIdentifier + "\n";
+            aspaceCopyUtil.addErrorMessage(message);
+            return null;
+        }
+    }
+
+    /**
+     * Method to check and see if the end date does not come before the begin date
+     * by looking only the year, month, and day
+     *
+     *
+     * @param begin
+     * @param end
+     * @param recordIdentifier
+     * @return
+     */
+    private boolean endDateValid(String begin, String end, String recordIdentifier) {
+        try {
+            Date beginDate = sdf.parse(begin);
+            Date endDate = sdf.parse(end);
+
+            if(endDate.before(beginDate)) {
+                String message = "End date: " + end + " before begin date: " + begin + ", ignoring end date.\nRecord:: " + recordIdentifier + "\n";
+                aspaceCopyUtil.addErrorMessage(message);
+            } else {
+                return true;
+            }
+        } catch (ParseException e) {
+            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+        }
+
+        return false;
+    }
+
+    /**
+     * Method to set the current resource record identifier. useful for error
      * message generation
      *
      * @param identifier
@@ -2519,10 +2624,60 @@ public class ASpaceMapper {
     }
 
     /**
+     * Method to specify that all ISO dates should be checked
+     *
+     * @param checkISODates
+     */
+    public void setCheckISODates(boolean checkISODates) {
+        this.checkISODates = checkISODates;
+        datesList = new ArrayList<String>();
+
+        // force the date formater to not to try an correct bad dates
+        sdf.setLenient(false);
+    }
+
+    /**
+     * Method to check all ISO dates
+     */
+    public void checkISODates() {
+        System.out.println("\n\nChecking " + datesList.size() + " ISO Dates ...\n");
+
+        int badDates = 0;
+
+        for (String date : datesList) {
+            String[] sa = date.split("/");
+            try {
+                if (!sa[0].equals("null")) {
+                    sdf.parse(sa[0]);
+
+                    if (!sa[1].equals("null")) {
+                        sdf.parse(sa[1]);
+                    }
+                }
+            } catch (ParseException e) {
+                System.out.println("Invalid ISO date: " + date);
+                badDates++;
+            }
+        }
+
+        System.out.println("\nFinished checking for bad ISO dates. Found: " + badDates);
+    }
+
+    /**
      * Method to print messages to the user
      * @param message
      */
     private void print(String message) {
         aspaceCopyUtil.print(message);
+    }
+
+    /**
+     * Main method for testing
+     *
+     * @param args
+     */
+    public static void main(String[] args) {
+        ASpaceMapper mapper = new ASpaceMapper();
+        System.out.println(mapper.normalizeISODate("19990304", "Test"));
     }
 }

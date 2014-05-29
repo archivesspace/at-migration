@@ -42,7 +42,7 @@ public class ASpaceClient {
     public static final String AGENT_PEOPLE_ENDPOINT = "/agents/people";
     public static final String AGENT_SOFTWARE_ENDPOINT = "/agents/software";
     public static final String ENUM_ENDPOINT = "/config/enumerations";
-    public static final String BATCH_IMPORT_ENDPOINT = "/batch_imports";
+    public static final String BATCH_IMPORT_ENDPOINT = "/batch_imports?migration=ArchivistToolkit";
     public static final String INDEXER_ENDPOINT = "/aspace-indexer/";
 
     private HttpClient httpclient = new HttpClient();
@@ -138,9 +138,6 @@ public class ASpaceClient {
      * @return
      */
     public String post(String route, String jsonText, NameValuePair[] params, String atId) throws Exception {
-        // explicitly convert to utf8
-        //jsonText = convertToUTF8(jsonText);
-
         // Prepare HTTP post method.
         String fullUrl = host + route;
         PostMethod post = new PostMethod(fullUrl);
@@ -454,11 +451,12 @@ public class ASpaceClient {
             e.printStackTrace();
         }
 
+        //TODO -- 5/8/2014 The pause indexer functionality doesn't work correctly so will disable
         // if we running ASpace greater that version 1.0.9 then pausing if indexer
         // is supported
-        if(info.contains("{") && info.contains("}")) {
+        /*if(info.contains("{") && info.contains("}")) {
             doPause = true;
-        }
+        }*/
 
         return info;
     }

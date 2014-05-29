@@ -6,6 +6,7 @@ import org.archiviststoolkit.plugin.utils.aspace.ASpaceCopyUtil;
 import org.hibernate.Session;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Properties;
 
@@ -36,11 +37,27 @@ public class dbCopyCLI {
 
     private boolean ignoreUnlinkedSubjects = false;
 
+    private boolean copyOnlyResources = false;
+
+    private boolean checkISODates = false;
+
+    private String resourcesToCopy = null;
+
+    private String databaseType = "";
+    private String atUrl = "";
+    private String atUsername = "";
+    private String atPassword = "";
+
     private String aspaceHost = "http://localhost:8089";
-
     private String aspaceAdmin = "admin";
-
     private String aspacePassword = "admin";
+
+    // specify which records to publish
+    private boolean publishNames = false;
+    private boolean publishSubjects = false;
+    private boolean publishAccessions = false;
+    private boolean publishDigitalObjects = false;
+    private boolean publishResources = true;
 
     // this is used to connect to the AT database
     private RemoteDBConnectDialogLight rcd;
@@ -72,7 +89,6 @@ public class dbCopyCLI {
     public dbCopyCLI(Properties properties) throws Exception {
         useTracer = new Boolean(properties.getProperty("useTracer"));
         tracerDatabase = properties.getProperty("tracerDatabase");
-        databaseURLIndex = new Integer(properties.getProperty("databaseURLIndex"));
         clientThreads = new Integer(properties.getProperty("clientThreads"));
         checkRepositoryMismatch = new Boolean(properties.getProperty("checkRepositoryMismatch"));
         continueFromResources = new Boolean(properties.getProperty("continueFromResources"));
@@ -80,6 +96,18 @@ public class dbCopyCLI {
         simulateRESTCalls = new Boolean(properties.getProperty("simulateRESTCalls"));
         ignoreUnlinkedNames = new Boolean(properties.getProperty("ignoreUnlinkedNames"));
         ignoreUnlinkedSubjects = new Boolean(properties.getProperty("ignoreUnlinkedSubjects"));
+        publishNames = new Boolean(properties.getProperty("publishNames"));
+        publishSubjects = new Boolean(properties.getProperty("publishSubjects"));
+        publishAccessions = new Boolean(properties.getProperty("publishAccessions"));
+        publishDigitalObjects = new Boolean(properties.getProperty("publishDigitalObjects"));
+        publishResources = new Boolean(properties.getProperty("publishResources"));
+        copyOnlyResources = new Boolean(properties.getProperty("copyOnlyResources"));
+        checkISODates = new Boolean(properties.getProperty("checkISODates"));
+        resourcesToCopy = properties.getProperty("resourcesToCopy");
+        databaseType = properties.getProperty("databaseType");
+        atUrl = properties.getProperty("atUrl");
+        atUsername = properties.getProperty("atUsername");
+        atPassword = properties.getProperty("atPassword");
         aspaceHost = properties.getProperty("aspaceHost");
         aspaceAdmin = properties.getProperty("aspaceAdmin");
         aspacePassword = properties.getProperty("aspacePassword");
@@ -95,24 +123,21 @@ public class dbCopyCLI {
 
         // see whether to connect to the particular index
         if(useTracer) {
-            String databaseType = "MySQL";
-            String url = "jdbc:mysql://tracerdb.cyo37z0ucix8.us-east-1.rds.amazonaws.com/at" + tracerDatabase;
-            String username = "aspace";
-            String password = "clubfoots37@freakiest";
+            databaseType = "MySQL";
+            atUrl = "jdbc:mysql://tracerdb.cyo37z0ucix8.us-east-1.rds.amazonaws.com/at" + tracerDatabase;
+            atUsername = "aspace";
+            atPassword = "clubfoots37@freakiest";
 
             // see whether we need to connect to the AT sandbox
             if(tracerDatabase.equals("SB")) {
-                url  = "jdbc:mysql://dev.archiviststoolkit.org:3306/AT_SANDBOX2_0";
-                username = "atuser";
-                password = "cr4ckA1t";
+                atUrl  = "jdbc:mysql://dev.archiviststoolkit.org:3306/AT_SANDBOX2_0";
+                atUsername = "atuser";
+                atPassword = "cr4ckA1t";
             }
-
-            rcd.connectToDatabase(databaseType, url, username, password);
-        } else if (databaseURLIndex == -2) {
-            rcd.connectToCurrentDatabase();
-        } else {
-            rcd.connectToDatabase(databaseURLIndex);
         }
+
+        // try connecting to the T database
+        rcd.connectToDatabase(databaseType, atUrl, atUsername, atPassword);
 
         // return the session which maybe null
         return rcd.getSession();
@@ -183,9 +208,19 @@ public class dbCopyCLI {
             // print the connection message
             System.out.println("Starting record copy\n\n");
 
+            // create the hash map use to see if a certain record should be exported automatically
+            HashMap<String, Boolean> publishMap = new HashMap<String, Boolean>();
+            publishMap.put("names", publishNames);
+            publishMap.put("subjects", publishSubjects);
+            publishMap.put("accessions", publishAccessions);
+            publishMap.put("digitalObjects", publishDigitalObjects);
+            publishMap.put("resources", publishResources);
+
             ascopy = new ASpaceCopyUtil(rcd, aspaceHost, aspaceAdmin, aspacePassword);
+            ascopy.setPublishHashMap(publishMap);
             ascopy.setRepositoryMismatchMap(repositoryMismatchMap);
             ascopy.setSimulateRESTCalls(simulateRESTCalls);
+            ascopy.setCheckISODates(checkISODates);
             ascopy.setExtentPortionInParts(false);
             ascopy.setIgnoreUnlinkedRecords(ignoreUnlinkedNames, ignoreUnlinkedSubjects);
 
@@ -207,26 +242,36 @@ public class dbCopyCLI {
             if (continueFromResources && ascopy.uriMapFileExist()) {
                 ascopy.loadURIMaps();
             } else {
-                ascopy.copyLookupList();
-                ascopy.copyRepositoryRecords();
-                ascopy.mapRepositoryGroups();
-                ascopy.copyLocationRecords();
-                ascopy.copyUserRecords();
-                ascopy.copySubjectRecords();
-                ascopy.copyNameRecords();
-                ascopy.copyAccessionRecords();
-                ascopy.copyDigitalObjectRecords();
+                if(!copyOnlyResources) {
+                    ascopy.copyLookupList();
+                    ascopy.copyRepositoryRecords();
+                    ascopy.mapRepositoryGroups();
+                    ascopy.copyLocationRecords();
+                    ascopy.copyUserRecords();
+                    ascopy.copySubjectRecords();
+                    ascopy.copyNameRecords();
+                    ascopy.copyAccessionRecords();
+                    ascopy.copyDigitalObjectRecords();
 
-                // save the record maps for possible future use
-                ascopy.saveURIMaps();
+                    // save the record maps for possible future use
+                    ascopy.saveURIMaps();
+                }
             }
 
-            // get the number of resources to copy here to allow it to be reset while the migration
-            // has been started, but migration of resources has not yet started
-            int resourcesToCopy = 1000000;
+            // set the number of resources to copy
+            int numberOfResourcesToCopy = 1000000;
+
+            // set the resources to copy. Useful for debugging only
+            ascopy.setResourcesToCopyList(getResourcesToCopy());
 
             ascopy.setUseBatchImport(true);
-            ascopy.copyResourceRecords(resourcesToCopy, clientThreads);
+
+            ascopy.copyResourceRecords(numberOfResourcesToCopy, clientThreads);
+
+            // DEBUG code which checks to see that all ISO dates are valid
+            if(checkISODates) {
+                ascopy.checkISODates();
+            }
 
             ascopy.cleanUp();
 
@@ -272,6 +317,19 @@ public class dbCopyCLI {
      */
     public void closeATConnection() {
         rcd.closeSession();
+    }
+
+    private ArrayList<String> getResourcesToCopy() {
+        ArrayList<String> resourcesIDsList = new ArrayList<String>();
+
+        if(resourcesToCopy != null) {
+            String[] sa = resourcesToCopy.split("\\s*,\\s*");
+            for (String id : sa) {
+                resourcesIDsList.add(id);
+            }
+        }
+
+        return resourcesIDsList;
     }
 
     /**
