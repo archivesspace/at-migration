@@ -312,6 +312,7 @@ public class ASpaceMapper {
             contactsJS.put("salutation", salutation);
         }
 
+        //contactsJS.put("publish", publishHashMap.get("names"));
         contactsJS.put("address_1", record.getContactAddress1());
         contactsJS.put("address_2", record.getContactAddress2());
         contactsJS.put("city", record.getContactCity());
@@ -702,10 +703,10 @@ public class ASpaceMapper {
         extentJS.put("container_summary", record.getContainerSummary());
 
         if (record.getExtentNumber() != null) {
-            extentJS.put("number", record.getExtentNumber().toString());
+            extentJS.put("number", removeTrailingZero(record.getExtentNumber()));
             extentJA.put(extentJS);
         } else if(extentJA.length() == 0) { // add a default number
-            extentJS.put("number", "1.0");
+            extentJS.put("number", "0");
             extentJA.put(extentJS);
         }
 
@@ -943,9 +944,10 @@ public class ASpaceMapper {
             }
 
             if(physicalDescription.getExtentNumber() != null) {
-                extentJS.put("number", physicalDescription.getExtentNumber().toString());
+                String number = removeTrailingZero(physicalDescription.getExtentNumber());
+                extentJS.put("number", number);
             } else {
-                extentJS.put("number", "1.0");
+                extentJS.put("number", "1");
             }
 
             extentJS.put("extent_type", enumUtil.getASpaceExtentType(physicalDescription.getExtentType()));
@@ -1055,7 +1057,7 @@ public class ASpaceMapper {
                 JSONObject extentJS = new JSONObject();
 
                 extentJS.put("portion", "whole");
-                extentJS.put("number", deaccession.getExtent().toString());
+                extentJS.put("number", removeTrailingZero(deaccession.getExtent()));
                 extentJS.put("extent_type", enumUtil.getASpaceExtentType(deaccession.getExtentType()));
                 extentJS.put("container_summary", deaccession.getDescription());
 
@@ -1308,7 +1310,7 @@ public class ASpaceMapper {
         extentJS.put("container_summary", record.getContainerSummary());
 
         if (record.getExtentNumber() != null) {
-            extentJS.put("number", record.getExtentNumber().toString());
+            extentJS.put("number", removeTrailingZero(record.getExtentNumber()));
             extentJA.put(extentJS);
         } else if(extentJA.length() == 0) { // add a default number
             extentJS.put("number", "0");
@@ -1430,7 +1432,8 @@ public class ASpaceMapper {
         addExternalId(record, json, "resource_component");
 
         /* Add fields needed for abstract_archival_object.rb */
-        json.put("publish", !record.getInternalOnly());
+        boolean publish = !record.getInternalOnly();
+        json.put("publish", publish);
 
         // check to make sure we have a title
         String title = record.getTitle();
@@ -1486,7 +1489,7 @@ public class ASpaceMapper {
             extentJS.put("portion", "whole");
 
             if(record.getExtentNumber() != null) {
-                extentJS.put("number", record.getExtentNumber().toString());
+                extentJS.put("number", removeTrailingZero(record.getExtentNumber()));
             } else {
                 extentJS.put("number", "0");
             }
@@ -1497,7 +1500,7 @@ public class ASpaceMapper {
         } else if(!record.getContainerSummary().isEmpty()) {
             // some groups only put information in the container summary field
             // so place this has a note
-            addNoteForContainerSummary(notesJA, record.getContainerSummary());
+            addNoteForContainerSummary(notesJA, record.getContainerSummary(), publish);
         }
 
         Set<ArchDescriptionPhysicalDescriptions> physicalDescriptions = record.getPhysicalDesctiptions();
@@ -1696,6 +1699,7 @@ public class ASpaceMapper {
         JSONObject noteJS = new JSONObject();
 
         noteJS.put("jsonmodel_type", "note_bioghist");
+        noteJS.put("publish", publishHashMap.get("names"));
         noteJS.put("label", enumUtil.getASpaceNameDescriptionType(record.getDescriptionType()));
 
         JSONArray subnotesJA = new JSONArray();
@@ -1708,6 +1712,7 @@ public class ASpaceMapper {
         if(record.getCitation() != null && !record.getCitation().isEmpty()) {
             JSONObject citationJS = new JSONObject();
             citationJS.put("jsonmodel_type", "note_citation");
+            citationJS.put("publish", publishHashMap.get("names"));
             JSONArray contentJA = new JSONArray();
             contentJA.put(record.getCitation());
             citationJS.put("content", contentJA);
@@ -1842,6 +1847,7 @@ public class ASpaceMapper {
         // if there is note content add it has a text note
         if(note.getContent() != null && !note.getContent().isEmpty()) {
             JSONObject textNoteJS = new JSONObject();
+            textNoteJS.put("publish", noteJS.get("publish"));
             addTextNote(textNoteJS, note.getContent());
             subnotesJA.put(textNoteJS);
         }
@@ -1849,6 +1855,7 @@ public class ASpaceMapper {
         // add the sub notes now
         for(ArchDescriptionRepeatingData childNote: note.getChildren()) {
             JSONObject subnoteJS = new JSONObject();
+            subnoteJS.put("publish", noteJS.get("publish"));
 
             if(childNote instanceof Bibliography) {
                 addBibliographyNote(subnoteJS, (Bibliography)childNote);
@@ -1870,6 +1877,7 @@ public class ASpaceMapper {
         // if there are no subnotes add a dummy note so record can save
         if(subnotesJA.length() == 0) {
             JSONObject textNoteJS = new JSONObject();
+            textNoteJS.put("publish", noteJS.get("publish"));
             addTextNote(textNoteJS, "No Subnote Content");
             subnotesJA.put(textNoteJS);
         }
@@ -2027,10 +2035,12 @@ public class ASpaceMapper {
      * @param notesJA
      * @param containerSummary
      */
-    private void addNoteForContainerSummary(JSONArray notesJA, String containerSummary) throws Exception {
+    private void addNoteForContainerSummary(JSONArray notesJA, String containerSummary, boolean publish) throws Exception {
         JSONObject noteJS = new JSONObject();
+        noteJS.put("publish", publish);
 
         noteJS.put("label", "Container Summary");
+
 
         JSONArray contentJA = new JSONArray();
         contentJA.put(containerSummary);
@@ -2664,6 +2674,22 @@ public class ASpaceMapper {
     }
 
     /**
+     * Method to remove trailing zero from a double
+     *
+     * @param doubleNumber
+     * @return
+     */
+    public String removeTrailingZero(Double doubleNumber) {
+        String number = doubleNumber.toString();
+
+        if(number.endsWith(".0")) {
+            number = number.replace(".0", "");
+        }
+
+        return number;
+    }
+
+    /**
      * Method to print messages to the user
      * @param message
      */
@@ -2678,6 +2704,13 @@ public class ASpaceMapper {
      */
     public static void main(String[] args) {
         ASpaceMapper mapper = new ASpaceMapper();
-        System.out.println(mapper.normalizeISODate("19990304", "Test"));
+        Double number = new Double("1.00");
+        System.out.println("Number " + number + ", " + mapper.removeTrailingZero(number));
+
+        number = new Double("10.5");
+        System.out.println(mapper.removeTrailingZero(number));
+
+        number = new Double("0.5");
+        System.out.println(mapper.removeTrailingZero(number));
     }
 }

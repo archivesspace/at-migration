@@ -4,7 +4,7 @@
 # outside of the AT.  It assumes the plugin zip file, "scriptAT.zip", has
 # been installed in the ATs' plugin directory.  Also, a file called dbcopy.properties
 # must be present in the same directory as this script. This file stores all
-# connection information for the AT database, and ASpace instances.
+# connection information for the AT database and ASpace instances.
 #
 # On Linux System without X11 display, then Xvbf needs to used by doing the following
 #

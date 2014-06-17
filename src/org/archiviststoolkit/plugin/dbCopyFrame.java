@@ -33,7 +33,7 @@ import java.util.HashMap;
  * @author Nathan Stevens
  */
 public class dbCopyFrame extends JFrame {
-    public static final String VERSION = "Archives Space Data Migrator v1.0.9.1 (05-29-2014)";
+    public static final String VERSION = "Archives Space Data Migrator v1.0.9.2 (06-16-2014)";
 
     // The application when running within the AT
     private ApplicationFrame mainFrame = null;
@@ -103,7 +103,7 @@ public class dbCopyFrame extends JFrame {
         sourceLabel.setVisible(false);
         sourceTextField.setVisible(false);
         //threadLabel.setVisible(false);
-        //threadsTextField.setVisible(false);
+        threadsTextField.setEnabled(false);
         //repositoryCheckButton.setVisible(false);
         //copyRecordCheckBox.setVisible(false);
         //viewRepositoryCheckReportButton.setVisible(false);
