@@ -1259,7 +1259,7 @@ public class ASpaceMapper {
             fileVersionJS.put("file_uri", fileVersion.getUri());
             fileVersionJS.put("use_statement", enumUtil.getASpaceFileVersionUseStatement(fileVersion.getUseStatement()));
             fileVersionJS.put("xlink_actuate_attribute", fileVersion.getEadDaoActuate());
-            fileVersionJS.put("xlink_show_attribute", fileVersion.getEadDaoShow());
+            fileVersionJS.put("xlink_show_attribute", fileVersion.getEadDaoShow().toLowerCase());
 
             fileVersionsJA.put(fileVersionJS);
         }
@@ -1372,9 +1372,13 @@ public class ASpaceMapper {
             json.put("other_level", fixEmptyString(record.getOtherLevel()));
         }
 
-        //json.put("restrictions", record.getRestrictionsApply());
+        if(record.getRestrictionsApply() != null && record.getRestrictionsApply()) {
+            json.put("restrictions", record.getRestrictionsApply());
+        }
+
         json.put("repository_processing_note", record.getRepositoryProcessingNote());
         json.put("container_summary", record.getContainerSummary());
+
 
         // add fields for EAD
         json.put("ead_id", getUniqueID("ead", record.getEadFaUniqueIdentifier(), null));
@@ -1475,6 +1479,11 @@ public class ASpaceMapper {
         }
 
         json.put("position", record.getSequenceNumber());
+
+        // add restrictions apply
+        if(record.getRestrictionsApply() != null && record.getRestrictionsApply()) {
+            json.put("restrictions_apply", record.getRestrictionsApply());
+        }
 
         // add the notes
         JSONArray notesJA = new JSONArray();
@@ -1588,7 +1597,7 @@ public class ASpaceMapper {
 
             if(bulkDateBegin != null) {
                 dateJS = new JSONObject();
-                dateJS.put("date_type", "inclusive");
+                dateJS.put("date_type", "bulk");
                 dateJS.put("label", dateLabel);
 
                 dateJS.put("begin", bulkDateBegin.toString());
@@ -2238,7 +2247,11 @@ public class ASpaceMapper {
             String code = lookupListItem.getCode();
 
             if(!enumUtil.mapsToASpaceEnumValue(enumListName, atValue, code)) {
-                valuesJA.put(atValue.toLowerCase());
+                if(enumListName.equals("subject_source")) {
+                    valuesJA.put(code);
+                } else {
+                    valuesJA.put(atValue.toLowerCase());
+                }
             }
         }
 

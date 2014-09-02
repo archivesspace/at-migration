@@ -594,12 +594,10 @@ public class ASpaceEnumUtil {
      * @return
      */
     public String getASpaceLinkedAgentRelator(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "";
-
         if(nameLinkCreatorCodes.containsKey(atValue)) {
             return nameLinkCreatorCodes.get(atValue);
         } else {
-            return UNMAPPED;
+            return atValue.trim();
         }
     }
 
@@ -1202,7 +1200,7 @@ public class ASpaceEnumUtil {
     public String getASpaceInstanceType(String atValue) {
         if(atValue == null || atValue.isEmpty()) return "";
 
-        atValue = atValue.toLowerCase();
+        atValue = atValue.toLowerCase().trim();
 
         if(atValue.contains("audio")) {
             return ASpaceInstanceTypes[0];
@@ -1262,7 +1260,7 @@ public class ASpaceEnumUtil {
     public String getASpaceInstanceContainerType(String atValue) {
         if(atValue == null || atValue.isEmpty()) return "item";
 
-        atValue = atValue.toLowerCase();
+        atValue = atValue.toLowerCase().trim();
 
         if(atValue.equals("bin") && returnATValue) {
             return atValue;

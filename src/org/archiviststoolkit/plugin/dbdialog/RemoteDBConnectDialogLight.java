@@ -690,10 +690,15 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
                     String code = lookupListItem.getCode();
 
                     if(addCodeToKey) {
-                         key  = lookupListItem.getListItem() + " (" + code + ")";
-                    }
+                        // add using key with no code as a work around for people ewho back loaded records into the AT
+                        itemsAndCodes.put(key, code);
 
-                    itemsAndCodes.put(key, code);
+                        // now add using key which contains the code
+                        key  = lookupListItem.getListItem() + " (" + code + ")";
+                        itemsAndCodes.put(key, code);
+                    } else {
+                        itemsAndCodes.put(key, code);
+                    }
                 }
 
                 // break out of this loop now
