@@ -51,7 +51,7 @@
             <string>javax.swing.JLabel</string> 
             <void method="setProperty"> 
              <string>text</string> 
-             <string>  Archives Space Version: v1.0.9</string> 
+             <string>  Archives Space Version: v1.0.9 - v1.1.x</string> 
             </void> 
             <void method="setProperty"> 
              <string>horizontalTextPosition</string> 
@@ -1091,13 +1091,13 @@
           </void> 
           <void method="add"> 
            <object class="com.jformdesigner.model.FormComponent"> 
-            <string>javax.swing.JLabel</string> 
+            <string>javax.swing.JTextField</string> 
             <void method="setProperty"> 
              <string>text</string> 
-             <string>Resources To Copy </string> 
+             <string>-refid_unique</string> 
             </void> 
             <void property="name"> 
-             <string>resourcesToCopyLabel</string> 
+             <string>resourcesToCopyTextField</string> 
             </void> 
            </object> 
            <object class="com.jformdesigner.model.FormLayoutConstraints"> 
@@ -1112,30 +1112,7 @@
             </void> 
             <void method="setProperty"> 
              <string>gridWidth</string> 
-             <int>5</int> 
-            </void> 
-           </object> 
-          </void> 
-          <void method="add"> 
-           <object class="com.jformdesigner.model.FormComponent"> 
-            <string>javax.swing.JTextField</string> 
-            <void property="name"> 
-             <string>resourcesToCopyTextField</string> 
-            </void> 
-           </object> 
-           <object class="com.jformdesigner.model.FormLayoutConstraints"> 
-            <class>com.jgoodies.forms.layout.CellConstraints</class> 
-            <void method="setProperty"> 
-             <string>gridX</string> 
-             <int>7</int> 
-            </void> 
-            <void method="setProperty"> 
-             <string>gridY</string> 
-             <int>21</int> 
-            </void> 
-            <void method="setProperty"> 
-             <string>gridWidth</string> 
-             <int>7</int> 
+             <int>11</int> 
             </void> 
            </object> 
           </void> 

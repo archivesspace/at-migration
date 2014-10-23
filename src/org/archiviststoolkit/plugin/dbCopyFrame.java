@@ -33,7 +33,7 @@ import java.util.HashMap;
  * @author Nathan Stevens
  */
 public class dbCopyFrame extends JFrame {
-    public static final String VERSION = "Archives Space Data Migrator v1.0.9.4 (08-25-2014)";
+    public static final String VERSION = "Archives Space Data Migrator v1.1.0 (10-21-2014)";
 
     // The application when running within the AT
     private ApplicationFrame mainFrame = null;
@@ -123,8 +123,7 @@ public class dbCopyFrame extends JFrame {
         numResourceToCopyLabel.setVisible(false);
         numResourceToCopyTextField.setVisible(false);
         deleteResourcesCheckBox.setVisible(false);
-        resourcesToCopyLabel.setVisible(false);
-        resourcesToCopyTextField.setVisible(false);
+        //resourcesToCopyTextField.setVisible(false);
         recordURIComboBox.setVisible(false);
         paramsLabel.setVisible(false);
         paramsTextField.setVisible(false);
@@ -352,10 +351,17 @@ public class dbCopyFrame extends JFrame {
                         if(!ids.isEmpty()) {
                             String[] sa = ids.split("\\s*,\\s*");
                             for(String id: sa) {
-                                resourcesIDsList.add(id);
+                                // check to see if we not dealing with a special command
+                                if(!id.startsWith("-")) {
+                                    resourcesIDsList.add(id);
+                                } else {
+                                    processSpecialOption(ascopy, id);
+                                }
                             }
 
-                            resourcesToCopy = resourcesIDsList.size();
+                            if(!resourcesIDsList.isEmpty()) {
+                                resourcesToCopy = resourcesIDsList.size();
+                            }
                         }
                     } catch (NumberFormatException nfe) { }
 
@@ -391,6 +397,14 @@ public class dbCopyFrame extends JFrame {
         });
 
         performer.start();
+    }
+
+    /**
+     * Method to process special commands access
+     */
+    private void processSpecialOption(ASpaceCopyUtil ascopy, String option) {
+        // only command we support for now is whether to make the refid unique or not
+        ascopy.setRefIdOption(option);
     }
 
     /**
@@ -743,7 +757,6 @@ public class dbCopyFrame extends JFrame {
         numResourceToCopyLabel = new JLabel();
         numResourceToCopyTextField = new JTextField();
         deleteResourcesCheckBox = new JCheckBox();
-        resourcesToCopyLabel = new JLabel();
         resourcesToCopyTextField = new JTextField();
         outputConsoleLabel = new JLabel();
         copyProgressBar = new JProgressBar();
@@ -824,7 +837,7 @@ public class dbCopyFrame extends JFrame {
                     }));
 
                 //---- apiLabel ----
-                apiLabel.setText("  Archives Space Version: v1.0.9");
+                apiLabel.setText("  Archives Space Version: v1.0.9 - v1.1.x");
                 apiLabel.setHorizontalTextPosition(SwingConstants.CENTER);
                 contentPanel.add(apiLabel, cc.xy(1, 1));
 
@@ -1039,10 +1052,9 @@ public class dbCopyFrame extends JFrame {
                 deleteResourcesCheckBox.setText("Delete Previously Saved Resources");
                 contentPanel.add(deleteResourcesCheckBox, cc.xy(1, 21));
 
-                //---- resourcesToCopyLabel ----
-                resourcesToCopyLabel.setText("Resources To Copy ");
-                contentPanel.add(resourcesToCopyLabel, cc.xywh(3, 21, 5, 1));
-                contentPanel.add(resourcesToCopyTextField, cc.xywh(7, 21, 7, 1));
+                //---- resourcesToCopyTextField ----
+                resourcesToCopyTextField.setText("-refid_unique");
+                contentPanel.add(resourcesToCopyTextField, cc.xywh(3, 21, 11, 1));
 
                 //---- outputConsoleLabel ----
                 outputConsoleLabel.setText("Output Console:");
@@ -1229,7 +1241,6 @@ public class dbCopyFrame extends JFrame {
     private JLabel numResourceToCopyLabel;
     private JTextField numResourceToCopyTextField;
     private JCheckBox deleteResourcesCheckBox;
-    private JLabel resourcesToCopyLabel;
     private JTextField resourcesToCopyTextField;
     private JLabel outputConsoleLabel;
     private JProgressBar copyProgressBar;

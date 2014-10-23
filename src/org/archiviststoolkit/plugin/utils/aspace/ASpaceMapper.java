@@ -242,10 +242,13 @@ public class ASpaceMapper {
         json.put("publish", publishHashMap.get("subjects"));
 
         // set the subject source
-        String source = record.getSubjectSource();
-        if(!source.isEmpty()) {
-            source = enumUtil.getASpaceSubjectSource(record.getSubjectSource());
+        String source = record.getSubjectSource().trim();
+        source = enumUtil.getASpaceSubjectSource(source);
+        if(source != null && !source.isEmpty()) {
             json.put("source", source);
+        } else {
+            // source is now required in ASpace v1.1.0
+            json.put("source", "local");
         }
 
         // set the subject terms and term type
@@ -1463,8 +1466,17 @@ public class ASpaceMapper {
 
         /* add field required for archival_object.rb */
 
-        // make the ref id unique otherwise ASpace complains
-        String refId = record.getPersistentId() + "_" + randomString.nextString();
+        // see if to make the ref id unique, leave blank, or just use the original (default)
+        String refId;
+
+        if(aspaceCopyUtil.getRefIdOption().equalsIgnoreCase(ASpaceCopyUtil.REFID_UNIQUE)) {
+            refId = record.getPersistentId() + "_" + randomString.nextString();
+        } else if(aspaceCopyUtil.getRefIdOption().equalsIgnoreCase(ASpaceCopyUtil.REFID_NONE)) {
+            refId = "";
+        } else {
+            refId = record.getPersistentId();
+        }
+
         json.put("ref_id", refId);
 
         String level = enumUtil.getASpaceArchivalObjectLevel(record.getLevel());
@@ -1814,7 +1826,12 @@ public class ASpaceMapper {
             JSONObject noteJS = new JSONObject();
 
             noteJS.put("label", note.getTitle());
-            noteJS.put("publish", !note.getInternalOnly());
+
+            if(note.getInternalOnly() != null) {
+                noteJS.put("publish", !note.getInternalOnly());
+            } else {
+                noteJS.put("publish", true);
+            }
 
             // se if to add any content
             if(note.getContent() != null && !note.getContent().isEmpty()) {
@@ -2308,8 +2325,11 @@ public class ASpaceMapper {
         // check to see if its a proper uri format
         if(lowercaseUrl.contains("://")) {
             return url;
-        } else if(lowercaseUrl.startsWith("/") || lowercaseUrl.contains(":\\")) {
+        } else if(lowercaseUrl.startsWith("/")) {
             url = "file://" + url;
+            return url;
+        } else if(lowercaseUrl.contains(":\\")) {
+            url = "file:///" + url;
             return url;
         } else {
             url = "http://" + url;

@@ -168,6 +168,13 @@ public class ASpaceCopyUtil {
     // A string builder object to track errors
     private StringBuilder errorBuffer = new StringBuilder();
 
+    // String which specifies how ref_ids are to be handled. The options are below
+    public static final String REFID_ORIGINAL = "-refid_original";
+    public static final String REFID_UNIQUE = "-refid_unique";
+    public static final String REFID_NONE = "-refid_none";
+
+    private String refIdOption = REFID_UNIQUE;
+
     /**
      * The main constructor, used when running as a stand alone application
      *
@@ -246,6 +253,23 @@ public class ASpaceCopyUtil {
      */
     public void setResetPassword(String resetPassword) {
         this.resetPassword = resetPassword;
+    }
+
+    /**
+     * Method to set the ref id option
+     * @param option
+     */
+    public void setRefIdOption(String option) {
+        refIdOption = option;
+    }
+
+    /**
+     * Method to return the ref id options
+     *
+     * @return
+     */
+    public String getRefIdOption() {
+        return refIdOption;
     }
 
     /**
