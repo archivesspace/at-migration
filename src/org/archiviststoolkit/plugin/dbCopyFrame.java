@@ -33,7 +33,7 @@ import java.util.HashMap;
  * @author Nathan Stevens
  */
 public class dbCopyFrame extends JFrame {
-    public static final String VERSION = "Archives Space Data Migrator v1.1.0 (10-21-2014)";
+    public static final String VERSION = "Archives Space Data Migrator v1.2.0 (04-02-2015)";
 
     // The application when running within the AT
     private ApplicationFrame mainFrame = null;
@@ -149,9 +149,10 @@ public class dbCopyFrame extends JFrame {
      * Method to copy data from AT to archive space. NO longer Used
      */
     private void CopyToASpaceButtonActionPerformed() {
-        // first check that the user is running update 15
-        if (mainFrame != null && !mainFrame.getAtVersionNumber().contains("15")) {
-            consoleTextArea.setText("You need AT version 2.0 Update 15 for data migration ...");
+        // first check that the user is running update 15, or greater
+        if (mainFrame != null && !mainFrame.getAtVersionNumber().contains("15") &&
+                !mainFrame.getAtVersionNumber().contains("16")) {
+            consoleTextArea.setText("You need AT version 2.0 Update 15, or greater for data migration ...");
             return;
         }
 
@@ -199,7 +200,7 @@ public class dbCopyFrame extends JFrame {
             String databaseName = tracerComboBox.getSelectedItem().toString();
 
             String databaseType = "MySQL";
-            String url = "jdbc:mysql://tracerdb.cyo37z0ucix8.us-east-1.rds.amazonaws.com/at" + databaseName;
+            String url = "jdbc:mysql://test.archivesspace.org/at" + databaseName;
             String username = "aspace";
             String password = "clubfoots37@freakiest";
 
@@ -303,6 +304,24 @@ public class dbCopyFrame extends JFrame {
                         consoleTextArea.append("Administrator authenticated ...\n");
                     }
 
+                    // process special options here. This could be done better but its the
+                    // quickest way to do it for now
+                    String ids = resourcesToCopyTextField.getText().trim();
+                    ArrayList<String> resourcesIDsList = new ArrayList<String>();
+
+                    if (!ids.isEmpty()) {
+                        String[] sa = ids.split("\\s*,\\s*");
+                        for (String id : sa) {
+                            // check to see if we are dealing with a special command
+                            // or an id to copy
+                            if (id.startsWith("-")) {
+                                processSpecialOption(ascopy, id);
+                            } else {
+                                resourcesIDsList.add(id);
+                            }
+                        }
+                    }
+
                     // first load the notes etc types and resource from the destination database
                     if(!copyStopped) ascopy.loadRepositories();
 
@@ -332,8 +351,6 @@ public class dbCopyFrame extends JFrame {
                     int resourcesToCopy = 1000000;
                     int threads = 1;
 
-                    ArrayList<String> resourcesIDsList = new ArrayList<String>();
-
                     try {
                         boolean useBatchImport = batchImportCheckBox.isSelected();
                         boolean deleteSavedResources = deleteResourcesCheckBox.isSelected();
@@ -344,24 +361,10 @@ public class dbCopyFrame extends JFrame {
                         threads = Integer.parseInt(threadsTextField.getText());
 
                         // get the number of resource to copy
-                        resourcesToCopy = Integer.parseInt(numResourceToCopyTextField.getText());
-
-                        // get the resource ids of resources to copy
-                        String ids = resourcesToCopyTextField.getText().trim();
-                        if(!ids.isEmpty()) {
-                            String[] sa = ids.split("\\s*,\\s*");
-                            for(String id: sa) {
-                                // check to see if we not dealing with a special command
-                                if(!id.startsWith("-")) {
-                                    resourcesIDsList.add(id);
-                                } else {
-                                    processSpecialOption(ascopy, id);
-                                }
-                            }
-
-                            if(!resourcesIDsList.isEmpty()) {
-                                resourcesToCopy = resourcesIDsList.size();
-                            }
+                        if(resourcesIDsList.isEmpty()) {
+                            resourcesToCopy = Integer.parseInt(numResourceToCopyTextField.getText());
+                        } else {
+                            resourcesToCopy = resourcesIDsList.size();
                         }
                     } catch (NumberFormatException nfe) { }
 
@@ -400,11 +403,14 @@ public class dbCopyFrame extends JFrame {
     }
 
     /**
-     * Method to process special commands access
+     * Method to process special commands
      */
     private void processSpecialOption(ASpaceCopyUtil ascopy, String option) {
-        // only command we support for now is whether to make the refid unique or not
-        ascopy.setRefIdOption(option);
+        if(option.contains("-refid_")) {
+            ascopy.setRefIdOption(option);
+        } else if(option.contains("-term_")) {
+            ascopy.setTermTypeOption(option);
+        }
     }
 
     /**
@@ -575,7 +581,7 @@ public class dbCopyFrame extends JFrame {
         }
 
         // if we running in standalone mode in pre update 15
-        if (mainFrame == null || mainFrame.getAtVersionNumber().contains("15")) {
+        if (mainFrame == null || mainFrame.getAtVersionNumber().contains("15") || mainFrame.getAtVersionNumber().contains("16")) {
             if (cvd == null) {
                 cvd = new CodeViewerDialog(this, SyntaxConstants.SYNTAX_STYLE_JAVA, script, true, false);
             }
@@ -666,7 +672,7 @@ public class dbCopyFrame extends JFrame {
             }
 
             // see whether to display code editor window
-            if (mainFrame == null || mainFrame.getAtVersionNumber().contains("15")) {
+            if (mainFrame == null || mainFrame.getAtVersionNumber().contains("15") || mainFrame.getAtVersionNumber().contains("16")) {
                 CodeViewerDialog codeViewerDialog = new CodeViewerDialog(this, SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT, "", true, true);
                 codeViewerDialog.setTitle("Record Unit Test");
                 codeViewerDialog.setASpaceClient(aspaceClient);
@@ -837,7 +843,7 @@ public class dbCopyFrame extends JFrame {
                     }));
 
                 //---- apiLabel ----
-                apiLabel.setText("  Archives Space Version: v1.0.9 - v1.1.x");
+                apiLabel.setText("  Archives Space Version: v1.0.9 - v1.2.x");
                 apiLabel.setHorizontalTextPosition(SwingConstants.CENTER);
                 contentPanel.add(apiLabel, cc.xy(1, 1));
 
@@ -1053,7 +1059,7 @@ public class dbCopyFrame extends JFrame {
                 contentPanel.add(deleteResourcesCheckBox, cc.xy(1, 21));
 
                 //---- resourcesToCopyTextField ----
-                resourcesToCopyTextField.setText("-refid_unique");
+                resourcesToCopyTextField.setText("-refid_unique, -term_default");
                 contentPanel.add(resourcesToCopyTextField, cc.xywh(3, 21, 11, 1));
 
                 //---- outputConsoleLabel ----

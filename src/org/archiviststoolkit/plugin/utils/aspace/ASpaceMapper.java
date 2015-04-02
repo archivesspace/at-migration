@@ -251,6 +251,9 @@ public class ASpaceMapper {
             json.put("source", "local");
         }
 
+        // see if to define term type as untyped
+        boolean isDefault = aspaceCopyUtil.isTermTypeDefault();
+
         // set the subject terms and term type
         String terms = record.getSubjectTerm();
         String termTypeAT = record.getSubjectTermType();
@@ -269,11 +272,16 @@ public class ASpaceMapper {
         String[] sa = terms.split("\\s*--\\s*");
         JSONArray termsJA = new JSONArray();
 
-        for(String term: sa) {
-            JSONObject termJS = new JSONObject();
+        for(int i = 0; i < sa.length; i++) {
+            // check to see if to mark term after the first one as untyped
+            if(i > 0 && !isDefault) {
+                termType = "untyped";
+            }
 
+            String term = sa[i];
+            JSONObject termJS = new JSONObject();
             termJS.put("term", term);
-            termJS.put("term_type",termType);
+            termJS.put("term_type", termType);
             termJS.put("vocabulary", vocabularyURI);
 
             termsJA.put(termJS);
@@ -968,7 +976,7 @@ public class ASpaceMapper {
      */
     public void convertArchDescriptionDates(JSONArray dateJA, Set<ArchDescriptionDates> archDescriptionDates,
                                             String recordIdentifier) throws JSONException {
-        if(archDescriptionDates == null && archDescriptionDates.size() == 0) return;
+        if(archDescriptionDates == null || archDescriptionDates.size() == 0) return;
 
         // TODO 12/10/2012 Archivists needs to map this
         for (ArchDescriptionDates archDescriptionDate: archDescriptionDates) {

@@ -172,8 +172,12 @@ public class ASpaceCopyUtil {
     public static final String REFID_ORIGINAL = "-refid_original";
     public static final String REFID_UNIQUE = "-refid_unique";
     public static final String REFID_NONE = "-refid_none";
-
     private String refIdOption = REFID_UNIQUE;
+
+    // String which specifies how to handle the default term type
+    public static final String TERM_UNTYPED = "-term_untyped";
+    public static final String TERM_DEFAULT = "-term_default";
+    private String termTypeOption = TERM_DEFAULT;
 
     /**
      * The main constructor, used when running as a stand alone application
@@ -270,6 +274,37 @@ public class ASpaceCopyUtil {
      */
     public String getRefIdOption() {
         return refIdOption;
+    }
+
+    /**
+     * Method to set the term type option
+     *
+     * @param option
+     */
+    public void setTermTypeOption(String option) {
+        termTypeOption = option;
+    }
+
+    /**
+     * Method to return the term type option
+     *
+     * @return
+     */
+    public String getTermType() {
+        if (termTypeOption.equals(TERM_DEFAULT)) {
+            return "genre_form";
+        } else {
+            return termTypeOption.replace("-term_", "");
+        }
+    }
+
+    /**
+     * Method to see if to mark a term type as untyped
+     *
+     * @return
+     */
+    public boolean isTermTypeDefault() {
+        return termTypeOption.equals(ASpaceCopyUtil.TERM_DEFAULT);
     }
 
     /**
@@ -1432,11 +1467,14 @@ public class ASpaceCopyUtil {
 
                 // add the name form as a term
                 if(!aname.getForm().isEmpty()) {
+                    // get the term type
+                    String termType = getTermType();
+
                     JSONArray termsJA = new JSONArray();
 
                     JSONObject termJS = new JSONObject();
                     termJS.put("term", aname.getForm());
-                    termJS.put("term_type", "genre_form");
+                    termJS.put("term_type", termType);
                     termJS.put("vocabulary", mapper.vocabularyURI);
 
                     termsJA.put(termJS);
@@ -2370,6 +2408,4 @@ public class ASpaceCopyUtil {
     public void checkISODates() {
         mapper.checkISODates();
     }
-
-
 }
