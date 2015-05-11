@@ -236,6 +236,24 @@ public class ASpaceClient {
                 }
 
                 if (debug) System.out.println(response.toString(2));
+            } else if (statusCode == HttpStatus.SC_BAD_REQUEST && responseBody.contains("\"conflicting_record\":[\"")) {
+                // ArchivesSpace will send back a "Bad Request" response if you
+                // try to create a subject or agent that already exists.  In the
+                // JSON response, it also gives the URI of the record that
+                // caused the conflict.
+                //
+                // Return the ID of the conflicting record to re-use that
+                // record.
+
+                JSONObject response = new JSONObject(responseBody);
+                JSONArray conflictingRecords = response.getJSONObject("error").getJSONArray("conflicting_record");
+
+                String conflictingUri = conflictingRecords.getString(0);
+                id = conflictingUri.substring(conflictingUri.lastIndexOf(" ") + 1);
+
+                errorBuffer.append("Endpoint: ").append(post.getURI()).append("\n").
+                    append("AT Identifier:").append(atId).append("\n").
+                    append("Re-using existing ASpace record:").append(conflictingUri).append("\n");
             } else {
                 // if it a 500 error the ASpace then we may need to add the JSON text
                 if(statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR) {
