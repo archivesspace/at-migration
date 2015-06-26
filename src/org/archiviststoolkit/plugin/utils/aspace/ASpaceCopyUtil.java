@@ -25,6 +25,8 @@ import java.util.Set;
  * Utility class for copying data from the AT to Archive Space
  */
 public class ASpaceCopyUtil {
+    public static final String SUPPORTED_ASPACE_VERSION = "v1.3";
+
     // used to get session from the source and destination databases
     private RemoteDBConnectDialogLight sourceRCD;
 
@@ -33,6 +35,7 @@ public class ASpaceCopyUtil {
 
     // The language codes needed for data mapping
     private HashMap<String, String> languageCodes;
+
     private HashMap<String, String> nameLinkCreatorCodes;
 
     // String to indicate when no ids where return from aspace backend
@@ -49,6 +52,8 @@ public class ASpaceCopyUtil {
 
     // used to store information about the archives space backend
     private String aspaceInformation = "Simulator";
+
+    private String aspaceVersion = "";
 
     // hashmap that maps repository from old database with copy in new database
     private HashMap<String, String> repositoryURIMap = new HashMap<String, String>();
@@ -346,10 +351,27 @@ public class ASpaceCopyUtil {
 
         if(connected) {
             aspaceInformation = aspaceClient.getArchivesSpaceInformation();
-            aspaceClient.pauseIndexer();
+            setASpaceVersion();
         }
 
         return connected;
+    }
+
+    /**
+     * Method to extract the aspace version from the information return from the backend
+     */
+    private void setASpaceVersion() {
+        try {
+            JSONObject infoJS = new JSONObject(aspaceInformation);
+            aspaceVersion = infoJS.getString("archivesSpaceVersion");
+        } catch (Exception e) { }
+    }
+
+    /**
+     * Method to return the aspace version
+     */
+    public String getASpaceVersion() {
+        return aspaceVersion;
     }
 
     /**

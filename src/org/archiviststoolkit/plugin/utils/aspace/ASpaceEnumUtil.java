@@ -158,7 +158,9 @@ public class ASpaceEnumUtil {
                 "lcsh",     // 3
                 "local",    // 4
                 "mesh",     // 5
-                "gmgpc"     // 6
+                "gmgpc",    // 6
+                "georeft",  // 7
+                "dot"       // 8
         };
     }
 
@@ -175,12 +177,12 @@ public class ASpaceEnumUtil {
 
         if(atValue.contains("art & architecture thesaurus")) {
             return ASpaceSubjectSources[0];
-        } else if (atValue.contains("dictionary of occupational titles") && returnATValue) {
-            return atValue;
+        } else if (atValue.contains("dictionary of occupational titles")) {
+            return ASpaceSubjectSources[8];
         } else if (atValue.contains("genre terms: a thesaurus for use in rare book")) {
             return ASpaceSubjectSources[1];
-        } else if (atValue.contains("georef thesaurus") && returnATValue) {
-            return atValue;
+        } else if (atValue.contains("georef thesaurus")) {
+            return ASpaceSubjectSources[7];
         } else if (atValue.contains("getty thesaurus of geographic names")) {
             return ASpaceSubjectSources[2];
         } else if (atValue.contains("library of congress subject headings")) {
@@ -1258,7 +1260,9 @@ public class ASpaceEnumUtil {
      * @return
      */
     public String getASpaceInstanceContainerType(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "item";
+        if(atValue == null || atValue.trim().isEmpty()) {
+            return "item";
+        }
 
         atValue = atValue.toLowerCase().trim();
 

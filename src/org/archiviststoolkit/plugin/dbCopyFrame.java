@@ -33,7 +33,7 @@ import java.util.HashMap;
  * @author Nathan Stevens
  */
 public class dbCopyFrame extends JFrame {
-    public static final String VERSION = "Archives Space Data Migrator v1.2.0 (04-02-2015)";
+    public static final String VERSION = "Archives Space Data Migrator v1.3.0 (06-15-2015)";
 
     // The application when running within the AT
     private ApplicationFrame mainFrame = null;
@@ -74,6 +74,7 @@ public class dbCopyFrame extends JFrame {
     // running in standalone mode
     public dbCopyFrame(boolean basic) {
         initComponents();
+
         setTitle(VERSION);
 
         if(basic) {
@@ -85,6 +86,7 @@ public class dbCopyFrame extends JFrame {
     public dbCopyFrame(ApplicationFrame mainFrame, boolean basic) {
         this.mainFrame = mainFrame;
         initComponents();
+
         setTitle(VERSION);
 
         sourceTextField.setText("-2");
@@ -302,6 +304,18 @@ public class dbCopyFrame extends JFrame {
                         return;
                     } else {
                         consoleTextArea.append("Administrator authenticated ...\n");
+                    }
+
+                    // check the current aspace version to make sure
+                    String aspaceVersion = ascopy.getASpaceVersion();
+
+                    if(!aspaceVersion.isEmpty() && !aspaceVersion.contains(ASpaceCopyUtil.SUPPORTED_ASPACE_VERSION)) {
+                        String message =  "Unsupported Archivesspace Version\nSupport Version: " +
+                                ASpaceCopyUtil.SUPPORTED_ASPACE_VERSION + " ...\n";
+
+                        consoleTextArea.append(message);
+                        reEnableCopyButtons();
+                        return;
                     }
 
                     // process special options here. This could be done better but its the
@@ -843,7 +857,7 @@ public class dbCopyFrame extends JFrame {
                     }));
 
                 //---- apiLabel ----
-                apiLabel.setText("  Archives Space Version: v1.0.9 - v1.2.x");
+                apiLabel.setText("  Archives Space Version: v1.3.0");
                 apiLabel.setHorizontalTextPosition(SwingConstants.CENTER);
                 contentPanel.add(apiLabel, cc.xy(1, 1));
 

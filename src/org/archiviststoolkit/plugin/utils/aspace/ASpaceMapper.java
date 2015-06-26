@@ -330,9 +330,10 @@ public class ASpaceMapper {
         contactsJS.put("region", record.getContactRegion());
         contactsJS.put("country", record.getContactCountry());
         contactsJS.put("post_code", record.getContactMailCode());
-        contactsJS.put("telephone", record.getContactPhone());
-        contactsJS.put("fax", record.getContactFax());
         contactsJS.put("email", record.getContactEmail());
+
+        // add the array holding the phone and fax numbers
+        addPhoneNumbers(contactsJS, record.getContactPhone(), record.getContactFax());
 
         // add the contact notes if any. All notes will be concatenated
         addNote(contactsJS, record.getContactNotes());
@@ -524,9 +525,10 @@ public class ASpaceMapper {
         contactsJS.put("country", country.trim());
 
         contactsJS.put("post_code", repository.getMailCode());
-        contactsJS.put("telephone", repository.getTelephone());
-        contactsJS.put("fax", repository.getFax());
         contactsJS.put("email", repository.getEmail());
+
+        // add the array holding the phone and fax numbers
+        addPhoneNumbers(contactsJS, repository.getTelephone(), repository.getFax());
 
         contactsJA.put(contactsJS);
         agentJS.put("agent_contacts", contactsJA);
@@ -543,6 +545,33 @@ public class ASpaceMapper {
         agentJS.put("names", namesJA);
 
         return agentJS.toString();
+    }
+
+    /**
+     * Method to add the telephone and fax numbers to an agent contact information
+     *
+     * @param contactsJS
+     * @param telephone
+     * @param fax
+     */
+    private void addPhoneNumbers(JSONObject contactsJS, String telephone, String fax) throws JSONException {
+        JSONArray telephonesJA = new JSONArray();
+
+        if(telephone != null && !telephone.isEmpty()) {
+            JSONObject phoneJS = new JSONObject();
+            phoneJS.put("number", telephone);
+            phoneJS.put("number_type", "business");
+            telephonesJA.put(phoneJS);
+        }
+
+        if (fax != null && !fax.isEmpty()) {
+            JSONObject phoneJS = new JSONObject();
+            phoneJS.put("number", fax);
+            phoneJS.put("number_type", "fax");
+            telephonesJA.put(phoneJS);
+        }
+
+        contactsJS.put("telephones", telephonesJA);
     }
 
     /**
@@ -1394,7 +1423,11 @@ public class ASpaceMapper {
         // add fields for EAD
         json.put("ead_id", getUniqueID("ead", record.getEadFaUniqueIdentifier(), null));
         json.put("ead_location", record.getEadFaLocation());
-        json.put("finding_aid_title", record.getFindingAidTitle() + "\n" + record.getFindingAidSubtitle());
+
+        // TODO 5/12/2015 -- breakout finding aid title and subtitle into separate fields in the ASpace record
+        //json.put("finding_aid_title", record.getFindingAidTitle() + "\n" + record.getFindingAidSubtitle());
+        json.put("finding_aid_title", record.getFindingAidTitle());
+        json.put("finding_aid_subtitle", record.getFindingAidSubtitle());
         json.put("finding_aid_filing_title", record.getFindingAidFilingTitle());
         json.put("finding_aid_date", record.getFindingAidDate());
         json.put("finding_aid_author", record.getAuthor());
@@ -1794,7 +1827,7 @@ public class ASpaceMapper {
                 noteType = note.getNotesEtcType().getNotesEtcName();
             }
 
-            // create a content array incase we need need it for a note
+            // create a content array in case we need need it for a note
             JSONArray contentJA = new JSONArray();
             contentJA.put(fixEmptyString(note.getContent(), "no content"));
 
@@ -1902,7 +1935,15 @@ public class ASpaceMapper {
             } else if(childNote instanceof ListDefinition) {
                 addDefinedListNote(subnoteJS, (ListDefinition)childNote);
             } else { // must be text note
-                addTextNote(subnoteJS, childNote.getContent());
+                // This is a check to address AR-1150 in which empty notes were being copied over and
+                // causing the parent resource record no migrate
+                if(childNote.getContent() != null && !childNote.getContent().isEmpty()) {
+                    addTextNote(subnoteJS, childNote.getContent());
+                } else {
+                    String message = "Empty sub-note with database ID: " + childNote.getIdentifier() + "\n";
+                    aspaceCopyUtil.addErrorMessage(message);
+                    continue;
+                }
             }
 
             subnotesJA.put(subnoteJS);
@@ -2095,6 +2136,11 @@ public class ASpaceMapper {
      * @throws Exception
      */
     public JSONObject convertAnalogInstance(ArchDescriptionAnalogInstances analogInstance, String locationURI) throws Exception {
+        // check to see if you have an empty instance
+        if(analogInstance.getInstanceType() == null || analogInstance.getInstanceType().trim().isEmpty()) {
+            return null;
+        }
+
         JSONObject instanceJS = new JSONObject();
 
         // add the AT database Id as an external ID
