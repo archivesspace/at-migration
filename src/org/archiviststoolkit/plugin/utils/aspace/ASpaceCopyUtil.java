@@ -25,7 +25,7 @@ import java.util.Set;
  * Utility class for copying data from the AT to Archive Space
  */
 public class ASpaceCopyUtil {
-    public static final String SUPPORTED_ASPACE_VERSION = "v1.3";
+    public static final String SUPPORTED_ASPACE_VERSION = "v1.3.0,v1.4.0";
 
     // used to get session from the source and destination databases
     private RemoteDBConnectDialogLight sourceRCD;
@@ -350,6 +350,7 @@ public class ASpaceCopyUtil {
         boolean connected = aspaceClient.getSession();
 
         if(connected) {
+            aspaceClient.setASpaceCopyUtil(this);
             aspaceInformation = aspaceClient.getArchivesSpaceInformation();
             setASpaceVersion();
         }
@@ -1713,7 +1714,7 @@ public class ASpaceCopyUtil {
                     // get the error message and add it to the parent aspace client object
                     aspaceClient.appendToErrorBuffer(asc.getErrorMessages());
 
-                    incrementErrorCount();
+                    incrementSaveErrorCount();
                     incrementASpaceErrorCount();
                 }
 
@@ -1942,7 +1943,7 @@ public class ASpaceCopyUtil {
                 print("Error saving record " + jsonText);
             }
 
-            incrementErrorCount();
+            incrementSaveErrorCount();
             incrementASpaceErrorCount();
         }
 
@@ -1952,20 +1953,23 @@ public class ASpaceCopyUtil {
     /**
      * Method to increment the error count
      */
-    private synchronized void incrementErrorCount() {
+    public synchronized void incrementSaveErrorCount() {
         saveErrorCount++;
-
-        if(errorCountLabel != null) {
-            errorCountLabel.setText(saveErrorCount + " and counting ...");
-        }
     }
 
     /**
      * Method to increment the aspace error count that occur when saving to the
      * backend
      */
-    private synchronized void incrementASpaceErrorCount() {
+    public synchronized void incrementASpaceErrorCount() {
         aspaceErrorCount++;
+        updateErrorCountLabel();
+    }
+
+    private void updateErrorCountLabel() {
+        if (errorCountLabel != null) {
+            errorCountLabel.setText(aspaceErrorCount + " and counting ...");
+        }
     }
 
     /**
@@ -2053,6 +2057,15 @@ public class ASpaceCopyUtil {
     }
 
     /**
+     * Get the total error count
+     *
+     * @return
+     */
+    public int getASpaceErrorCount() {
+        return aspaceErrorCount;
+    }
+
+    /**
      * Method to add an error message to the buffer
      *
      * @param message
@@ -2061,11 +2074,11 @@ public class ASpaceCopyUtil {
         if(checkRepositoryMismatch) {
             if(message.contains("Repository Mismatch")) {
                 errorBuffer.append(message).append("\n");
-                incrementErrorCount();
+                incrementASpaceErrorCount();
             }
         } else {
             errorBuffer.append(message).append("\n");
-            incrementErrorCount();
+            incrementASpaceErrorCount();
         }
     }
 
@@ -2075,7 +2088,7 @@ public class ASpaceCopyUtil {
      * @return
      */
     public String getSaveErrorMessages() {
-        int errorsAndWarnings = saveErrorCount - aspaceErrorCount;
+        int errorsAndWarnings = Math.abs(saveErrorCount - aspaceErrorCount);
 
         String mapperScriptMessage = "";
         if(mapperScriptRejects > 0) {
@@ -2083,7 +2096,7 @@ public class ASpaceCopyUtil {
         }
 
         String errorMessage = "RECORD CONVERSION ERRORS/WARNINGS ( " + errorsAndWarnings + " ) ::\n\n" + errorBuffer.toString() + mapperScriptMessage +
-                "\n\n\nRECORD SAVE ERRORS ( " + aspaceErrorCount + " ) ::\n\n" + aspaceClient.getErrorMessages() +
+                "\n\n\nRECORD SAVE ERRORS ( " + saveErrorCount + " ) ::\n\n" + aspaceClient.getErrorMessages() +
                 "\n\nTOTAL COPY TIME: " + stopWatch.getPrettyTime() +
                 "\n\nNUMBER OF RECORDS COPIED: \n" + getTotalRecordsCopiedMessage() +
                 "\n\n" + getSystemInformation();
@@ -2097,7 +2110,7 @@ public class ASpaceCopyUtil {
      * @return
      */
     public String getCurrentProgressMessage() {
-        int errorsAndWarnings = saveErrorCount - aspaceErrorCount;
+        int errorsAndWarnings = Math.abs(aspaceErrorCount - saveErrorCount);
 
         String mapperScriptMessage = "";
         if(mapperScriptRejects > 0) {
@@ -2107,7 +2120,7 @@ public class ASpaceCopyUtil {
         String totalRecordsCopied = getTotalRecordsCopiedMessage();
 
         String errorMessages = "RECORD CONVERSION ERRORS/WARNINGS ( " + errorsAndWarnings + " ) ::\n\n" + errorBuffer.toString() + mapperScriptMessage +
-                "\n\n\nRECORD SAVE ERRORS ( " + aspaceErrorCount + " ) ::\n\n" + aspaceClient.getErrorMessages();
+                "\n\n\nRECORD SAVE ERRORS ( " + saveErrorCount + " ) ::\n\n" + aspaceClient.getErrorMessages();
 
         String message = errorMessages +
                 "\n\nRunning for: " + stopWatch.getPrettyTime() +
@@ -2137,7 +2150,7 @@ public class ASpaceCopyUtil {
      * @return
      */
     public String getCurrentRecordCheckMessage() {
-        int errorsAndWarnings = saveErrorCount - aspaceErrorCount;
+        int errorsAndWarnings = Math.abs(aspaceErrorCount - saveErrorCount);
 
         String errorMessages = "REPOSITORY MISMATCH ERRORS ( " + errorsAndWarnings + " ) ::\n\n" + errorBuffer.toString();
 
@@ -2180,7 +2193,7 @@ public class ASpaceCopyUtil {
             print("\nNumber of Records copied: \n" + totalRecordsCopied);
         }
 
-        print("\nNumber of errors/warnings: " + saveErrorCount);
+        print("\nNumber of errors/warnings: " + aspaceErrorCount);
     }
 
     /**

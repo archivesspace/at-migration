@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 /**
- * This is util class used to mapped ASpace enum list to AT lookup list items
+ * This is util class used to mapped ASpace enum list to AR lookup list items
  *
  * Created by IntelliJ IDEA.
  * User: nathan
@@ -59,7 +59,7 @@ public class ASpaceEnumUtil {
     // A trying that is used to bypass
     public final static String UNMAPPED = "other_unmapped";
 
-    public boolean returnATValue = true; // set this to return the AT value instead of UNMAPPED
+    public boolean returnATValue = true; // set this to return the AR value instead of UNMAPPED
 
     /**
      * Main constructor
@@ -383,7 +383,7 @@ public class ASpaceEnumUtil {
     }
 
     /**
-     * Method initASpaceiate the array the hold information on dates
+     * Method initiate the array the hold information on dates
      */
     private void initASpaceDateEnums() {
         ASpaceDateEnums = new String[] {
@@ -678,20 +678,6 @@ public class ASpaceEnumUtil {
             return atValue;
         } else {
             return UNMAPPED;
-        }
-    }
-
-    /**
-     * Since AT doesn't have this just return collection
-     *
-     * @param atValue
-     * @return
-     */
-    public String getASpaceDigitalObjectLevel(String atValue) {
-        if(atValue == null) {
-            return UNMAPPED;
-        } else {
-            return "collection";
         }
     }
 

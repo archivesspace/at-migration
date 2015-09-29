@@ -33,7 +33,7 @@ import java.util.HashMap;
  * @author Nathan Stevens
  */
 public class dbCopyFrame extends JFrame {
-    public static final String VERSION = "Archives Space Data Migrator v1.3.0 (06-15-2015)";
+    public static final String VERSION = "Archives Space Data Migrator v1.4.0 (09-29-2015)";
 
     // The application when running within the AT
     private ApplicationFrame mainFrame = null;
@@ -309,8 +309,8 @@ public class dbCopyFrame extends JFrame {
                     // check the current aspace version to make sure
                     String aspaceVersion = ascopy.getASpaceVersion();
 
-                    if(!aspaceVersion.isEmpty() && !aspaceVersion.contains(ASpaceCopyUtil.SUPPORTED_ASPACE_VERSION)) {
-                        String message =  "Unsupported Archivesspace Version\nSupport Version: " +
+                    if(!aspaceVersion.isEmpty() && !ASpaceCopyUtil.SUPPORTED_ASPACE_VERSION.contains(aspaceVersion)) {
+                        String message =  "Unsupported Archivesspace Version\nSupport Versions: " +
                                 ASpaceCopyUtil.SUPPORTED_ASPACE_VERSION + " ...\n";
 
                         consoleTextArea.append(message);
@@ -393,9 +393,9 @@ public class dbCopyFrame extends JFrame {
                     ascopy.cleanUp();
 
                     // set the number of errors and message now
-                    String errorCount = "" + ascopy.getSaveErrorCount();
+                    String errorCount = "" + ascopy.getASpaceErrorCount();
                     errorCountLabel.setText(errorCount);
-                    migrationErrors = ascopy.getSaveErrorMessages() + "\n\nTotal errors: " + errorCount;
+                    migrationErrors = ascopy.getSaveErrorMessages() + "\n\nTotal errors/warnings: " + errorCount;
                 } catch (Exception e) {
                     consoleTextArea.setText("Unrecoverable exception, migration stopped ...\n\n");
 
@@ -498,7 +498,7 @@ public class dbCopyFrame extends JFrame {
                     ascopyREC.cleanUp();
 
                     // set the number of errors and message now
-                    String errorCount = "" + ascopyREC.getSaveErrorCount();
+                    String errorCount = "" + ascopyREC.getASpaceErrorCount();
                     errorCountLabel.setText(errorCount);
                     repositoryMismatchErrors = ascopyREC.getCurrentRecordCheckMessage() + "\n\nTotal errors: " + errorCount;
                 } catch (Exception e) {
@@ -857,7 +857,7 @@ public class dbCopyFrame extends JFrame {
                     }));
 
                 //---- apiLabel ----
-                apiLabel.setText("  Archives Space Version: v1.3.0");
+                apiLabel.setText("  Archives Space Version: v1.4.0");
                 apiLabel.setHorizontalTextPosition(SwingConstants.CENTER);
                 contentPanel.add(apiLabel, cc.xy(1, 1));
 
@@ -1164,7 +1164,7 @@ public class dbCopyFrame extends JFrame {
                 buttonBar.add(errorLogButton, cc.xy(2, 1));
 
                 //---- saveErrorsLabel ----
-                saveErrorsLabel.setText(" Errors: ");
+                saveErrorsLabel.setText(" Errors/Warnings: ");
                 buttonBar.add(saveErrorsLabel, cc.xy(4, 1));
 
                 //---- errorCountLabel ----

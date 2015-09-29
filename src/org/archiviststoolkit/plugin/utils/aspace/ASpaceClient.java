@@ -53,6 +53,9 @@ public class ASpaceClient {
     // String that stores the session
     private String session;
 
+    // used to increment the error count
+    private ASpaceCopyUtil aspaceCopyUtil;
+
     // let keep all the errors we encounter so we can have a log
     private StringBuilder errorBuffer = new StringBuilder();
 
@@ -89,6 +92,15 @@ public class ASpaceClient {
     public ASpaceClient(String host, String session) {
         this.host = host;
         this.session = session;
+    }
+
+    /**
+     * Method to set the aspace copy util
+     *
+     * @param aspaceCopyUtil
+     */
+    public void setASpaceCopyUtil(ASpaceCopyUtil aspaceCopyUtil) {
+        this.aspaceCopyUtil = aspaceCopyUtil;
     }
 
     /**
@@ -214,7 +226,7 @@ public class ASpaceClient {
                     response = responseJA.getJSONObject(responseJA.length() - 1);
 
                     errorBuffer.append("Endpoint: ").append(post.getURI()).append("\n").
-                            append("AT Identifier:").append(atId).append("\n").
+                            append("AT Identifier: ").append(atId).append("\n").
                             append(statusMessage).append("\n\n").append(response.toString(2)).append("\n");
 
                     throw new Exception(response.toString(2));
@@ -229,7 +241,7 @@ public class ASpaceClient {
 
                 if (id == null || id.trim().isEmpty()) {
                     errorBuffer.append("Endpoint: ").append(post.getURI()).append("\n").
-                            append("AT Identifier:").append(atId).append("\n").
+                            append("AT Identifier: ").append(atId).append("\n").
                             append(statusMessage).append("\n\n").append(response.toString(2)).append("\n");
 
                     throw new Exception(response.toString(2));
@@ -252,8 +264,11 @@ public class ASpaceClient {
                 id = conflictingUri.substring(conflictingUri.lastIndexOf(" ") + 1);
 
                 errorBuffer.append("Endpoint: ").append(post.getURI()).append("\n").
-                        append("AT Identifier:").append(atId).append("\n").
-                        append("Re-using existing ASpace record:").append(conflictingUri).append("\n");
+                        append("AT Identifier: ").append(atId).append("\n").
+                        append("Re-using existing ASpace record: ").append(conflictingUri).append("\n\n");
+
+                aspaceCopyUtil.incrementASpaceErrorCount();
+                aspaceCopyUtil.incrementSaveErrorCount();
             } else {
                 // if it a 500 error the ASpace then we may need to add the JSON text
                 if (statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR) {
@@ -267,7 +282,7 @@ public class ASpaceClient {
                 }
 
                 errorBuffer.append("Endpoint: ").append(post.getURI()).append("\n").
-                        append("AT Identifier:").append(atId).append("\n").
+                        append("AT Identifier: ").append(atId).append("\n").
                         append(statusMessage).append("\n").append(responseBody).append("\n\n");
 
                 post.releaseConnection();
