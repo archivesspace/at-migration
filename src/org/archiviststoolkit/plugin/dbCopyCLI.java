@@ -23,8 +23,6 @@ public class dbCopyCLI {
     private boolean useTracer = false;
     private String tracerDatabase = "";
 
-    private int databaseURLIndex = -2;
-
     private int clientThreads = 1;
 
     private boolean continueFromResources = false;
@@ -124,7 +122,7 @@ public class dbCopyCLI {
         // see whether to connect to the particular index
         if(useTracer) {
             databaseType = "MySQL";
-            atUrl = "jdbc:mysql://tracerdb.cyo37z0ucix8.us-east-1.rds.amazonaws.com/at" + tracerDatabase;
+            atUrl = "jdbc:mysql://test.archivesspace.org/at" + tracerDatabase;
             atUsername = "aspace";
             atPassword = "clubfoots37@freakiest";
 
@@ -280,7 +278,7 @@ public class dbCopyCLI {
             migrationErrors = ascopy.getSaveErrorMessages() + "\n\nTotal errors: " + errorCount;
 
             // now save the migration log
-            saveLogFile("migration_log.txt", migrationErrors);
+            saveLogFile("migration_log-" + getDatabaseNameFromURL(atUrl) + ".txt", migrationErrors);
         } catch (Exception e) {
             System.out.println("Unrecoverable exception, migration stopped ...\n\n");
 
@@ -310,6 +308,16 @@ public class dbCopyCLI {
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }
+    }
+
+    /**
+     * Return only the name of the database so it can be appended to log file
+     *
+     * @return
+     */
+    public String getDatabaseNameFromURL(String databaseURL) {
+        int begin = databaseURL.lastIndexOf("/") + 1;
+        return databaseURL.substring(begin);
     }
 
     /**
@@ -374,5 +382,7 @@ public class dbCopyCLI {
 			    }
 		    }
 	    }
+
+        System.exit(0);
     }
 }

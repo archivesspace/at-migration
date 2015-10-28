@@ -33,7 +33,7 @@ import java.util.HashMap;
  * @author Nathan Stevens
  */
 public class dbCopyFrame extends JFrame {
-    public static final String VERSION = "Archives Space Data Migrator v1.4.0 (09-29-2015)";
+    public static final String VERSION = "Archives Space Data Migrator v1.4.2 (10-28-2015)";
 
     // The application when running within the AT
     private ApplicationFrame mainFrame = null;
@@ -857,7 +857,7 @@ public class dbCopyFrame extends JFrame {
                     }));
 
                 //---- apiLabel ----
-                apiLabel.setText("  Archives Space Version: v1.4.0");
+                apiLabel.setText("  Archives Space Version: v1.4.x");
                 apiLabel.setHorizontalTextPosition(SwingConstants.CENTER);
                 contentPanel.add(apiLabel, cc.xy(1, 1));
 

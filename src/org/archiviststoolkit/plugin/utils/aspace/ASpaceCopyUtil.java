@@ -25,7 +25,7 @@ import java.util.Set;
  * Utility class for copying data from the AT to Archive Space
  */
 public class ASpaceCopyUtil {
-    public static final String SUPPORTED_ASPACE_VERSION = "v1.3.0,v1.4.0";
+    public static final String SUPPORTED_ASPACE_VERSION = "v1.3,v1.4";
 
     // used to get session from the source and destination databases
     private RemoteDBConnectDialogLight sourceRCD;
@@ -364,7 +364,9 @@ public class ASpaceCopyUtil {
     private void setASpaceVersion() {
         try {
             JSONObject infoJS = new JSONObject(aspaceInformation);
-            aspaceVersion = infoJS.getString("archivesSpaceVersion");
+            String version = infoJS.getString("archivesSpaceVersion");
+            int end = version.lastIndexOf(".");
+            aspaceVersion = version.substring(0, end);
         } catch (Exception e) { }
     }
 
