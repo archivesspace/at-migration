@@ -4,6 +4,7 @@ utility. The bulk of the data migration code can be found under "src/org/archivi
 Detailed information the plugin functionality can be viewed found at:
 https://docs.google.com/a/nyu.edu/document/d/1Uj2qKtSKLGMm1VPDmDtuNG4eL8zgAJNhOHc93j0S7TE/pub
 
+NOTE: This tool works for migration into ArchivesSpace v1.4.2. If migrating from Archivists' Toolkit to ArchivesSpace v1.5.x, you need to install ArchivesSpace v1.4.2 and run this migration tool first.  Then upgrade your ArchivesSpace installation to ArchivesSpace v1.5.x.
 
 NOTES ON COMPILING THE PLUGIN FROM SOURCE CODE:
 
