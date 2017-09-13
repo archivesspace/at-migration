@@ -5,10 +5,10 @@ import org.archiviststoolkit.plugin.dbCopyCLI;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class dbCopyCLITests {
+public class dbCopyCLITest extends Testing {
 
     public static junit.framework.Test suite() {
-        return new JUnit4TestAdapter(dbCopyCLITests.class);
+        return new JUnit4TestAdapter(dbCopyCLITest.class);
     }
 
     @Test

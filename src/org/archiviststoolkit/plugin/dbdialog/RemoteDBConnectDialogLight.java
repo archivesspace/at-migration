@@ -657,7 +657,7 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
      * @return
      */
     public HashMap<String, String> getLanguageCodes() {
-        return getLookupListItemsAndCodes("Language codes", false);
+        return getLookupListItemsAndCodes("Language", false);
     }
 
     /**
