@@ -302,6 +302,7 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
      *
      * @throws java.sql.SQLException if it can't connect to the AT database
      */
+
     private void testHibernate() throws SQLException {
         Session testSession = sessionFactory.openSession();
         Query query = testSession.createQuery("select count(*) from Constants");
@@ -799,7 +800,7 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
 
     private void initComponents() {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
-        // Generated using JFormDesigner non-commercial license
+        // Generated using JFormDesigner Evaluation license - Sarah Morrissey
         dialogPane = new JPanel();
         contentPanel = new JPanel();
         label1 = new JLabel();
@@ -827,6 +828,14 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
         //======== dialogPane ========
         {
             dialogPane.setBorder(Borders.DIALOG_BORDER);
+
+            // JFormDesigner evaluation mark
+            dialogPane.setBorder(new javax.swing.border.CompoundBorder(
+                new javax.swing.border.TitledBorder(new javax.swing.border.EmptyBorder(0, 0, 0, 0),
+                    "JFormDesigner Evaluation", javax.swing.border.TitledBorder.CENTER,
+                    javax.swing.border.TitledBorder.BOTTOM, new java.awt.Font("Dialog", java.awt.Font.BOLD, 12),
+                    java.awt.Color.red), dialogPane.getBorder())); dialogPane.addPropertyChangeListener(new java.beans.PropertyChangeListener(){public void propertyChange(java.beans.PropertyChangeEvent e){if("border".equals(e.getPropertyName()))throw new RuntimeException();}});
+
             dialogPane.setLayout(new BorderLayout());
 
             //======== contentPanel ========
@@ -856,6 +865,7 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
                 //---- connectionUrl ----
                 connectionUrl.setEditable(true);
                 connectionUrl.addItemListener(new ItemListener() {
+                    @Override
                     public void itemStateChanged(ItemEvent e) {
                         updateConnectionUrlInformation();
                     }
@@ -916,6 +926,7 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
                 //---- button1 ----
                 button1.setText("Connect");
                 button1.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         connectToDatabase();
                     }
@@ -941,6 +952,7 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
                 //---- okButton ----
                 okButton.setText("OK");
                 okButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         okButtonActionPerformed();
                     }
@@ -956,7 +968,7 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
     }
 
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables
-    // Generated using JFormDesigner non-commercial license
+    // Generated using JFormDesigner Evaluation license - Sarah Morrissey
     private JPanel dialogPane;
     private JPanel contentPanel;
     private JLabel label1;

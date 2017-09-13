@@ -151,6 +151,7 @@ public class ASpaceClient {
      * @return
      */
     public String post(String route, String jsonText, NameValuePair[] params, String atId) throws Exception {
+
         // Prepare HTTP post method.
         String fullUrl = host + route;
         PostMethod post = new PostMethod(fullUrl);
@@ -198,6 +199,7 @@ public class ASpaceClient {
 
         // Execute request
         try {
+
             int statusCode = httpclient.executeMethod(post);
 
             // Display status code

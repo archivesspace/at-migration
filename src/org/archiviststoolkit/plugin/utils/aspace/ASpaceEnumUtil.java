@@ -159,30 +159,31 @@ public class ASpaceEnumUtil {
                 "local",    // 4
                 "mesh",     // 5
                 "gmgpc",    // 6
-                "georeft",  // 7
-                "dot"       // 8
+//                "georeft",  // 7
+//                "dot"       // 8
         };
     }
 
     /**
      * Method to map the subject source
-     *
+     * ***THIS DOES NOT WORK RIGHT. SHOULD BE THE OTHER WAY AROUND (SHORT NAME TO LONG NAME)***
      * @param atValue
      * @return
      */
     public String getASpaceSubjectSource(String atValue) {
+
         if(atValue == null || atValue.isEmpty()) return "";
 
         atValue = atValue.toLowerCase();
 
         if(atValue.contains("art & architecture thesaurus")) {
             return ASpaceSubjectSources[0];
-        } else if (atValue.contains("dictionary of occupational titles")) {
-            return ASpaceSubjectSources[8];
+//        } else if (atValue.contains("dictionary of occupational titles")) {
+////            return ASpaceSubjectSources[8];
         } else if (atValue.contains("genre terms: a thesaurus for use in rare book")) {
             return ASpaceSubjectSources[1];
-        } else if (atValue.contains("georef thesaurus")) {
-            return ASpaceSubjectSources[7];
+//        } else if (atValue.contains("georef thesaurus")) {
+//            return ASpaceSubjectSources[7];
         } else if (atValue.contains("getty thesaurus of geographic names")) {
             return ASpaceSubjectSources[2];
         } else if (atValue.contains("library of congress subject headings")) {

@@ -274,6 +274,7 @@ public class dbCopyFrame extends JFrame {
                     publishMap.put("accessions", publishAccessionsCheckBox.isSelected());
                     publishMap.put("digitalObjects", publishDigitalObjectsCheckBox.isSelected());
                     publishMap.put("resources", publishResourcesCheckBox.isSelected());
+                    publishMap.put("repositories", publishReposCheckBox.isSelected());
 
                     ascopy = new ASpaceCopyUtil(sourceRCD, host, admin, adminPassword);
                     ascopy.setPublishHashMap(publishMap);
@@ -307,7 +308,11 @@ public class dbCopyFrame extends JFrame {
                     }
 
                     // check the current aspace version to make sure
+                    //will need to modify this
                     String aspaceVersion = ascopy.getASpaceVersion();
+
+                    //Check if working
+                    System.out.println("Version: " + aspaceVersion);
 
                     if(!aspaceVersion.isEmpty() && !ASpaceCopyUtil.SUPPORTED_ASPACE_VERSION.contains(aspaceVersion)) {
                         String message =  "Unsupported Archivesspace Version\nSupport Versions: " +
@@ -733,7 +738,7 @@ public class dbCopyFrame extends JFrame {
 
     private void initComponents() {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
-        // Generated using JFormDesigner non-commercial license
+        // Generated using JFormDesigner Evaluation license - Sarah Morrissey
         dialogPane = new JPanel();
         contentPanel = new JPanel();
         apiLabel = new JLabel();
@@ -765,6 +770,7 @@ public class dbCopyFrame extends JFrame {
         ignoreUnlinkedSubjectsCheckBox = new JCheckBox();
         publishPanel = new JPanel();
         label1 = new JLabel();
+        publishReposCheckBox = new JCheckBox();
         publishNamesCheckBox = new JCheckBox();
         publishSubjectsCheckBox = new JCheckBox();
         publishAccessionsCheckBox = new JCheckBox();
@@ -804,6 +810,14 @@ public class dbCopyFrame extends JFrame {
         //======== dialogPane ========
         {
             dialogPane.setBorder(Borders.DIALOG_BORDER);
+
+            // JFormDesigner evaluation mark
+            dialogPane.setBorder(new javax.swing.border.CompoundBorder(
+                new javax.swing.border.TitledBorder(new javax.swing.border.EmptyBorder(0, 0, 0, 0),
+                    "JFormDesigner Evaluation", javax.swing.border.TitledBorder.CENTER,
+                    javax.swing.border.TitledBorder.BOTTOM, new java.awt.Font("Dialog", java.awt.Font.BOLD, 12),
+                    java.awt.Color.red), dialogPane.getBorder())); dialogPane.addPropertyChangeListener(new java.beans.PropertyChangeListener(){public void propertyChange(java.beans.PropertyChangeEvent e){if("border".equals(e.getPropertyName()))throw new RuntimeException();}});
+
             dialogPane.setLayout(new BorderLayout());
 
             //======== contentPanel ========
@@ -857,7 +871,7 @@ public class dbCopyFrame extends JFrame {
                     }));
 
                 //---- apiLabel ----
-                apiLabel.setText("  Archives Space Version: v1.4.x");
+                apiLabel.setText("  Archives Space Version: v2.1.x");
                 apiLabel.setHorizontalTextPosition(SwingConstants.CENTER);
                 contentPanel.add(apiLabel, cc.xy(1, 1));
 
@@ -882,6 +896,7 @@ public class dbCopyFrame extends JFrame {
                 //---- copyToASpaceButton ----
                 copyToASpaceButton.setText("Copy To Archives Space");
                 copyToASpaceButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         CopyToASpaceButtonActionPerformed();
                     }
@@ -899,6 +914,7 @@ public class dbCopyFrame extends JFrame {
                 //---- repositoryCheckButton ----
                 repositoryCheckButton.setText("Run Repository Check");
                 repositoryCheckButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         repositoryCheckButtonActionPerformed();
                     }
@@ -913,6 +929,7 @@ public class dbCopyFrame extends JFrame {
                 //---- viewRepositoryCheckReportButton ----
                 viewRepositoryCheckReportButton.setText("View Report");
                 viewRepositoryCheckReportButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         viewRepositoryCheckReportButtonActionPerformed();
                     }
@@ -925,7 +942,6 @@ public class dbCopyFrame extends JFrame {
 
                     //---- useTracerCheckBox ----
                     useTracerCheckBox.setText("Use Tracer Database");
-                    useTracerCheckBox.setSelected(true);
                     tracerPanel.add(useTracerCheckBox);
 
                     //---- tracerComboBox ----
@@ -1006,6 +1022,8 @@ public class dbCopyFrame extends JFrame {
                             FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
                             FormFactory.DEFAULT_COLSPEC,
                             FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
+                            FormFactory.DEFAULT_COLSPEC,
+                            FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
                             FormFactory.DEFAULT_COLSPEC
                         },
                         RowSpec.decodeSpecs("default")));
@@ -1014,27 +1032,32 @@ public class dbCopyFrame extends JFrame {
                     label1.setText("  Records To Publish?");
                     publishPanel.add(label1, cc.xy(1, 1));
 
+                    //---- publishReposCheckBox ----
+                    publishReposCheckBox.setText("Repositories");
+                    publishReposCheckBox.setSelected(true);
+                    publishPanel.add(publishReposCheckBox, cc.xy(3, 1));
+
                     //---- publishNamesCheckBox ----
                     publishNamesCheckBox.setText("Names");
-                    publishPanel.add(publishNamesCheckBox, cc.xy(3, 1));
+                    publishPanel.add(publishNamesCheckBox, cc.xy(5, 1));
 
                     //---- publishSubjectsCheckBox ----
                     publishSubjectsCheckBox.setText("Subjects");
-                    publishPanel.add(publishSubjectsCheckBox, cc.xy(5, 1));
+                    publishPanel.add(publishSubjectsCheckBox, cc.xy(7, 1));
 
                     //---- publishAccessionsCheckBox ----
                     publishAccessionsCheckBox.setText("Accessions");
-                    publishPanel.add(publishAccessionsCheckBox, cc.xy(7, 1));
+                    publishPanel.add(publishAccessionsCheckBox, cc.xy(9, 1));
 
                     //---- publishDigitalObjectsCheckBox ----
                     publishDigitalObjectsCheckBox.setText("Digital Objects");
                     publishDigitalObjectsCheckBox.setSelected(true);
-                    publishPanel.add(publishDigitalObjectsCheckBox, cc.xy(9, 1));
+                    publishPanel.add(publishDigitalObjectsCheckBox, cc.xy(11, 1));
 
                     //---- publishResourcesCheckBox ----
                     publishResourcesCheckBox.setText("Resources");
                     publishResourcesCheckBox.setSelected(true);
-                    publishPanel.add(publishResourcesCheckBox, cc.xy(11, 1));
+                    publishPanel.add(publishResourcesCheckBox, cc.xy(13, 1));
                 }
                 contentPanel.add(publishPanel, cc.xywh(1, 15, 13, 1));
 
@@ -1049,6 +1072,7 @@ public class dbCopyFrame extends JFrame {
                 //---- editScriptButton ----
                 editScriptButton.setText("Edit or Load Script");
                 editScriptButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         editScriptButtonActionPerformed();
                     }
@@ -1112,20 +1136,22 @@ public class dbCopyFrame extends JFrame {
 
                 //---- paramsTextField ----
                 paramsTextField.setText("page=1");
-                contentPanel.add(paramsTextField, cc.xywh(5, 27, 5, 1));
+                contentPanel.add(paramsTextField, cc.xywh(5, 27, 3, 1));
 
                 //---- viewRecordButton ----
                 viewRecordButton.setText("View");
                 viewRecordButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         viewRecordButtonActionPerformed();
                     }
                 });
-                contentPanel.add(viewRecordButton, cc.xywh(11, 27, 2, 1));
+                contentPanel.add(viewRecordButton, cc.xy(11, 27));
 
                 //---- testRecordButton ----
                 testRecordButton.setText("Test");
                 testRecordButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         testRecordButtonActionPerformed();
                     }
@@ -1157,6 +1183,7 @@ public class dbCopyFrame extends JFrame {
                 //---- errorLogButton ----
                 errorLogButton.setText("View Error Log");
                 errorLogButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         errorLogButtonActionPerformed();
                     }
@@ -1177,6 +1204,7 @@ public class dbCopyFrame extends JFrame {
                 stopButton.setText("Cancel Copy");
                 stopButton.setEnabled(false);
                 stopButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         stopButtonActionPerformed();
                         stopButtonActionPerformed();
@@ -1187,6 +1215,7 @@ public class dbCopyFrame extends JFrame {
                 //---- basicUIButton ----
                 basicUIButton.setText("Basic UI");
                 basicUIButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         basicUIButtonActionPerformed();
                     }
@@ -1196,6 +1225,7 @@ public class dbCopyFrame extends JFrame {
                 //---- okButton ----
                 okButton.setText("Close");
                 okButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         okButtonActionPerformed();
                     }
@@ -1217,7 +1247,7 @@ public class dbCopyFrame extends JFrame {
 
 
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables
-    // Generated using JFormDesigner non-commercial license
+    // Generated using JFormDesigner Evaluation license - Sarah Morrissey
     private JPanel dialogPane;
     private JPanel contentPanel;
     private JLabel apiLabel;
@@ -1249,6 +1279,7 @@ public class dbCopyFrame extends JFrame {
     private JCheckBox ignoreUnlinkedSubjectsCheckBox;
     private JPanel publishPanel;
     private JLabel label1;
+    private JCheckBox publishReposCheckBox;
     private JCheckBox publishNamesCheckBox;
     private JCheckBox publishSubjectsCheckBox;
     private JCheckBox publishAccessionsCheckBox;

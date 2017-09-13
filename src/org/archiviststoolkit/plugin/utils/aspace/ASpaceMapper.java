@@ -594,6 +594,8 @@ public class ASpaceMapper {
         json.put("org_code", record.getAgencyCode());
         json.put("parent_institution_name", record.getInstitutionName());
         json.put("url", fixUrl(record.getUrl()));
+        json.put("publish", publishHashMap.get("repositories"));
+        json.put("hidden", !(publishHashMap.get("repositories")));
 
         return json.toString();
     }
