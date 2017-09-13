@@ -8,7 +8,7 @@ import java.util.ArrayList;
 /**
  * a class for setup to make testing easier
  */
-public abstract class Testing {
+public class Testing {
 
     private static ArrayList<String> testsToRun = new ArrayList<String>();
 
