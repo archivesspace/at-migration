@@ -3,6 +3,7 @@ package org.archiviststoolkit.plugin.utils.aspace;
 import org.apache.commons.httpclient.NameValuePair;
 import org.archiviststoolkit.ApplicationFrame;
 import org.archiviststoolkit.model.*;
+import test.TestUtils;
 import org.archiviststoolkit.plugin.dbCopyFrame;
 import org.archiviststoolkit.plugin.dbdialog.RemoteDBConnectDialogLight;
 import org.archiviststoolkit.plugin.utils.ScriptDataUtils;
@@ -25,7 +26,8 @@ import java.util.Set;
  * Utility class for copying data from the AT to Archive Space
  */
 public class ASpaceCopyUtil {
-    public static final String SUPPORTED_ASPACE_VERSION = "v1.3,v1.4";
+
+    public static final String SUPPORTED_ASPACE_VERSION = "v2.1";
 
     // used to get session from the source and destination databases
     private RemoteDBConnectDialogLight sourceRCD;
@@ -472,6 +474,8 @@ public class ASpaceCopyUtil {
 
         ArrayList<Repositories> records = sourceRCD.getRepositories();
 
+        records = TestUtils.trimRecords(records);
+
         // these are used to update the progress bar
         int total = records.size();
         int count = 0;
@@ -571,6 +575,8 @@ public class ASpaceCopyUtil {
         print("Copying locations records ...");
         ArrayList<Locations> records = sourceRCD.getLocations();
 
+        records = TestUtils.trimRecords(records);
+
         // these are used to update the progress bar and import log
         int total = records.size();
         int count = 0;
@@ -621,6 +627,8 @@ public class ASpaceCopyUtil {
         print("Copying User records ...");
 
         ArrayList<Users> records = sourceRCD.getUsers();
+
+        records = TestUtils.trimRecords(records);
 
         // these are used to update the progress bar
         int total = records.size();
@@ -745,6 +753,8 @@ public class ASpaceCopyUtil {
 
         ArrayList<Names> records = sourceRCD.getNames();
 
+        records = TestUtils.trimRecords(records);
+
         // these are used to update the progress bar
         int total = records.size();
         int count = 0;
@@ -823,6 +833,8 @@ public class ASpaceCopyUtil {
 
         ArrayList<Subjects> records = sourceRCD.getSubjects();
 
+        records = TestUtils.trimRecords(records);
+
         // these are used to update the progress bar
         int total = records.size();
         int count = 0;
@@ -887,6 +899,8 @@ public class ASpaceCopyUtil {
         print("Copying Accession records ...");
 
         ArrayList<Accessions> records = sourceRCD.getAccessions();
+
+        records = TestUtils.trimRecords(records);
 
         // these are used to update the progress bar
         int total = records.size();
@@ -1000,6 +1014,8 @@ public class ASpaceCopyUtil {
         print("Copying Digital Object records ...");
 
         ArrayList<DigitalObjects> records = sourceRCD.getDigitalObjects();
+
+        records = TestUtils.trimRecords(records);
 
         // these are used to update the progress bar
         int total = records.size();
@@ -1161,6 +1177,8 @@ public class ASpaceCopyUtil {
         }
 
         ArrayList<Resources> records = sourceRCD.getResources();
+
+        records = TestUtils.trimRecords(records);
 
         print("Copying " + records.size() + " Resource records ...");
 
@@ -1921,6 +1939,7 @@ public class ASpaceCopyUtil {
      * @param params   parameters to pass to service
      */
     public synchronized String saveRecord(String endpoint, String jsonText, NameValuePair[] params, String atId) {
+
         String id = NO_ID;
 
         try {

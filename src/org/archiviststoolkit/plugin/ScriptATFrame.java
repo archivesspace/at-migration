@@ -76,7 +76,7 @@ public class ScriptATFrame extends JFrame {
 
     private void initComponents() {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
-        // Generated using JFormDesigner non-commercial license
+        // Generated using JFormDesigner Evaluation license - Sarah Morrissey
         dialogPane = new JPanel();
         contentPanel = new JPanel();
         showScriptConsoleButton = new JButton();
@@ -93,6 +93,14 @@ public class ScriptATFrame extends JFrame {
         //======== dialogPane ========
         {
             dialogPane.setBorder(new EmptyBorder(12, 12, 12, 12));
+
+            // JFormDesigner evaluation mark
+            dialogPane.setBorder(new javax.swing.border.CompoundBorder(
+                new javax.swing.border.TitledBorder(new javax.swing.border.EmptyBorder(0, 0, 0, 0),
+                    "JFormDesigner Evaluation", javax.swing.border.TitledBorder.CENTER,
+                    javax.swing.border.TitledBorder.BOTTOM, new java.awt.Font("Dialog", java.awt.Font.BOLD, 12),
+                    java.awt.Color.red), dialogPane.getBorder())); dialogPane.addPropertyChangeListener(new java.beans.PropertyChangeListener(){public void propertyChange(java.beans.PropertyChangeEvent e){if("border".equals(e.getPropertyName()))throw new RuntimeException();}});
+
             dialogPane.setLayout(new BorderLayout());
 
             //======== contentPanel ========
@@ -106,6 +114,7 @@ public class ScriptATFrame extends JFrame {
                 //---- showScriptConsoleButton ----
                 showScriptConsoleButton.setText("Show Beanshell Workspace");
                 showScriptConsoleButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         showScriptConsoleButtonActionPerformed();
                     }
@@ -118,6 +127,7 @@ public class ScriptATFrame extends JFrame {
                 testButton.setText("Test");
                 testButton.setVisible(false);
                 testButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         testButtonActionPerformed(e);
                     }
@@ -138,6 +148,7 @@ public class ScriptATFrame extends JFrame {
                 //---- connectButton ----
                 connectButton.setText("Connect to Database");
                 connectButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         connectButtonActionPerformed();
                     }
@@ -149,6 +160,7 @@ public class ScriptATFrame extends JFrame {
                 //---- okButton ----
                 okButton.setText("OK");
                 okButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         okButtonActionPerformed();
                     }
@@ -166,7 +178,7 @@ public class ScriptATFrame extends JFrame {
     }
 
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables
-    // Generated using JFormDesigner non-commercial license
+    // Generated using JFormDesigner Evaluation license - Sarah Morrissey
     private JPanel dialogPane;
     private JPanel contentPanel;
     private JButton showScriptConsoleButton;

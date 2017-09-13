@@ -56,6 +56,7 @@ public class dbCopyCLI {
     private boolean publishAccessions = false;
     private boolean publishDigitalObjects = false;
     private boolean publishResources = true;
+    private boolean publishRepos = true;
 
     // this is used to connect to the AT database
     private RemoteDBConnectDialogLight rcd;
@@ -99,6 +100,7 @@ public class dbCopyCLI {
         publishAccessions = new Boolean(properties.getProperty("publishAccessions"));
         publishDigitalObjects = new Boolean(properties.getProperty("publishDigitalObjects"));
         publishResources = new Boolean(properties.getProperty("publishResources"));
+        publishRepos = new Boolean(properties.getProperty("publishRepos"));
         copyOnlyResources = new Boolean(properties.getProperty("copyOnlyResources"));
         checkISODates = new Boolean(properties.getProperty("checkISODates"));
         resourcesToCopy = properties.getProperty("resourcesToCopy");
@@ -213,6 +215,7 @@ public class dbCopyCLI {
             publishMap.put("accessions", publishAccessions);
             publishMap.put("digitalObjects", publishDigitalObjects);
             publishMap.put("resources", publishResources);
+            publishMap.put("repositories", publishRepos);
 
             ascopy = new ASpaceCopyUtil(rcd, aspaceHost, aspaceAdmin, aspacePassword);
             ascopy.setPublishHashMap(publishMap);
