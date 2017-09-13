@@ -3,6 +3,6 @@
 scriptAT_src.zip
 makep.sh
 at-migration.iml
-/logs
+/logs/*
 /out
 src/desktop.ini
