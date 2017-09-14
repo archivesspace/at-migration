@@ -665,7 +665,6 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
             if (langCodes.get(key).isEmpty() || langCodes.get(key) == null) langCodes.put(key, key);
         }
         langs.putAll(langCodes);
-        TestUtils.print(langs);
         return langs;
     }
 

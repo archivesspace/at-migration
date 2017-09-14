@@ -166,7 +166,6 @@ public class ASpaceEnumUtil {
 
     /**
      * Method to map the subject source
-     * ***THIS DOES NOT WORK RIGHT. SHOULD BE THE OTHER WAY AROUND (SHORT NAME TO LONG NAME)***
      * @param atValue
      * @return
      */

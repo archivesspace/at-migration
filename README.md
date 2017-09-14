@@ -14,20 +14,31 @@ IDE of choice. The current source needs to be compiled with JDK 1.6, or later. T
 1. Clone this repo.
 2. Import the source code into your IDE.
 3. In your IDE, place all the *.jar files found in the "lib" folder in the Classpath.
-4. You should now be able to successfully compile the plugin from source code.
+4. You should now be able to successfully compile the plugin from source code. **You must use JDK 1.6 to compile 
+   the code. 1.7 or later will not work with AT.**
 5. You can edit the makep script to fit your development environment to generate the scriptAT.zip plugin
    file after code compilation.
 
 Note: If you intend to modify user interface code, then you will need to use JFormdesigner to open
 the *.jfd files. Consult the JFormDesigner documentation on how to install and use it.
 
+NOTES ON TESTING
+
+When writing tests you should always place them in the test directory. To write a test:
+
+1. Create a class that extends Testing to write your tests in.
+2. Import junit.framework.JUnit4TestAdapter, org.junit.Assert, and org.junit.Test.
+3. Write tests with annotation @Test in this class.
+4. Add the following method:
+
+    public static junit.framework.Test suite() {return new JUnit4TestAdapter(*Name of your class here*.class);}
 
 NOTES ON RUNNING THE PLUGIN IN STANDALONE MODE
 
 Though intended to run as a plugin within the AT application, the plugin can run in standalone
 mode for testing purposes. To run in standalone mode:
 
-1. Create a directory call "logs" in the project directory.
+1. Create a directory call "logs" in the project directory if it is not already there.
 2. Run the "dbCopyFrame" class making sure all the *.jar files in "lib" are in the Classpath.
 
 
