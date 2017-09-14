@@ -32,6 +32,8 @@ When writing tests you should always place them in the test directory. To write 
 4. Add the following method:
 
     public static junit.framework.Test suite() {return new JUnit4TestAdapter(*Name of your class here*.class);}
+5. You can now run your test by calling a constructor for your class from the testing main method then running the 
+   Testing main method.
 
 NOTES ON RUNNING THE PLUGIN IN STANDALONE MODE
 
