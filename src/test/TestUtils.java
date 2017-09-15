@@ -22,7 +22,7 @@ import java.util.Scanner;
 public class TestUtils {
 
     public static final String[] empty = new String[0];
-    public static boolean trimData = false;
+    public static boolean trimData = true;
     public static int startNum = 0;
     public static int numToCopy = 20;
     private static String propertiesUrl = "C:/Users/morrissey/Desktop/at-mig-6/dbcopy.properties";
@@ -86,7 +86,7 @@ public class TestUtils {
         try {
             st.executeUpdate("DROP SCHEMA archivesspace;");
         } catch (SQLException e) {
-            e.printStackTrace();
+            print(e.getMessage());
         }
         System.out.println("Creating new schema");
         st.executeUpdate("create SCHEMA archivesspace");

@@ -6,7 +6,7 @@ import org.archiviststoolkit.model.Subjects;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class ASpaceMapperTest {
+public class ASpaceMapperTest extends Testing {
 
     @Test
     public void convertSubject() throws Exception {
@@ -15,8 +15,8 @@ public class ASpaceMapperTest {
         tester.setSubjectTerm("A test subject");
         tester.setSubjectSource("getty thesaurus of geographic names");
         tester.setSubjectTermType("function");
+        tester.setVersion(1L);
         String json = TestUtils.mapper.convertSubject(tester);
-        TestUtils.print(json);
         Assert.assertTrue(json.contains("\"publish\":true"));
         Assert.assertTrue(json.contains("\"source\":\"tgn\""));
         Assert.assertTrue(json.contains("\"term_type\":\"function\""));

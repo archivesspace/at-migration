@@ -25,6 +25,7 @@ import org.hibernate.*;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+import test.TestUtils;
 
 import javax.swing.*;
 import java.awt.*;
@@ -657,7 +658,14 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
      * @return
      */
     public HashMap<String, String> getLanguageCodes() {
-        return getLookupListItemsAndCodes("Language codes", false);
+        HashMap<String, String> langs = new HashMap<String, String>();
+        langs.putAll(getLookupListItemsAndCodes("Language", false));
+        HashMap<String, String> langCodes = getLookupListItemsAndCodes("Language codes", false);
+        for (String key: langCodes.keySet()) {
+            if (langCodes.get(key).isEmpty() || langCodes.get(key) == null) langCodes.put(key, key);
+        }
+        langs.putAll(langCodes);
+        return langs;
     }
 
     /**
