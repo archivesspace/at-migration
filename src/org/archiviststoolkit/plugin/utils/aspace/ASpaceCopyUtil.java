@@ -986,6 +986,8 @@ public class ASpaceCopyUtil {
      * @throws Exception
      */
     public void addInstance(Accessions accession, JSONObject json) throws Exception {
+        String parentRepoURI = getRepositoryURI(accession.getRepository()) + "/";
+
         Set<AccessionsLocations> locations = accession.getLocations();
         if(locations == null || locations.size() == 0) return;
 
@@ -997,7 +999,7 @@ public class ASpaceCopyUtil {
             String locationURI = locationURIMap.get(location.getLocation().getIdentifier());
             if(locationURI != null) {
                 String locationNote = location.getNote();
-                JSONObject instanceJS = mapper.createAccessionInstance(accession, locationURI, locationNote);
+                JSONObject instanceJS = mapper.createAccessionInstance(accession, locationURI, locationNote, parentRepoURI);
                 instancesJA.put(instanceJS);
             }
         }
@@ -1579,7 +1581,7 @@ public class ASpaceCopyUtil {
                     }*/
                 }
 
-                JSONObject instanceJS = mapper.convertAnalogInstance(analogInstance, locationURI);
+                JSONObject instanceJS = mapper.convertAnalogInstance(analogInstance, locationURI, parentRepoURI);
 
                 if(instanceJS != null) {
                     instancesJA.put(instanceJS);

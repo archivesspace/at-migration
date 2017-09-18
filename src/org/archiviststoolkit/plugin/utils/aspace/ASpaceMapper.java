@@ -7,6 +7,7 @@ import org.archiviststoolkit.plugin.utils.RandomString;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import test.TestUtils;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -2137,7 +2138,8 @@ public class ASpaceMapper {
      * @return
      * @throws Exception
      */
-    public JSONObject convertAnalogInstance(ArchDescriptionAnalogInstances analogInstance, String locationURI) throws Exception {
+    public JSONObject convertAnalogInstance(ArchDescriptionAnalogInstances analogInstance, String locationURI,
+                                            String parentRepoURI) throws Exception {
         // check to see if you have an empty instance
         if(analogInstance.getInstanceType() == null || analogInstance.getInstanceType().trim().isEmpty()) {
             return null;
@@ -2155,9 +2157,11 @@ public class ASpaceMapper {
         // add the container now
         JSONObject containerJS = new JSONObject();
 
-        containerJS.put("type_1", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer1Type()));
-        containerJS.put("indicator_1", fixEmptyString(analogInstance.getContainer1Indicator(), "not specified"));
-        containerJS.put("barcode_1", analogInstance.getBarcode());
+        TopContainerMapper topContainer = new TopContainerMapper(analogInstance, parentRepoURI, aspaceCopyUtil);
+        containerJS.put("top_container", getReferenceObject(topContainer.getRef()));
+//        containerJS.put("type_1", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer1Type()));
+//        containerJS.put("indicator_1", fixEmptyString(analogInstance.getContainer1Indicator(), "not specified"));
+//        containerJS.put("barcode_1", analogInstance.getBarcode());
 
         if(!analogInstance.getContainer2Type().isEmpty()) {
             containerJS.put("type_2", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer2Type()));
@@ -2187,7 +2191,7 @@ public class ASpaceMapper {
         // TODO 4/16/2013 add the user defined fields
         //addUserDefinedFields(containerJS, analogInstance);
 
-        instanceJS.put("container", containerJS);
+        instanceJS.put("sub_container", containerJS);
 
         return instanceJS;
     }
@@ -2219,7 +2223,8 @@ public class ASpaceMapper {
      * @return
      * @throws Exception
      */
-    public JSONObject createAccessionInstance(Accessions accession, String locationURI, String locationNote) throws Exception {
+    public JSONObject createAccessionInstance(Accessions accession, String locationURI, String locationNote,
+                                              String parentRepoURI) throws Exception {
         JSONObject instanceJS = new JSONObject();
 
         // set the type
@@ -2228,8 +2233,8 @@ public class ASpaceMapper {
         // add the container now
         JSONObject containerJS = new JSONObject();
 
-        containerJS.put("type_1", "item");
-        containerJS.put("indicator_1", accession.getAccessionNumber());
+        TopContainerMapper topContainer = new TopContainerMapper(accession, parentRepoURI, aspaceCopyUtil);
+        containerJS.put("top_container", getReferenceObject(topContainer.getRef()));
 
         Date date = new Date(); // this is need to have valid container_location json record
         JSONArray locationsJA = new JSONArray();
@@ -2243,7 +2248,7 @@ public class ASpaceMapper {
         locationsJA.put(locationJS);
 
         containerJS.put("container_locations", locationsJA);
-        instanceJS.put("container", containerJS);
+        instanceJS.put("sub_container", containerJS);
 
         return instanceJS;
     }

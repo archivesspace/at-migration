@@ -12,6 +12,7 @@ import org.archiviststoolkit.mydomain.DomainObject;
 import org.archiviststoolkit.plugin.dbdialog.RemoteDBConnectDialogLight;
 import org.archiviststoolkit.plugin.utils.aspace.ASpaceMapper;
 import org.archiviststoolkit.structure.NotesEtcTypes;
+import test.TestUtils;
 
 import java.io.File;
 import java.io.FileWriter;

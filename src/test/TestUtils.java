@@ -24,7 +24,7 @@ public class TestUtils {
     public static final String[] empty = new String[0];
     public static boolean trimData = true;
     public static int startNum = 0;
-    public static int numToCopy = 20;
+    public static int numToCopy = 50;
     private static String propertiesUrl = "C:/Users/morrissey/Desktop/at-mig-6/dbcopy.properties";
     private static String atURL;
     private static String at_username;
