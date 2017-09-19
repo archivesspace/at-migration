@@ -209,6 +209,49 @@ public class ASpaceCopyUtil {
         init();
     }
 
+    public void addContainerData() throws Exception {
+        print("Adding data for top containers ...");
+
+        Set<TopContainerMapper> records = TopContainerMapper.getAlreadyAdded().keySet();
+
+        // these are used to update the progress bar
+        int total = records.size();
+        int count = 0;
+        int success = 0;
+        
+        for (TopContainerMapper topContainer: records) {
+
+            if (stopCopy) return;
+
+            String containerURI = topContainer.getRef();
+            JSONObject json = getRecord(containerURI);
+
+            print("Saving locations for top container " + topContainer);
+            JSONArray locations = topContainer.getContainerLocations();
+            if (!(locations == null)) json.put("container_locations", locations);
+
+            if (json != null) {
+                String id = saveRecord(containerURI, json.toString(), "topContainers->" + topContainer.getAtID());
+                if(!id.equalsIgnoreCase(NO_ID)) {
+                    print("Copied Top Container " + topContainer);
+                    success++;
+                } else {
+                    print("Fail -- Top Container: " + topContainer);
+                }
+            } else {
+                print("Fail -- Top Container to JSON: " + topContainer);
+            }
+
+            count++;
+            updateProgress("Top Containers", total, count);
+        }
+
+        updateRecordTotals("Top Containers", total, success);
+
+        // refresh the database connection to prevent heap space error
+        freeMemory();
+    }
+
     /**
      * Method to initiate certain variables that are needed to work
      */
@@ -2465,5 +2508,10 @@ public class ASpaceCopyUtil {
      */
     public void checkISODates() {
         mapper.checkISODates();
+    }
+
+    public JSONObject getRecord(String uri) throws Exception {
+        String data = aspaceClient.get(uri,null);
+        return new JSONObject(data);
     }
 }

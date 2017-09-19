@@ -79,16 +79,16 @@ public class TestUtils {
      * @throws FileNotFoundException
      */
     public static void resetDatabase() throws SQLException, FileNotFoundException {
-        System.out.println("Resetting AS database");
+        System.out.println("Resetting AS database ...");
         Connection conn = DriverManager.getConnection(asURL, as_username, as_password);
         Statement st = conn.createStatement();
-        System.out.println("Dropping old schema");
+        System.out.println("Dropping old schema ...");
         try {
             st.executeUpdate("DROP SCHEMA archivesspace;");
         } catch (SQLException e) {
             print(e.getMessage());
         }
-        System.out.println("Creating new schema");
+        System.out.println("Creating new schema ...");
         st.executeUpdate("create SCHEMA archivesspace");
         st.executeUpdate("GRANT all on archivesspace.* to 'AS_user'@'localhost'");
         st.close();
@@ -109,7 +109,7 @@ public class TestUtils {
                 "--\n" +
                 "-- Dumping routines for database 'archivesspace'\n" +
                 "--");
-        System.out.println("Adding tables to schema");
+        System.out.println("Adding tables to schema ...");
         for (String command: commands[0].split(";")) {
             try {
                 if (command.trim() != "") st.executeUpdate(command + ";");
@@ -118,7 +118,7 @@ public class TestUtils {
                 e.printStackTrace();
             }
         }
-        System.out.println("Adding functions to schema");
+        System.out.println("Adding functions to schema ...");
         for (String command: commands[1].split(";;\n" +
                 "DELIMITER ;\n")) {
             try {
@@ -130,7 +130,7 @@ public class TestUtils {
             }
         }
         st.close();
-        System.out.println("Database reset");
+        System.out.println("Database reset ...");
     }
 
     /**

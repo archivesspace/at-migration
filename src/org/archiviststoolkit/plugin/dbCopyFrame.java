@@ -395,6 +395,8 @@ public class dbCopyFrame extends JFrame {
                         ascopy.copyResourceRecords(resourcesToCopy, threads);
                     }
 
+                    if (!copyStopped) ascopy.addContainerData();
+
                     ascopy.cleanUp();
 
                     // set the number of errors and message now

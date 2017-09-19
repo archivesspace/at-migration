@@ -2158,6 +2158,7 @@ public class ASpaceMapper {
         JSONObject containerJS = new JSONObject();
 
         TopContainerMapper topContainer = new TopContainerMapper(analogInstance, parentRepoURI, aspaceCopyUtil);
+        topContainer.addLocationURI(locationURI);
         containerJS.put("top_container", getReferenceObject(topContainer.getRef()));
 //        containerJS.put("type_1", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer1Type()));
 //        containerJS.put("indicator_1", fixEmptyString(analogInstance.getContainer1Indicator(), "not specified"));
@@ -2234,6 +2235,7 @@ public class ASpaceMapper {
         JSONObject containerJS = new JSONObject();
 
         TopContainerMapper topContainer = new TopContainerMapper(accession, parentRepoURI, aspaceCopyUtil);
+        topContainer.addLocationURI(locationURI);
         containerJS.put("top_container", getReferenceObject(topContainer.getRef()));
 
         Date date = new Date(); // this is need to have valid container_location json record
@@ -2260,7 +2262,7 @@ public class ASpaceMapper {
      * @return
      * @throws Exception
      */
-    public JSONObject getReferenceObject(String recordURI) throws Exception {
+    public static JSONObject getReferenceObject(String recordURI) throws Exception {
         JSONObject referenceJS = new JSONObject();
         referenceJS.put("ref", recordURI);
         return referenceJS;
