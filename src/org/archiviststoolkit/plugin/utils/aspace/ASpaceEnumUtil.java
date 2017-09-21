@@ -1232,7 +1232,7 @@ public class ASpaceEnumUtil {
                 "object",   // 5
                 "page",     // 6
                 "reel",     // 7
-                "volume"    // 8
+//                "volume"    // 8
         };
     }
 
@@ -1282,8 +1282,8 @@ public class ASpaceEnumUtil {
             return ASpaceInstanceContainerTypes[7];
         } else if(atValue.equals("reel-frame") && returnATValue) {
             return atValue;
-        } else if(atValue.equals("volume")) {
-            return ASpaceInstanceContainerTypes[8];
+//        } else if(atValue.equals("volume")) {
+//            return ASpaceInstanceContainerTypes[8];
         } else if(returnATValue) {
             if(validContainerTypes.contains(atValue)) {
                 return atValue;

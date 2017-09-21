@@ -2,13 +2,10 @@ package org.archiviststoolkit.plugin.utils.aspace;
 
 import org.archiviststoolkit.model.Accessions;
 import org.archiviststoolkit.model.ArchDescriptionAnalogInstances;
-import org.archiviststoolkit.mydomain.DomainAccessObject;
 import org.archiviststoolkit.mydomain.DomainObject;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.restlet.data.Warning;
-import test.TestUtils;
 
 import java.util.*;
 
@@ -17,9 +14,13 @@ import java.util.*;
  */
 public class TopContainerMapper {
 
+    public DomainObject getInstance() {
+        return instance;
+    }
+
     private class Info {
         public String uri;
-        private Set<JSONObject> locationURIs = new HashSet<JSONObject>();
+        private Set<LocationJSONObject> locationURIs = new HashSet<LocationJSONObject>();
 
         public Info(String uri) {
             this.uri = uri;
@@ -32,14 +33,16 @@ public class TopContainerMapper {
 
     private static Map<TopContainerMapper, Info> alreadyAdded = new HashMap<TopContainerMapper, Info>();
 
+    private static int unknownCount = 1;
+
     private ASpaceEnumUtil enumUtil = new ASpaceEnumUtil();
     private ASpaceCopyUtil aSpaceCopyUtil;
-    private DomainObject instance;
 
     public String getAtID() {
         return atID;
     }
 
+    private DomainObject instance;
     private String atID;
     private String parentRepoURI; //***
     private String indicator; //***
@@ -54,7 +57,7 @@ public class TopContainerMapper {
      * @throws JSONException
      */
     public TopContainerMapper(ArchDescriptionAnalogInstances analogInstance, String parentRepoURI,
-                              ASpaceCopyUtil aSpaceCopyUtil) throws JSONException {
+                              ASpaceCopyUtil aSpaceCopyUtil) throws Exception {
         this.instance = analogInstance;
         indicator = analogInstance.getContainer1Indicator();
         type = enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer1Type());
@@ -72,9 +75,8 @@ public class TopContainerMapper {
      * @param aSpaceCopyUtil
      * @throws JSONException
      */
-    public TopContainerMapper(Accessions accession, String parentRepoURI, ASpaceCopyUtil aSpaceCopyUtil) throws JSONException {
+    public TopContainerMapper(Accessions accession, String parentRepoURI, ASpaceCopyUtil aSpaceCopyUtil) throws Exception {
         this.instance = accession;
-        indicator = accession.getAccessionNumber();
         type = "item";
         this.parentRepoURI = parentRepoURI;
         this.aSpaceCopyUtil = aSpaceCopyUtil;
@@ -86,7 +88,18 @@ public class TopContainerMapper {
      * calls the method to add the top container if it does not exist yet
      * @throws JSONException
      */
-    private void initContainer() throws JSONException {
+    private void initContainer() throws Exception {
+        if (indicator == null || indicator.isEmpty()) {
+            indicator = String.format("Unknown container %d for ", unknownCount);
+            if (!aSpaceCopyUtil.getSimulateRESTCalls()) unknownCount++;
+            if (instance instanceof Accessions) indicator += "Accession " + ((Accessions) instance).getAccessionNumber();
+            else {
+                ArchDescriptionAnalogInstances analogInstances = (ArchDescriptionAnalogInstances) instance;
+                indicator += "instance of ";
+                if (analogInstances.getResource() != null) indicator += analogInstances.getResource().getResourceIdentifier();
+                else indicator += analogInstances.getResourceComponent().getTitle();
+            }
+        }
         if (! alreadyAdded.keySet().contains(this)) {
             String uri;
             uri = this.addTopContainer();
@@ -100,18 +113,19 @@ public class TopContainerMapper {
      * @return the uri of the top container
      * @throws JSONException
      */
-    private String addTopContainer() throws JSONException {
+    private String addTopContainer() throws Exception {
         JSONObject jsonObject = new JSONObject();
+        ASpaceMapper.addExternalId(instance, jsonObject, instance.getClass().getSimpleName());
         jsonObject.put("jsonmodel_type", "top_container");
         jsonObject.put("indicator", indicator);
         jsonObject.put("type", type);
         jsonObject.put("barcode", barcode);
         String id = aSpaceCopyUtil.saveRecord(parentRepoURI + "top_containers", jsonObject.toString(),
-                "TopContainer->" + atID);
+                instance.getClass().getSimpleName() + "->" + atID);
         if (!(id.equalsIgnoreCase("no id assigned"))) {
-            aSpaceCopyUtil.print("Copied Top Container: " + this);
+            aSpaceCopyUtil.print("Copied Top Container -- " + this);
         } else {
-            aSpaceCopyUtil.print("Could not copy Top Container: " + this);
+            aSpaceCopyUtil.print("Fail -- Instance: " + printableInstance());
         }
         return parentRepoURI + "top_containers/" + id;
     }
@@ -145,6 +159,7 @@ public class TopContainerMapper {
      * add a top container to the list of containers that have already been added so that it won't be duplicated
      */
     public void addToExisting(String uri) {
+        if (uri.contains("10000001") || uri.contains("no id assigned")) return;
         alreadyAdded.put(this, new Info(uri));
     }
 
@@ -153,30 +168,56 @@ public class TopContainerMapper {
      * @return uri for top container
      */
     public String getRef() {
+        if (!alreadyAdded.containsKey(this)) return null;
         return alreadyAdded.get(this).uri;
     }
 
-    public void addLocationURI(String uri) throws Exception {
+    public void addLocationURI(String uri, String note) throws Exception {
         if (uri == null || uri.isEmpty()) {
             return;
         }
-        JSONObject json = new JSONObject();
-        json.put("ref", uri);
-        json.put("status", "current");
-        //TODO find out if this info is stored in AT
-        JSONObject dateJSON = new JSONObject();
-        dateJSON.put("type", "single");
-        dateJSON.put("date_label", "record_keeping");
-        dateJSON.put("begin", new Date());
-        json.put("start_date", "before " + dateJSON);
+        LocationJSONObject json = new LocationJSONObject(uri, note);
+
         alreadyAdded.get(this).locationURIs.add(json);
     }
 
+    public void addLocationURI(String uri) throws Exception {addLocationURI(uri, "");}
+
+    private class LocationJSONObject extends JSONObject {
+
+        String uri;
+
+        public LocationJSONObject(String uri, String note) throws JSONException {
+            this.uri = uri;
+            put("ref", uri);
+            put("status", "current");
+            put("note", note);
+            //TODO find out if this info is stored in AT
+            JSONObject dateJSON = new JSONObject();
+            dateJSON.put("type", "single");
+            dateJSON.put("date_label", "record_keeping");
+            dateJSON.put("begin", new Date());
+            put("start_date", "before " + dateJSON);
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (this == other) return true;
+            if (other == null || !(other instanceof LocationJSONObject)) return false;
+            return this.uri.equals(((LocationJSONObject) other).uri);
+        }
+
+        @Override
+        public int hashCode() {
+            return uri.hashCode();
+        }
+    }
+
     public JSONArray getContainerLocations() throws Exception {
-        Set<JSONObject> containerLocs = alreadyAdded.get(this).locationURIs;
+        Set<LocationJSONObject> containerLocs = alreadyAdded.get(this).locationURIs;
         if (containerLocs.size() == 0) {
             this.aSpaceCopyUtil.addErrorMessage("No locations exist for top container " + this + "\n");
-            this.aSpaceCopyUtil.print("No locations exist for " + this + ". Skipping.");
+            this.aSpaceCopyUtil.print("No locations exist for " + this + ". Skipping.\n");
             return null;
         } else {
             JSONArray locations = new JSONArray(containerLocs);
@@ -186,7 +227,11 @@ public class TopContainerMapper {
 
     @Override
     public String toString() {
-        return type + " " + indicator;
+        return type + " " + indicator + " -- " + printableInstance();
+    }
+
+    public String printableInstance() {
+        return instance.getClass().getSimpleName() + " " + atID;
     }
 
 }

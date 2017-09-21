@@ -5,7 +5,7 @@ cp -v plugin.xml out/production/ScriptAT
 
 cd out/production/ScriptAT
 
-zip -rv scriptAT.zip . -i \*.class *.bsh *.xml
+zip -rv scriptAT.zip . -i \*.class *.bsh *.xml -x test/*
 
 mv -v scriptAT.zip ../../../../
 
