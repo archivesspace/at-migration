@@ -3,7 +3,6 @@ package org.archiviststoolkit.plugin.utils.aspace;
 import org.apache.commons.httpclient.NameValuePair;
 import org.archiviststoolkit.ApplicationFrame;
 import org.archiviststoolkit.model.*;
-import test.TestUtils;
 import org.archiviststoolkit.plugin.dbCopyFrame;
 import org.archiviststoolkit.plugin.dbdialog.RemoteDBConnectDialogLight;
 import org.archiviststoolkit.plugin.utils.ScriptDataUtils;
@@ -207,6 +206,57 @@ public class ASpaceCopyUtil {
         this.sourceRCD = sourceRCD;
         this.aspaceClient = new ASpaceClient(host, admin, adminPassword);
         init();
+    }
+
+    public void addContainerData() throws Exception {
+        print("Adding data for top containers ...");
+
+        Set<TopContainerMapper> records = TopContainerMapper.getAlreadyAdded().keySet();
+
+        // these are used to update the progress bar
+        int total = records.size();
+        int count = 0;
+        int success = 0;
+        
+        for (TopContainerMapper topContainer: records) {
+
+            if (stopCopy) return;
+
+            JSONArray locations = topContainer.getContainerLocations();
+            if (locations == null) {
+                count++;
+                success++;
+                updateProgress("Top Containers", total, count);
+                continue;
+            }
+
+            String containerURI = topContainer.getRef();
+            JSONObject json = getRecord(containerURI);
+            if (json == null) {
+                print("Record was not saved -- " + topContainer + "\nCan't add its locations\n");
+                continue;
+            }
+
+            print("Saving locations for top container -- " + topContainer);
+            json.put("container_locations", locations);
+
+            String id = saveRecord(containerURI, json.toString(),
+                    topContainer.getInstance().getClass().getName() + "->" + topContainer.getAtID());
+            if(!id.equalsIgnoreCase(NO_ID)) {
+                print("Copied Top Container " + topContainer);
+                success++;
+            } else {
+                print("Fail -- Top Container: " + topContainer);
+            }
+
+            count++;
+            updateProgress("Top Containers", total, count);
+        }
+
+        updateRecordTotals("Top Containers", total, success);
+
+        // refresh the database connection to prevent heap space error
+        freeMemory();
     }
 
     /**
@@ -474,7 +524,6 @@ public class ASpaceCopyUtil {
 
         ArrayList<Repositories> records = sourceRCD.getRepositories();
 
-        records = TestUtils.trimRecords(records);
 
         // these are used to update the progress bar
         int total = records.size();
@@ -575,7 +624,6 @@ public class ASpaceCopyUtil {
         print("Copying locations records ...");
         ArrayList<Locations> records = sourceRCD.getLocations();
 
-        records = TestUtils.trimRecords(records);
 
         // these are used to update the progress bar and import log
         int total = records.size();
@@ -628,7 +676,6 @@ public class ASpaceCopyUtil {
 
         ArrayList<Users> records = sourceRCD.getUsers();
 
-        records = TestUtils.trimRecords(records);
 
         // these are used to update the progress bar
         int total = records.size();
@@ -753,7 +800,6 @@ public class ASpaceCopyUtil {
 
         ArrayList<Names> records = sourceRCD.getNames();
 
-        records = TestUtils.trimRecords(records);
 
         // these are used to update the progress bar
         int total = records.size();
@@ -833,8 +879,6 @@ public class ASpaceCopyUtil {
 
         ArrayList<Subjects> records = sourceRCD.getSubjects();
 
-        records = TestUtils.trimRecords(records);
-
         // these are used to update the progress bar
         int total = records.size();
         int count = 0;
@@ -899,8 +943,6 @@ public class ASpaceCopyUtil {
         print("Copying Accession records ...");
 
         ArrayList<Accessions> records = sourceRCD.getAccessions();
-
-        records = TestUtils.trimRecords(records);
 
         // these are used to update the progress bar
         int total = records.size();
@@ -986,6 +1028,8 @@ public class ASpaceCopyUtil {
      * @throws Exception
      */
     public void addInstance(Accessions accession, JSONObject json) throws Exception {
+        String parentRepoURI = getRepositoryURI(accession.getRepository()) + "/";
+
         Set<AccessionsLocations> locations = accession.getLocations();
         if(locations == null || locations.size() == 0) return;
 
@@ -997,7 +1041,7 @@ public class ASpaceCopyUtil {
             String locationURI = locationURIMap.get(location.getLocation().getIdentifier());
             if(locationURI != null) {
                 String locationNote = location.getNote();
-                JSONObject instanceJS = mapper.createAccessionInstance(accession, locationURI, locationNote);
+                JSONObject instanceJS = mapper.createAccessionInstance(accession, locationURI, locationNote, parentRepoURI);
                 instancesJA.put(instanceJS);
             }
         }
@@ -1014,8 +1058,6 @@ public class ASpaceCopyUtil {
         print("Copying Digital Object records ...");
 
         ArrayList<DigitalObjects> records = sourceRCD.getDigitalObjects();
-
-        records = TestUtils.trimRecords(records);
 
         // these are used to update the progress bar
         int total = records.size();
@@ -1178,7 +1220,6 @@ public class ASpaceCopyUtil {
 
         ArrayList<Resources> records = sourceRCD.getResources();
 
-        records = TestUtils.trimRecords(records);
 
         print("Copying " + records.size() + " Resource records ...");
 
@@ -1579,7 +1620,7 @@ public class ASpaceCopyUtil {
                     }*/
                 }
 
-                JSONObject instanceJS = mapper.convertAnalogInstance(analogInstance, locationURI);
+                JSONObject instanceJS = mapper.convertAnalogInstance(analogInstance, locationURI, parentRepoURI);
 
                 if(instanceJS != null) {
                     instancesJA.put(instanceJS);
@@ -1883,7 +1924,7 @@ public class ASpaceCopyUtil {
     private synchronized String getRepositoryURI(Repositories oldRepository) {
         // check to see if old repo is not null. If it is then we need to just return anyone
         // since this should never occur in a properly formatted AT database
-        if(oldRepository != null) {
+        if(oldRepository != null && repositoryURIMap.containsKey(oldRepository.getShortName())) {
             String shortName = oldRepository.getShortName();
             return repositoryURIMap.get(shortName);
         } else {
@@ -2463,5 +2504,14 @@ public class ASpaceCopyUtil {
      */
     public void checkISODates() {
         mapper.checkISODates();
+    }
+
+    public JSONObject getRecord(String uri) throws Exception {
+        String data = aspaceClient.get(uri,null);
+        return new JSONObject(data);
+    }
+
+    public boolean getSimulateRESTCalls() {
+        return simulateRESTCalls;
     }
 }

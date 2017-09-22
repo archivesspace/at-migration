@@ -25,7 +25,6 @@ import org.hibernate.*;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
-import test.TestUtils;
 
 import javax.swing.*;
 import java.awt.*;

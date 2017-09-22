@@ -269,6 +269,8 @@ public class dbCopyCLI {
 
             ascopy.copyResourceRecords(numberOfResourcesToCopy, clientThreads);
 
+            ascopy.addContainerData();
+
             // DEBUG code which checks to see that all ISO dates are valid
             if(checkISODates) {
                 ascopy.checkISODates();

@@ -10,7 +10,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.Scanner;
@@ -19,12 +18,15 @@ import java.util.Scanner;
  * A simple class that is used to reset the AS database. Meant mainly for running tests
  * Note that for the AS UI to reset you will have to also delete the AS data directory's contents
  */
-public class TestUtils {
+class TestUtils {
+
+    //Be sure to set this to false before building
+    private static final boolean testMode = true;
 
     public static final String[] empty = new String[0];
-    public static boolean trimData = true;
+    public static boolean trimData = false;
     public static int startNum = 0;
-    public static int numToCopy = 20;
+    public static int numToCopy = 50;
     private static String propertiesUrl = "C:/Users/morrissey/Desktop/at-mig-6/dbcopy.properties";
     private static String atURL;
     private static String at_username;
@@ -35,6 +37,15 @@ public class TestUtils {
     private static String schemaSetup = "C:/Users/morrissey/Documents/dumps/as_21_empty.sql";
     private static String asDirectory = "C:/Users/morrissey/Desktop/archivesspace";
     private static String host;
+    public static boolean manualConnect = true;
+
+    static {
+        if (!testMode) {
+            manualConnect = false;
+            trimData = false;
+        }
+    }
+
     public static Properties getProperties() {
         return properties;
     }
@@ -42,6 +53,7 @@ public class TestUtils {
     private static Properties properties = new Properties();
 
     public static void setProperties() throws IOException {
+        if (!testMode) return;
         InputStream file = new FileInputStream(propertiesUrl);
         properties.load(file);
         if (atURL == null) atURL = properties.getProperty("atUrl");
@@ -79,16 +91,16 @@ public class TestUtils {
      * @throws FileNotFoundException
      */
     public static void resetDatabase() throws SQLException, FileNotFoundException {
-        System.out.println("Resetting AS database");
+        System.out.println("Resetting AS database ...");
         Connection conn = DriverManager.getConnection(asURL, as_username, as_password);
         Statement st = conn.createStatement();
-        System.out.println("Dropping old schema");
+        System.out.println("Dropping old schema ...");
         try {
             st.executeUpdate("DROP SCHEMA archivesspace;");
         } catch (SQLException e) {
             print(e.getMessage());
         }
-        System.out.println("Creating new schema");
+        System.out.println("Creating new schema ...");
         st.executeUpdate("create SCHEMA archivesspace");
         st.executeUpdate("GRANT all on archivesspace.* to 'AS_user'@'localhost'");
         st.close();
@@ -109,7 +121,7 @@ public class TestUtils {
                 "--\n" +
                 "-- Dumping routines for database 'archivesspace'\n" +
                 "--");
-        System.out.println("Adding tables to schema");
+        System.out.println("Adding tables to schema ...");
         for (String command: commands[0].split(";")) {
             try {
                 if (command.trim() != "") st.executeUpdate(command + ";");
@@ -118,7 +130,7 @@ public class TestUtils {
                 e.printStackTrace();
             }
         }
-        System.out.println("Adding functions to schema");
+        System.out.println("Adding functions to schema ...");
         for (String command: commands[1].split(";;\n" +
                 "DELIMITER ;\n")) {
             try {
@@ -130,32 +142,7 @@ public class TestUtils {
             }
         }
         st.close();
-        System.out.println("Database reset");
-    }
-
-    /**
-    * use to get records down to a manageable amount for testing
-    * @param original the full list of records
-    * @param <E> some type of record
-    * @param numToCopy how many records you want to test with
-    * @return a trimmed list of only a few records
-    */
-   public static <E> ArrayList<E> trimRecords(ArrayList<E> original, int numToCopy) {
-       if (trimData) {
-           ArrayList<E> newList = new ArrayList<E>();
-           for (int i = startNum; i < startNum + numToCopy; i++) {
-               int j = i;
-               if (i >= original.size()) {
-                   j = i % original.size();
-               }
-               newList.add(original.get(j));
-           }
-           return newList;
-       } else {return original;}
-   }
-
-    public static <E> ArrayList<E> trimRecords(ArrayList<E> original) {
-       return trimRecords(original, numToCopy);
+        System.out.println("Database reset ...");
     }
 
     public static Statement dbConnect() throws SQLException {

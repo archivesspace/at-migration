@@ -2137,7 +2137,8 @@ public class ASpaceMapper {
      * @return
      * @throws Exception
      */
-    public JSONObject convertAnalogInstance(ArchDescriptionAnalogInstances analogInstance, String locationURI) throws Exception {
+    public JSONObject convertAnalogInstance(ArchDescriptionAnalogInstances analogInstance, String locationURI,
+                                            String parentRepoURI) throws Exception {
         // check to see if you have an empty instance
         if(analogInstance.getInstanceType() == null || analogInstance.getInstanceType().trim().isEmpty()) {
             return null;
@@ -2155,39 +2156,46 @@ public class ASpaceMapper {
         // add the container now
         JSONObject containerJS = new JSONObject();
 
-        containerJS.put("type_1", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer1Type()));
-        containerJS.put("indicator_1", fixEmptyString(analogInstance.getContainer1Indicator(), "not specified"));
-        containerJS.put("barcode_1", analogInstance.getBarcode());
+        TopContainerMapper topContainer = new TopContainerMapper(analogInstance, parentRepoURI, aspaceCopyUtil);
+        topContainer.addLocationURI(locationURI);
+        containerJS.put("top_container", getReferenceObject(topContainer.getRef()));
+//        containerJS.put("type_1", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer1Type()));
+//        containerJS.put("indicator_1", fixEmptyString(analogInstance.getContainer1Indicator(), "not specified"));
+//        containerJS.put("barcode_1", analogInstance.getBarcode());
 
         if(!analogInstance.getContainer2Type().isEmpty()) {
             containerJS.put("type_2", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer2Type()));
-            containerJS.put("indicator_2", analogInstance.getContainer2Indicator());
+            String indicator2 = analogInstance.getContainer2Indicator();
+            if (indicator2 == null || indicator2.isEmpty()) indicator2 = "unknown";
+            containerJS.put("indicator_2", indicator2);
         }
 
         if(!analogInstance.getContainer3Type().isEmpty()) {
             containerJS.put("type_3", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer3Type()));
-            containerJS.put("indicator_3", analogInstance.getContainer3Indicator());
+            String indicator3 = analogInstance.getContainer3Indicator();
+            if (indicator3 == null || indicator3.isEmpty()) indicator3 = "unknown";
+            containerJS.put("indicator_3", indicator3);
         }
 
-        // add the location now if needed
-        if(locationURI != null && !locationURI.isEmpty()) {
-            Date date = new Date(); // this is need to have valid container_location json record
-
-            JSONArray locationsJA = new JSONArray();
-
-            JSONObject locationJS = new JSONObject();
-            locationJS.put("status", "current");
-            locationJS.put("start_date", date);
-            locationJS.put("ref", locationURI);
-
-            locationsJA.put(locationJS);
-            containerJS.put("container_locations", locationsJA);
-        }
+//        // add the location now if needed
+//        if(locationURI != null && !locationURI.isEmpty()) {
+//            Date date = new Date(); // this is need to have valid container_location json record
+//
+//            JSONArray locationsJA = new JSONArray();
+//
+//            JSONObject locationJS = new JSONObject();
+//            locationJS.put("status", "current");
+//            locationJS.put("start_date", date);
+//            locationJS.put("ref", locationURI);
+//
+//            locationsJA.put(locationJS);
+//            containerJS.put("container_locations", locationsJA);
+//        }
 
         // TODO 4/16/2013 add the user defined fields
         //addUserDefinedFields(containerJS, analogInstance);
 
-        instanceJS.put("container", containerJS);
+        instanceJS.put("sub_container", containerJS);
 
         return instanceJS;
     }
@@ -2219,7 +2227,8 @@ public class ASpaceMapper {
      * @return
      * @throws Exception
      */
-    public JSONObject createAccessionInstance(Accessions accession, String locationURI, String locationNote) throws Exception {
+    public JSONObject createAccessionInstance(Accessions accession, String locationURI, String locationNote,
+                                              String parentRepoURI) throws Exception {
         JSONObject instanceJS = new JSONObject();
 
         // set the type
@@ -2228,22 +2237,23 @@ public class ASpaceMapper {
         // add the container now
         JSONObject containerJS = new JSONObject();
 
-        containerJS.put("type_1", "item");
-        containerJS.put("indicator_1", accession.getAccessionNumber());
+        TopContainerMapper topContainer = new TopContainerMapper(accession, parentRepoURI, aspaceCopyUtil);
+        topContainer.addLocationURI(locationURI, locationNote);
+        containerJS.put("top_container", getReferenceObject(topContainer.getRef()));
 
-        Date date = new Date(); // this is need to have valid container_location json record
-        JSONArray locationsJA = new JSONArray();
-
-        JSONObject locationJS = new JSONObject();
-        locationJS.put("status", "current");
-        locationJS.put("start_date", date);
-        locationJS.put("ref", locationURI);
-        locationJS.put("note", locationNote);
-
-        locationsJA.put(locationJS);
-
-        containerJS.put("container_locations", locationsJA);
-        instanceJS.put("container", containerJS);
+//        Date date = new Date(); // this is need to have valid container_location json record
+//        JSONArray locationsJA = new JSONArray();
+//
+//        JSONObject locationJS = new JSONObject();
+//        locationJS.put("status", "current");
+//        locationJS.put("start_date", date);
+//        locationJS.put("ref", locationURI);
+//        locationJS.put("note", locationNote);
+//
+//        locationsJA.put(locationJS);
+//
+//        containerJS.put("container_locations", locationsJA);
+        instanceJS.put("sub_container", containerJS);
 
         return instanceJS;
     }
@@ -2255,7 +2265,7 @@ public class ASpaceMapper {
      * @return
      * @throws Exception
      */
-    public JSONObject getReferenceObject(String recordURI) throws Exception {
+    public static JSONObject getReferenceObject(String recordURI) throws Exception {
         JSONObject referenceJS = new JSONObject();
         referenceJS.put("ref", recordURI);
         return referenceJS;
@@ -2267,7 +2277,7 @@ public class ASpaceMapper {
      * @param record
      * @param source
      */
-    public void addExternalId(DomainObject record, JSONObject recordJS, String source) throws Exception {
+    public static void addExternalId(DomainObject record, JSONObject recordJS, String source) throws Exception {
         source = "Archivists Toolkit Database::" + source.toUpperCase();
 
         JSONArray externalIdsJA = new JSONArray();

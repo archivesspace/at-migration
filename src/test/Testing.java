@@ -8,7 +8,7 @@ import java.util.ArrayList;
 /**
  * a class for setup to make testing easier
  */
-public class Testing {
+class Testing {
 
     private static ArrayList<String> testsToRun = new ArrayList<String>();
 
@@ -31,7 +31,8 @@ public class Testing {
      * @param args
      */
     public static void main(String[] args) throws Exception {
-        TestUtils.resetDatabase();
+//        TestUtils.resetDatabase();
+//        dbCopyFrame.main(TestUtils.empty);
         //Call constructors for any tests you want to run here
         new dbCopyCLITest();
         new ASpaceMapperTest();
