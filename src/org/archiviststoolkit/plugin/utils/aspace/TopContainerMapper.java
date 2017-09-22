@@ -130,10 +130,6 @@ public class TopContainerMapper {
         return parentRepoURI + "top_containers/" + id;
     }
 
-    public void setType(String type) {
-        this.type = type;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
