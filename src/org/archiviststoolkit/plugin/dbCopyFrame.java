@@ -222,7 +222,6 @@ public class dbCopyFrame extends JFrame {
             rcd.pack();
             rcd.setVisible(true);
         } else {
-//            rcd.connectToDatabase("MySQL", "jdbc:mysql://localhost:3306/toolkit", "root", "cinnamon");
             rcd.connectToDatabase(urlIndex);
         }
 

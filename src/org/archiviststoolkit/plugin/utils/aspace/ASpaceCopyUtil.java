@@ -184,6 +184,7 @@ public class ASpaceCopyUtil {
     public static final String TERM_UNTYPED = "-term_untyped";
     public static final String TERM_DEFAULT = "-term_default";
     private String termTypeOption = TERM_DEFAULT;
+    private boolean enumsSet = false;
 
     /**
      * The main constructor, used when running as a stand alone application
@@ -439,6 +440,7 @@ public class ASpaceCopyUtil {
         // first load the dynamic enums current is ASpace
         HashMap<String, JSONObject> dynamicEnums = aspaceClient.loadDynamicEnums();
         mapper.setASpaceDynamicEnums(dynamicEnums);
+        enumsSet = true;
         mapper.setReturnATValue(false);
 
         if(dynamicEnums == null) {
@@ -467,12 +469,18 @@ public class ASpaceCopyUtil {
             // we may need to add additional values to some lookup list now
             if(listName.equalsIgnoreCase("Extent type")) {
                 sourceRCD.addExtentTypes(lookupList);
+                lookupList.addListItem("unknown");
             } else if(listName.equals("Salutation")) {
                 sourceRCD.addSalutations(lookupList);
             } else if(listName.equals("Name source")) {
                 lookupList.addListItem("ingest");
+                lookupList.addListItem("local");
             } else if(listName.equals("Container types")) {
                 lookupList.addListItem("item");
+            } else if(listName.equals("Resource type")) {
+                lookupList.addListItem("collection");
+            } else if(listName.equals("Date type")) {
+                lookupList.addListItem("other");
             }
 
             JSONObject updatedEnumJS = mapper.mapLookList(lookupList);
@@ -1211,6 +1219,9 @@ public class ASpaceCopyUtil {
      * @param threads
      */
     public void copyResourceRecords(int max, int threads) throws Exception {
+        if (!enumsSet) mapper.setASpaceDynamicEnums(aspaceClient.loadDynamicEnums());
+        enumsSet = true;
+
         currentRecordType = "Resource Record";
 
         // first delete previously saved resource records if that option was selected by user
@@ -1546,7 +1557,7 @@ public class ASpaceCopyUtil {
             if(nameURI != null) {
                 JSONObject linkedAgentJS = new JSONObject();
 
-                linkedAgentJS.put("role", enumUtil.getASpaceLinkedAgentRole(aname.getNameLinkFunction()));
+                linkedAgentJS.put("role", enumUtil.getASpaceLinkedAgentRole(aname.getNameLinkFunction())[0]);
                 linkedAgentJS.put("relator", enumUtil.getASpaceLinkedAgentRelator(aname.getRole()));
 
                 // add the name form as a term

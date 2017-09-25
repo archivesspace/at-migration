@@ -60,7 +60,7 @@ public class TopContainerMapper {
                               ASpaceCopyUtil aSpaceCopyUtil) throws Exception {
         this.instance = analogInstance;
         indicator = analogInstance.getContainer1Indicator();
-        type = enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer1Type());
+        type = (String) enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer1Type())[0];
         barcode = analogInstance.getBarcode();
         this.parentRepoURI = parentRepoURI;
         this.aSpaceCopyUtil = aSpaceCopyUtil;
@@ -130,10 +130,6 @@ public class TopContainerMapper {
         return parentRepoURI + "top_containers/" + id;
     }
 
-    public void setType(String type) {
-        this.type = type;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -195,7 +191,7 @@ public class TopContainerMapper {
             //TODO find out if this info is stored in AT
             JSONObject dateJSON = new JSONObject();
             dateJSON.put("type", "single");
-            dateJSON.put("date_label", "record_keeping");
+            dateJSON.put("date_label", enumUtil.getASpaceDateEnum(null)[0]);
             dateJSON.put("begin", new Date());
             put("start_date", "before " + dateJSON);
         }

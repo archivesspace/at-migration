@@ -24,7 +24,7 @@ public class ASpaceEnumUtil {
 
     private HashMap<String, String> nameLinkCreatorCodes;
 
-    private HashMap<String, JSONObject> dynamicEnums;
+    private static HashMap<String, JSONObject> dynamicEnums;
 
     // Hash map that maps AT values to AT codes
     private HashMap<String, String> lookupListValuesToCodes = new HashMap<String, String>();
@@ -35,57 +35,19 @@ public class ASpaceEnumUtil {
     private ArrayList<String> validContainerTypes = new ArrayList<String>();
     private ArrayList<String> validResourceTypes = new ArrayList<String>();
 
-    private String[] ASpaceTermTypes = null;
     private String[] ASpaceSubjectSources = null;
-    private String[] ASpaceNameSources = null;
-    private String[] ASpaceNameRules = null;
-    private String[] ASpaceNameDescriptionTypes = null;
-    private String[] ASpaceLinkedAgentRoles = null;
-    private String[] ASpaceExtentTypes = null;
-    private String[] ASpaceDateEnums = null;
-    private String[] ASpaceCollectionManagementRecordEnums = null;
-    private String[] ASpaceDigitalObjectTypes = null;
-    private String[] ASpaceNoteTypes = null;
-    private String[] ASpaceIndexItemTypes = null;
-    private String[] ASpaceResourceLevels = null;
-    private String[] ASpaceFindingAidDescriptionRules = null;
-    private String[] ASpaceFindingAidStatus = null;
-    private String[] ASpaceInstanceTypes = null;
-    private String[] ASpaceInstanceContainerTypes = null;
-    private String[] ASpaceAcquisitionTypes = null;
-    private String[] ASpaceFileVersionUseStatements = null;
-    private String[] ASpaceAccessionResourceTypes = null;
 
     // A trying that is used to bypass
     public final static String UNMAPPED = "other_unmapped";
 
     public boolean returnATValue = true; // set this to return the AR value instead of UNMAPPED
 
-    /**
-     * Main constructor
-     */
-    public ASpaceEnumUtil() {
-        initASpaceTermTypes();
-        initASpaceSubjectSources();
-        initASpaceNameRules();
-        initASpaceNameSource();
-        initASpaceNameDescriptionType();
-        initASpaceExtentTypes();
-        initASpaceDateEnums();
-        initASpaceCollectionManagementRecordEnums();
-        initASpaceLinkedAgentRole();
-        initASpaceDigitalObjectType();
-        initASpaceFileVersionUseStatements();
-        initASpaceNoteTypes();
-        initASpaceIndexItemTypes();
-        initASpaceResourceLevels();
-        initASpaceFindingAidDescriptionRules();
-        initASpaceFindingAidStatus();
-        initASpaceInstanceTypes();
-        initASpaceInstanceContainerTypes();
-        initASpaceAcquisitionTypes();
-        initASpaceAccessionResourceTypes();
-    }
+//    /**
+//     * Main constructor
+//     */
+//    public ASpaceEnumUtil() {
+//        initASpaceSubjectSources();
+//    }
 
     /**
      * Method to set the language code hash map
@@ -103,114 +65,76 @@ public class ASpaceEnumUtil {
     }
 
     /**
-     * Initialize the array that hold term types
-     */
-    private void initASpaceTermTypes() {
-        ASpaceTermTypes = new String[]{
-                "cultural_context",     // 0
-                "function",             // 1
-                "geographic",           // 2
-                "genre_form",           // 3
-                "occupation",           // 4
-                "style_period",         // 5
-                "technique",            // 6
-                "temporal",             // 7
-                "topical",              // 8
-                "uniform_title"         // 9
-        };
-    }
-
-    /**
      * Method to map the AT subject term type to the ones in ASPace
      * @param atValue
      * @return
      */
-    public String getASpaceTermType(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return UNMAPPED;
-
-        atValue = atValue.toLowerCase();
-
-        if(atValue.contains("function")) {
-            return ASpaceTermTypes[1];
-        } else if(atValue.contains("genre")) {
-            return ASpaceTermTypes[3];
-        } else if(atValue.contains("geographic")) {
-            return ASpaceTermTypes[2];
-        } else if(atValue.contains("occupation")) {
-            return ASpaceTermTypes[4];
-        } else if(atValue.contains("topical")) {
-            return ASpaceTermTypes[8];
-        } else if(atValue.contains("uniform")) {
-            return ASpaceTermTypes[9];
-        } else { // return others unknown
-            return UNMAPPED;
+    public Object[] getASpaceTermType(String atValue) {
+        if (atValue.contains("uniform")) {
+            atValue = "uniform_title";
         }
+        return getASpaceEnumValue("subject_term_type", atValue, false, "topical");
     }
 
-    /**
-     * Initialize the array that holds the subject source
-     */
-    private void initASpaceSubjectSources() {
-        ASpaceSubjectSources = new String[] {
-                "aat",      // 0
-                "rbgenr",   // 1
-                "tgn",      // 2
-                "lcsh",     // 3
-                "local",    // 4
-                "mesh",     // 5
-                "gmgpc",    // 6
-//                "georeft",  // 7
-//                "dot"       // 8
-        };
-    }
+//    /**
+//     * Initialize the array that holds the subject source
+//     */
+//    private void initASpaceSubjectSources() {
+//        ASpaceSubjectSources = new String[] {
+//                "aat",      // 0
+//                "rbgenr",   // 1
+//                "tgn",      // 2
+//                "lcsh",     // 3
+//                "local",    // 4
+//                "mesh",     // 5
+//                "gmgpc",    // 6
+////                "georeft",  // 7
+////                "dot"       // 8
+//        };
+//    }
 
     /**
      * Method to map the subject source
      * @param atValue
      * @return
      */
-    public String getASpaceSubjectSource(String atValue) {
+    public Object[] getASpaceSubjectSource(String atValue) {
 
-        if(atValue == null || atValue.isEmpty()) return "";
+        String code;
+
+//        if(atValue == null || atValue.isEmpty()) return "";
 
         atValue = atValue.toLowerCase();
 
         if(atValue.contains("art & architecture thesaurus")) {
-            return ASpaceSubjectSources[0];
+            code = "aat";
+//            return ASpaceSubjectSources[0];
 //        } else if (atValue.contains("dictionary of occupational titles")) {
 ////            return ASpaceSubjectSources[8];
         } else if (atValue.contains("genre terms: a thesaurus for use in rare book")) {
-            return ASpaceSubjectSources[1];
-//        } else if (atValue.contains("georef thesaurus")) {
-//            return ASpaceSubjectSources[7];
+            code = "rbgenr";
+//            return ASpaceSubjectSources[1];
         } else if (atValue.contains("getty thesaurus of geographic names")) {
-            return ASpaceSubjectSources[2];
+            code = "tgn";
+//            return ASpaceSubjectSources[2];
         } else if (atValue.contains("library of congress subject headings")) {
-            return ASpaceSubjectSources[3];
+            code = "lcsh";
+//            return ASpaceSubjectSources[3];
         } else if (atValue.contains("local")) {
-            return ASpaceSubjectSources[4];
+            code = "local";
+//            return ASpaceSubjectSources[4];
         } else if (atValue.contains("medical subject headings")) {
-            return ASpaceSubjectSources[5];
+            code = "mesh";
+//            return ASpaceSubjectSources[5];
         } else if (atValue.contains("thesaurus for graphic materials")) {
-            return ASpaceSubjectSources[6];
-        } else if (returnATValue) {
-            return lookupListValuesToCodes.get(atValue);
+            code =  "gmgpc";
+//        } else if (returnATValue) {
+//            return lookupListValuesToCodes.get(atValue);
         } else {
-            return UNMAPPED;
+            code = lookupListValuesToCodes.get(atValue);
+//            return UNMAPPED;
         }
-    }
-
-    /**
-     * initialize the name source array
-     */
-    private void initASpaceNameSource() {
-        ASpaceNameSources = new String[]{
-                "local",    // 0
-                "naf",      // 1
-                "nad",      // 2
-                "ulan"      // 3
-        };
-
+        return getASpaceEnumValue("subject_source", code);
     }
 
     /**
@@ -219,24 +143,19 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceNameSource(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "";
+    public Object[] getASpaceNameSource(String atValue) {
 
         atValue = atValue.toLowerCase();
+        if (atValue == null || atValue.trim().isEmpty()) atValue = "local";
 
-        if(atValue.contains("local")) {
-            return ASpaceNameSources[0];
-        } else if(atValue.contains("naco")) {
-            return ASpaceNameSources[1];
+        if(atValue.contains("naco")) {
+            atValue = "naf";
         } else if(atValue.contains("nad")) {
-            return ASpaceNameSources[2];
+            atValue = "nad";
         } else if(atValue.contains("union")) {
-            return ASpaceNameSources[3];
-        } else if(returnATValue) {
-            return atValue;
-        } else {
-            return UNMAPPED;
+            atValue = "ulan";
         }
+        return getASpaceEnumValue("name_source", atValue);
     }
 
     /**
@@ -245,23 +164,14 @@ public class ASpaceEnumUtil {
      * @param directOrder
      * @return
      */
-    public String getASpaceNameOrder(Boolean directOrder) {
+    public Object[] getASpaceNameOrder(Boolean directOrder) {
+        String atValue;
         if(directOrder) {
-            return "direct";
+            atValue = "direct";
         } else {
-            return "inverted";
+            atValue = "inverted";
         }
-    }
-
-    /**
-     * Method to initASpaceialize the name rules array
-     */
-    private void initASpaceNameRules() {
-        ASpaceNameRules = new String[] {
-                "local",    // 0
-                "aacr",     // 1
-                "dacs"      // 2
-        };
+        return getASpaceEnumValue("name_person_name_order", atValue, false, "direct");
     }
 
     /**
@@ -270,55 +180,19 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceNameRule(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "";
+    public Object[] getASpaceNameRule(String atValue) {
+        if(atValue == null || atValue.isEmpty()) atValue = "local";
 
         atValue = atValue.toLowerCase();
 
         if(atValue.contains("anglo")) {
-            return ASpaceNameRules[1];
+            atValue = "aacr";
         } else if(atValue.contains("describing")) {
-            return ASpaceNameRules[2];
-        } else if(atValue.contains("local")) {
-            return ASpaceNameRules[0];
-        } else if(returnATValue) {
-            return atValue;
-        } else {
-            return UNMAPPED;
+            atValue = "dacs";
         }
+        return getASpaceEnumValue("name_rule", atValue);
     }
 
-    /**
-     * Get the Name description type
-     */
-    private void initASpaceNameDescriptionType() {
-        ASpaceNameDescriptionTypes = new String[]{
-                "administrative history",   // 0
-                "biographical statement",   // 1
-        };
-    }
-
-    /**
-     * Method to map the name description type
-     *
-     * @param atValue
-     * @return
-     */
-    public String getASpaceNameDescriptionType(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "";
-
-        atValue = atValue.toLowerCase();
-
-        if(atValue.contains("administrative")) {
-            return ASpaceNameDescriptionTypes[0];
-        } else if(atValue.contains("biography")) {
-            return ASpaceNameDescriptionTypes[1];
-        } else if(returnATValue) {
-            return atValue;
-        } else {
-            return UNMAPPED;
-        }
-    }
 
     /**
      * Method to return the ASpace salutation. There is currently no way to map this
@@ -340,71 +214,14 @@ public class ASpaceEnumUtil {
     }
 
     /**
-     * Method to init ASpace extent type array
-     */
-    private void initASpaceExtentTypes() {
-        ASpaceExtentTypes = new String[] {
-                "cassettes",            // 0
-                "cubic_feet",           // 1
-                "files",                // 2
-                "gigabytes",            // 3
-                "leaves",               // 4
-                "linear_feet",          // 5
-                "megabytes",            // 6
-                "photographic_prints",  // 7
-                "photographic_slides",  // 8
-                "reels",                // 9
-                "sheets",               // 10
-                "terabytes",            // 11
-                "volumes"               // 12
-        };
-    }
-
-    /**
      * Method to map the extent type
      *
      * @param atValue
      * @return
      */
-    public String getASpaceExtentType(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return ASpaceExtentTypes[1];
-
-        atValue = atValue.toLowerCase();
-
-        if(atValue.contains("cubic")) {
-            return ASpaceExtentTypes[1];
-        } else if(atValue.contains("linear")) {
-            return ASpaceExtentTypes[5];
-        } else if(returnATValue) {
-            return atValue;
-        } else {
-            return UNMAPPED;
-        }
-    }
-
-    /**
-     * Method initiate the array the hold information on dates
-     */
-    private void initASpaceDateEnums() {
-        ASpaceDateEnums = new String[] {
-                "single",       // 0
-                "bulk",         // 1
-                "inclusive",    // 2
-                "broadcast",    // 3
-                "copyright",    // 4
-                "creation",     // 5
-                "deaccession",  // 6
-                "digitized",    // 7
-                "issued",       // 8
-                "modified",     // 9
-                "publication",  // 10
-                "other",        // 11
-                "approximate",  // 12
-                "inferred",     // 13
-                "questionable", // 14
-                "ce",           // 15
-                "gregorian"     // 16
-        };
+    public Object[] getASpaceExtentType(String atValue) {
+        if(atValue == null || atValue.isEmpty()) atValue = "unknown";
+        return getASpaceEnumValue("extent_extent_type", atValue);
     }
 
     /**
@@ -413,24 +230,9 @@ public class ASpaceEnumUtil {
      *
      * @param atValue
      */
-    public String getASpaceDateEnum(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "other";
-
-        atValue = atValue.toLowerCase();
-
-        if(atValue.contains("creation")) {
-            return ASpaceDateEnums[5];
-        } else if(atValue.contains("recordkeeping")) {
-            return ASpaceDateEnums[11];
-        } else if(atValue.contains("publication")) {
-            return ASpaceDateEnums[10];
-        } else if(atValue.contains("broadcast")) {
-            return ASpaceDateEnums[3];
-        } else if (returnATValue) {
-            return atValue;
-        } else {
-            return UNMAPPED;
-        }
+    public Object[] getASpaceDateEnum(String atValue) {
+        if(atValue == null || atValue.isEmpty() || atValue.contains("recordkeeping")) atValue = "other";
+        return getASpaceEnumValue("date_label", atValue);
     }
 
     /**
@@ -439,18 +241,8 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceDateEra(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "";
-
-        atValue = atValue.toLowerCase();
-
-        if(atValue.contains("ce")) {
-            return ASpaceDateEnums[15];
-        } else if (returnATValue) {
-            return atValue;
-        } else {
-            return UNMAPPED;
-        }
+    public Object[] getASpaceDateEra(String atValue) {
+        return getASpaceEnumValue("date_era", atValue);
     }
 
     /**
@@ -459,18 +251,8 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceDateCalender(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "";
-
-        atValue = atValue.toLowerCase();
-
-        if(atValue.contains("gregorian")) {
-            return ASpaceDateEnums[16];
-        } else if (returnATValue) {
-            return atValue;
-        } else {
-            return UNMAPPED;
-        }
+    public Object[] getASpaceDateCalender(String atValue) {
+        return getASpaceEnumValue("date_calendar", atValue);
     }
 
     /**
@@ -479,12 +261,14 @@ public class ASpaceEnumUtil {
      * @param archDescriptionDate
      * @return
      */
-    public String getASpaceDateUncertainty(ArchDescriptionDates archDescriptionDate) {
+    public Object[] getASpaceDateCertainty(ArchDescriptionDates archDescriptionDate) {
+        String atValue;
         if(archDescriptionDate != null && archDescriptionDate.getCertainty() != null &&  archDescriptionDate.getCertainty()) {
-            return ASpaceDateEnums[14];
+            atValue = "inferred";
         } else {
-            return ASpaceDateEnums[13];
+            atValue = "questionable";
         }
+        return getASpaceEnumValue("date_certainty", atValue, false, "questionable");
     }
 
     /**
@@ -493,23 +277,9 @@ public class ASpaceEnumUtil {
      * @param archDescriptionDate
      * @return
      */
-    public String getASpaceDateType(ArchDescriptionDates archDescriptionDate) {
+    public Object[] getASpaceDateType(ArchDescriptionDates archDescriptionDate) {
         // TODO 12/10/2012 archivist will need to provide logic for mapping this
-        return ASpaceDateEnums[2];
-    }
-
-    /**
-     * Method to initASpaceialize array that holds enums of collection management records
-     */
-    private void initASpaceCollectionManagementRecordEnums() {
-        ASpaceCollectionManagementRecordEnums = new String[] {
-                "high",         // 0
-                "medium",       // 1
-                "low",          // 2
-                "new",          // 3
-                "in_progress",  // 4
-                "completed"     // 5
-        };
+        return getASpaceEnumValue("date_type", "inclusive", false, "inclusive");
     }
 
     /**
@@ -518,20 +288,8 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceCollectionManagementRecordProcessingPriority(String atValue) {
-        atValue = atValue.toLowerCase();
-
-        if(atValue.equals("high")) {
-            return ASpaceCollectionManagementRecordEnums[0];
-        } else if(atValue.equals("medium")) {
-            return ASpaceCollectionManagementRecordEnums[1];
-        } else if(atValue.equals("low")) {
-            return ASpaceCollectionManagementRecordEnums[2];
-        } else if(returnATValue) {
-            return atValue;
-        } else {
-            return UNMAPPED;
-        }
+    public Object[] getASpaceCollectionManagementRecordProcessingPriority(String atValue) {
+        return getASpaceEnumValue("collection_management_processing_priority", atValue);
     }
 
     /**
@@ -539,55 +297,22 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceCollectionManagementRecordProcessingStatus(String atValue) {
+    public Object[] getASpaceCollectionManagementRecordProcessingStatus(String atValue) {
         atValue = atValue.toLowerCase();
 
-        if (atValue.equals("new")) {
-            return ASpaceCollectionManagementRecordEnums[3];
-        } else if(atValue.equals("in progress")) {
-            return ASpaceCollectionManagementRecordEnums[4];
-        } else if(atValue.equals("processed")) {
-            return ASpaceCollectionManagementRecordEnums[5];
-        } else if(returnATValue) {
-            return atValue;
-        } else {
-            return UNMAPPED;
+        if(atValue.equals("processed")) {
+            atValue = "completed";
         }
+        return getASpaceEnumValue("collection_management_processing_status", atValue);
     }
 
     /**
-     * Method to initialize array that holds the name linked function roles
-     */
-    private void initASpaceLinkedAgentRole() {
-        ASpaceLinkedAgentRoles = new String[] {
-                "creator",  // 0
-                "source",   // 1
-                "subject"   // 2
-        };
-    }
-
-    /**
-     * Method to map the AT name link function to ASpace linked agent role
      *
      * @param atValue
      * @return
      */
-    public String getASpaceLinkedAgentRole(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "";
-
-        atValue = atValue.toLowerCase();
-
-        if (atValue.contains("creator")) {
-            return ASpaceLinkedAgentRoles[0];
-        } else if(atValue.contains("source")) {
-            return ASpaceLinkedAgentRoles[1];
-        } else if(atValue.contains("subject")) {
-            return ASpaceLinkedAgentRoles[2];
-        } else if(returnATValue) {
-            return atValue;
-        } else {
-            return UNMAPPED;
-        }
+    public Object[] getASpaceLinkedAgentRole(String atValue) {
+        return getASpaceEnumValue("linked_agent_role", atValue, false, null);
     }
 
     /**
@@ -628,88 +353,22 @@ public class ASpaceEnumUtil {
     }
 
     /**
-     * Method to initialize the array that holds the digital object types
-     */
-    private void initASpaceDigitalObjectType() {
-        ASpaceDigitalObjectTypes = new String[]{
-                "cartographic",                 // 0
-                "mixed_materials",              // 1
-                "moving_image",                 // 2
-                "notated_music",                // 3
-                "software_multimedia",          // 4
-                "sound_recording",              // 5
-                "sound_recording_musical",      // 6
-                "sound_recording_nonmusical",   // 7
-                "still_image",                  // 8
-                "text"                          // 9
-        };
-    }
-
-    /**
      * Method to return the type of the digital object
      *
      * @param atValue
      * @return
      */
-    public String getASpaceDigitalObjectType(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "";
-
-        if (atValue.contains("cartographic")) {
-            return ASpaceDigitalObjectTypes[0];
-        } else if(atValue.contains("mixed material")) {
-            return ASpaceDigitalObjectTypes[1];
-        } else if(atValue.contains("moving image")) {
-            return ASpaceDigitalObjectTypes[2];
-        } else if(atValue.contains("notated music")) {
-            return ASpaceDigitalObjectTypes[3];
+    public Object[] getASpaceDigitalObjectType(String atValue) {
+        if(atValue.contains("mixed material")) {
+            atValue = "mixed_materials";
         } else if(atValue.contains("software, multimedia")) {
-            return ASpaceDigitalObjectTypes[4];
-        } else if(atValue.equals("sound recording")) {
-            return ASpaceDigitalObjectTypes[5];
+            atValue = "software_multimedia";
         } else if(atValue.contains("sound recording-musical")) {
-            return ASpaceDigitalObjectTypes[6];
+            atValue = "sound_recording_musical";
         } else if(atValue.contains("sound recording-nonmusical")) {
-            return ASpaceDigitalObjectTypes[7];
-        } else if(atValue.contains("still image")) {
-            return ASpaceDigitalObjectTypes[8];
-        } else if(atValue.contains("text")) {
-            return ASpaceDigitalObjectTypes[9];
-        } else if(returnATValue) {
-            return atValue;
-        } else {
-            return UNMAPPED;
+            atValue = "sound_recording_nonmusical";
         }
-    }
-
-    /**
-     * Method to initialize the use statements
-     */
-    private void initASpaceFileVersionUseStatements() {
-        ASpaceFileVersionUseStatements = new String[] {
-                "audio-clip",           // 0
-                "audio-master",         // 1
-                "audio-master-edited",  // 2
-                "audio-service",        // 3
-                "audio-streaming",      // 4
-                "image-master",         // 5
-                "image-master-edited",  // 6
-                "image-service",        // 7
-                "image-service-edited", // 8
-                "image-thumbnail",      // 9
-                "text-codebook",        // 10
-                "text-data",            // 11
-                "text-data_definition", // 12
-                "text-georeference",    // 13
-                "text-ocr-edited",      // 14
-                "text-ocr-unedited",    // 15
-                "text-tei-transcripted",    // 16
-                "text-tei-translated",      // 17
-                "video-clip",               // 18
-                "video-master",             // 19
-                "video-master-edited",      // 20
-                "video-service",            // 21
-                "video-streaming"           // 22
-        };
+        return getASpaceEnumValue("digital_object_digital_object_type", atValue);
     }
 
     /**
@@ -718,105 +377,8 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceFileVersionUseStatement(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "";
-
-        atValue = atValue.toLowerCase();
-
-        if(atValue.equals("audio-clip")) {
-            return ASpaceFileVersionUseStatements[0];
-        } else if(atValue.equals("audio-master")) {
-            return ASpaceFileVersionUseStatements[1];
-        } else if(atValue.equals("audio-master-edited")) {
-            return ASpaceFileVersionUseStatements[2];
-        } else if(atValue.equals("audio-service")) {
-            return ASpaceFileVersionUseStatements[3];
-        } else if(atValue.equals("audio-streaming")) {
-            return ASpaceFileVersionUseStatements[4];
-        } else if(atValue.equals("image-master")) {
-            return ASpaceFileVersionUseStatements[5];
-        } else if(atValue.equals("image-master-edited")) {
-            return ASpaceFileVersionUseStatements[6];
-        } else if(atValue.equals("image-service")) {
-            return ASpaceFileVersionUseStatements[7];
-        } else if(atValue.equals("image-service-edited")) {
-            return ASpaceFileVersionUseStatements[8];
-        } else if(atValue.equals("image-thumbnail")) {
-            return ASpaceFileVersionUseStatements[9];
-        } else if(atValue.equals("text-codebook")) {
-            return ASpaceFileVersionUseStatements[10];
-        } else if(atValue.equals("text-data")) {
-            return ASpaceFileVersionUseStatements[11];
-        } else if(atValue.equals("text-data_definition")) {
-            return ASpaceFileVersionUseStatements[12];
-        } else if(atValue.equals("text-georeference")) {
-            return ASpaceFileVersionUseStatements[13];
-        } else if(atValue.equals("text-ocr-edited")) {
-            return ASpaceFileVersionUseStatements[14];
-        } else if(atValue.equals("text-ocr-unedited")) {
-            return ASpaceFileVersionUseStatements[15];
-        } else if(atValue.equals("text-tei-transcripted")) {
-            return ASpaceFileVersionUseStatements[16];
-        } else if(atValue.equals("text-tei-translated")) {
-            return ASpaceFileVersionUseStatements[17];
-        } else if(atValue.equals("video-clip")) {
-            return ASpaceFileVersionUseStatements[18];
-        } else if(atValue.equals("video-master")) {
-            return ASpaceFileVersionUseStatements[19];
-        } else if(atValue.equals("video-master-edited")) {
-            return ASpaceFileVersionUseStatements[20];
-        } else if(atValue.equals("video-service")) {
-            return ASpaceFileVersionUseStatements[21];
-        } else if(atValue.equals("video-streaming")) {
-            return ASpaceFileVersionUseStatements[22];
-        } else if(returnATValue) {
-            return atValue;
-        } else {
-            return UNMAPPED;
-        }
-    }
-
-    /**
-     * Method to initASpaceialize array containing ASpace note types
-     */
-    private void initASpaceNoteTypes() {
-        ASpaceNoteTypes = new String[] {
-                "abstract",                             // 0
-                "accruals",                             // 1
-                "appraisal",                            // 2
-                "arrangement",                          // 3
-                "bioghist",                             // 4
-                "accessrestrict",                       // 5
-                "userestrict",                          // 6
-                "custodhist",                           // 7
-                "dimensions",                           // 8
-                "edition",                              // 9
-                "extent",                               // 10
-                "altformavail",                         // 11
-                "originalsloc",                         // 12
-                "fileplan",                             // 13
-                "note",                                 // 14
-                "physdesc",                             // 15
-                "acqinfo",                              // 16
-                "inscription",                          // 17
-                "langmaterial",                         // 18
-                "legalstatus",                          // 19
-                "physloc",                              // 20
-                "materialspec",                         // 21
-                "otherfindaid",                         // 22
-                "phystech",                             // 23
-                "physdesc",                             // 24
-                "physfacet",                            // 25
-                "prefercite",                           // 26
-                "processinfo",                          // 27
-                "relatedmaterial",                      // 28
-                "relatedmaterial",                      // 29
-                "scopecontent",                         // 30
-                "separatedmaterial",                    // 31
-                "summary",                              // 32
-                "odd",                                  // 33
-                "bibliography"                          // 34
-        };
+    public Object[] getASpaceFileVersionUseStatement(String atValue) {
+        return getASpaceEnumValue("file_version_use_statement", atValue);
     }
 
     /**
@@ -825,44 +387,41 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceDigitalObjectNoteType(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return ASpaceNoteTypes[14];
+    public Object[] getASpaceDigitalObjectNoteType(String atValue) {
+
+        String enumName = "note_digital_object_type";
+        String defaultValue = "note";
 
         atValue = atValue.toLowerCase();
 
         if(atValue.contains("biographical/historical")) {
-            return ASpaceNoteTypes[4];
+            atValue = "bioghist";
         } else if(atValue.contains("conditions governing access")) {
-            return ASpaceNoteTypes[5];
+            atValue = "accessrestrict";
         } else if(atValue.contains("conditions governing use")) {
-            return ASpaceNoteTypes[6];
+            atValue = "userestrict";
         } else if(atValue.contains("custodial history")) {
-            return ASpaceNoteTypes[7];
-        } else if(atValue.contains("dimensions")) {
-            return ASpaceNoteTypes[8];
+            atValue = "custodhist";
         } else if(atValue.contains("existence and location of copies")) {
-            return ASpaceNoteTypes[11];
+            atValue = "altformavail";
         } else if(atValue.contains("existence and location of originals")) {
-            return ASpaceNoteTypes[12];
-        } else if(atValue.contains("general note")) {
-            return ASpaceNoteTypes[14];
+            atValue = "originalsloc";
         } else if(atValue.contains("general physical description")) {
-            return ASpaceNoteTypes[24];
+            atValue = "physdesc";
         } else if(atValue.contains("immediate source of acquisition")) {
-            return ASpaceNoteTypes[16];
+            atValue = "acqinfo";
         } else if(atValue.contains("language of materials")) {
-            return ASpaceNoteTypes[18];
+            atValue = "langmaterial";
         } else if(atValue.contains("legal status")) {
-            return ASpaceNoteTypes[19];
+            atValue = "legalstatus";
         } else if(atValue.contains("preferred citation")) {
-            return ASpaceNoteTypes[26];
+            atValue = "prefercite";
         } else if(atValue.contains("processing information")) {
-            return ASpaceNoteTypes[27];
+            atValue = "processinfo";
         } else if(atValue.contains("related archival materials")) {
-            return ASpaceNoteTypes[29];
-        } else {
-            return ASpaceNoteTypes[14];  // just tag this note as a note type
+            atValue = "relatedmaterial";
         }
+        return getASpaceEnumValue(enumName, atValue, false, defaultValue);
     }
 
     /**
@@ -871,58 +430,47 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceMultiPartNoteType(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "";
+    public Object[] getASpaceMultiPartNoteType(String atValue) {
+
+        String enumName = "note_multipart_type";
+        String defaultValue = "odd";
 
         atValue = atValue.toLowerCase();
 
-        if(atValue.contains("accruals")) {
-            return ASpaceNoteTypes[1];
-        } else if(atValue.contains("appraisal")) {
-            return ASpaceNoteTypes[2];
-        } else if(atValue.contains("arrangement")) {
-            return ASpaceNoteTypes[3];
-        } else if(atValue.contains("biographical/historical")) {
-            return ASpaceNoteTypes[4];
-        } else if(atValue.contains("bibliography")) {
-            return ASpaceNoteTypes[34];
+        if(atValue.contains("biographical/historical")) {
+            atValue = "bioghist";
         } else if(atValue.contains("conditions governing access")) {
-            return ASpaceNoteTypes[5];
+            atValue = "accessrestrict";
         } else if(atValue.contains("conditions governing use")) {
-            return ASpaceNoteTypes[6];
+            atValue = "userestrict";
         } else if(atValue.contains("custodial history")) {
-            return ASpaceNoteTypes[7];
-        } else if(atValue.contains("dimensions")) {
-            return ASpaceNoteTypes[8];
+            atValue = "custodhist";
         } else if(atValue.contains("existence and location of copies")) {
-            return ASpaceNoteTypes[11];
+            atValue = "altformavail";
         } else if(atValue.contains("existence and location of originals")) {
-            return ASpaceNoteTypes[12];
+            atValue = "originalsloc";
         } else if(atValue.contains("file plan")) {
-            return ASpaceNoteTypes[13];
-        } else if(atValue.contains("general note")) {
-            return ASpaceNoteTypes[33];
+            atValue = "fileplan";
         } else if(atValue.contains("immediate source of acquisition")) {
-            return ASpaceNoteTypes[16];
+            atValue = "acqinfo";
         } else if(atValue.contains("legal status")) {
-            return ASpaceNoteTypes[19];
+            atValue = "legalstatus";
         } else if(atValue.contains("other finding aids")) {
-            return ASpaceNoteTypes[22];
+            atValue = "otherfindaid";
         } else if(atValue.contains("physical characteristics and technical requirements")) {
-            return ASpaceNoteTypes[23];
+            atValue = "phystech";
         } else if(atValue.contains("preferred citation")) {
-            return ASpaceNoteTypes[26];
+            atValue = "prefercite";
         } else if(atValue.contains("processing information")) {
-            return ASpaceNoteTypes[27];
+            atValue = "processinfo";
         } else if(atValue.contains("related archival materials")) {
-            return ASpaceNoteTypes[28];
+            atValue = "relatedmaterial";
         } else if(atValue.contains("scope and contents")) {
-            return ASpaceNoteTypes[30];
+            atValue = "scopecontent";
         } else if(atValue.contains("separated materials")) {
-            return ASpaceNoteTypes[31];
-        } else {
-            return UNMAPPED;
+            atValue = "separatedmaterial";
         }
+        return getASpaceEnumValue(enumName, atValue, false, defaultValue);
     }
 
     /**
@@ -931,26 +479,26 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceSinglePartNoteType(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "";
+    public Object[] getASpaceSinglePartNoteType(String atValue) {
 
         atValue = atValue.toLowerCase();
 
-        if (atValue.contains("abstract")) {
-            return ASpaceNoteTypes[0];
-        } else if(atValue.contains("general physical description")) {
-            return ASpaceNoteTypes[15];
+        String enumName = "note_singlepart_type";
+        String defaultValue = "abstract";
+
+
+        if(atValue.contains("general physical description")) {
+           atValue = "physdesc";
         } else if(atValue.contains("language of materials")) {
-            return ASpaceNoteTypes[18];
+            atValue = "langmaterial";
         } else if(atValue.contains("location note")) {
-            return ASpaceNoteTypes[20];
+            atValue = "physloc";
         } else if(atValue.contains("material specific details")) {
-            return ASpaceNoteTypes[21];
+            atValue = "materialspec";
         } else if(atValue.contains("physical facet")) {
-            return ASpaceNoteTypes[25];
-        } else {
-            return UNMAPPED;
+            atValue = "physfacet";
         }
+        return getASpaceEnumValue(enumName, atValue, false, defaultValue);
     }
 
     /**
@@ -968,75 +516,27 @@ public class ASpaceEnumUtil {
     }
 
     /**
-     * initialize array containing the ASpace index note item type
-     */
-    private void initASpaceIndexItemTypes() {
-        ASpaceIndexItemTypes = new String[] {
-                "corporate_entity", // 0
-                "family",           // 1
-                "function",         // 2
-                "geographic_name",  // 3
-                "name",             // 4
-                "occupation",       // 5
-                "person",           // 6
-                "subject",          // 7
-                "title"             // 8
-        };
-    }
-
-    /**
      * Method to convert AT index item types to ASpace note index types
      *
      * @param atValue
      * @return
      */
-    public String getASpaceIndexItemType(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "";
+    public Object[] getASpaceIndexItemType(String atValue) {
 
         atValue = atValue.toLowerCase();
+        String enumName = "note_index_item_type";
 
         if (atValue.contains("corporate name")) {
-            return ASpaceIndexItemTypes[0];
+            atValue = "corporate_entity";
         } else if(atValue.contains("genre form")) {
-            return ASpaceIndexItemTypes[7];
-        } else if(atValue.contains("name")) {
-            return ASpaceIndexItemTypes[4];
-        } else if(atValue.contains("occupation")) {
-            return ASpaceIndexItemTypes[5];
+            atValue = "subject";
         } else if(atValue.contains("personal name")) {
-            return ASpaceIndexItemTypes[6];
-        } else if(atValue.contains("subject")) {
-            return ASpaceIndexItemTypes[7];
+            atValue = "person";
         } else if(atValue.contains("family name")) {
-            return ASpaceIndexItemTypes[1];
-        } else if(atValue.contains("function")) {
-            return ASpaceIndexItemTypes[2];
-        } else if(atValue.contains("geographic name")) {
-            return ASpaceIndexItemTypes[3];
-        }else if(atValue.contains("Title")) {
-            return ASpaceIndexItemTypes[8];
-        } else {
-            return ASpaceIndexItemTypes[8];
+            atValue = "family";
         }
-    }
+        return getASpaceEnumValue(enumName, atValue, false, "title");
 
-    /**
-     * Initialize the array that stores resource levels
-     */
-    private void initASpaceResourceLevels() {
-        ASpaceResourceLevels = new String[] {
-                "class",            // 0
-                "collection",       // 1
-                "file",             // 2
-                "fonds",            // 3
-                "item",             // 4
-                "otherlevel",       // 5
-                "recordgrp",        // 6
-                "series",           // 7
-                "subfonds",         // 8
-                "subgrp",           // 9
-                "subseries"         // 10
-        };
     }
 
     /**
@@ -1045,36 +545,8 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceResourceLevel(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "collection";
-
-        atValue = atValue.toLowerCase();
-
-        if (atValue.contains("class")) {
-            return ASpaceResourceLevels[0];
-        } else if(atValue.contains("collection")) {
-            return ASpaceResourceLevels[1];
-        } else if(atValue.contains("file")) {
-            return ASpaceResourceLevels[2];
-        } else if(atValue.contains("fonds")) {
-            return ASpaceResourceLevels[3];
-        } else if(atValue.contains("item")) {
-            return ASpaceResourceLevels[4];
-        } else if(atValue.contains("otherlevel")) {
-            return ASpaceResourceLevels[5];
-        } else if(atValue.contains("recordgrp")) {
-            return ASpaceResourceLevels[6];
-        } else if(atValue.equals("series")) {
-            return ASpaceResourceLevels[7];
-        } else if(atValue.contains("subfonds")) {
-            return ASpaceResourceLevels[8];
-        } else if(atValue.contains("subgrp")) {
-            return ASpaceResourceLevels[9];
-        } else if(atValue.contains("subseries")) {
-            return ASpaceResourceLevels[10];
-        } else {
-            return UNMAPPED;
-        }
+    public Object[] getASpaceResourceLevel(String atValue) {
+        return getASpaceEnumValue("archival_record_level", atValue, false, "collection");
     }
 
     /**
@@ -1083,21 +555,8 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceArchivalObjectLevel(String atValue) {
+    public Object[] getASpaceArchivalObjectLevel(String atValue) {
         return getASpaceResourceLevel(atValue);
-    }
-
-    /**
-     * Method to initASpace array that holds the description rules
-     */
-    private void initASpaceFindingAidDescriptionRules() {
-        ASpaceFindingAidDescriptionRules = new String[] {
-                "aacr", // 0
-                "cco",  // 1
-                "dacs", // 2
-                "rad",  // 3
-                "isadg" // 4
-        };
     }
 
     /**
@@ -1106,34 +565,20 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceFindingAidDescriptionRule(String atValue) {
+    public Object[] getASpaceFindingAidDescriptionRule(String atValue) {
         atValue = atValue.toLowerCase();
+        String enumName = "resource_finding_aid_description_rules";
 
         if (atValue.contains("anglo-american")) {
-            return ASpaceFindingAidDescriptionRules[0];
+            atValue = "aacr";
         } else if(atValue.contains("cataloging cultural")) {
-            return ASpaceFindingAidDescriptionRules[1];
+            atValue = "cco";
         } else if(atValue.contains("describing archives")) {
-            return ASpaceFindingAidDescriptionRules[2];
+            atValue = "dacs";
         } else if(atValue.contains("rules for archival description")) {
-            return ASpaceFindingAidDescriptionRules[3];
-        } else if(returnATValue) {
-            return atValue;
-        } else {
-            return UNMAPPED;
+            atValue = "rad";
         }
-    }
-
-    /**
-     * Method to initASpace the finding aid status
-     */
-    private void initASpaceFindingAidStatus() {
-        ASpaceFindingAidStatus = new String[] {
-                "completed",        // 0
-                "in_progress",      // 1
-                "under_revision",   // 2
-                "unprocessed"       // 3
-        };
+        return getASpaceEnumValue(enumName, atValue);
     }
 
     /**
@@ -1142,41 +587,8 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceFindingAidStatus(String atValue) {
-        atValue = atValue.toLowerCase();
-
-        if (atValue.contains("completed")) {
-            return ASpaceFindingAidStatus[0];
-        } else if(atValue.contains("in_process")) {
-            return ASpaceFindingAidStatus[1];
-        } else if(atValue.contains("under_revision")) {
-            return ASpaceFindingAidStatus[2];
-        } else if(atValue.contains("unprocessed")) {
-            return ASpaceFindingAidStatus[3];
-        } else if (returnATValue) {
-            return atValue;
-        } else {
-            return UNMAPPED;
-        }
-    }
-
-    /**
-     * Method to initialize the ASpace instance types
-     */
-    private void initASpaceInstanceTypes() {
-        ASpaceInstanceTypes = new String[] {
-                "audio",                // 0
-                "books",                // 1
-                "computer_disks",       // 2
-                "graphic_materials",    // 3
-                "maps",                 // 4
-                "microform",            // 5
-                "mixed_materials",      // 6
-                "moving_images",        // 7
-                "realia",               // 8
-                "text",                 // 9
-                "digital_object"        // 10
-        };
+    public Object[] getASpaceFindingAidStatus(String atValue) {
+        return getASpaceEnumValue("resource_finding_aid_status", atValue);
     }
 
     /**
@@ -1185,55 +597,9 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceInstanceType(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "";
+    public Object[] getASpaceInstanceType(String atValue) {
 
-        atValue = atValue.toLowerCase().trim();
-
-        if(atValue.contains("audio")) {
-            return ASpaceInstanceTypes[0];
-        } else if(atValue.contains("books")) {
-            return ASpaceInstanceTypes[1];
-        } else if(atValue.contains("computer disks")) {
-            return ASpaceInstanceTypes[2];
-        } else if(atValue.contains("digital object")) {
-            return ASpaceInstanceTypes[10];
-        } else if(atValue.contains("graphic materials")) {
-            return ASpaceInstanceTypes[3];
-        } else if(atValue.contains("maps")) {
-            return ASpaceInstanceTypes[4];
-        } else if(atValue.contains("microform")) {
-            return ASpaceInstanceTypes[5];
-        } else if(atValue.contains("mixed materials")) {
-            return ASpaceInstanceTypes[6];
-        } else if(atValue.contains("moving Images")) {
-            return ASpaceInstanceTypes[7];
-        } else if(atValue.contains("realia")) {
-            return ASpaceInstanceTypes[8];
-        } else if(atValue.contains("text")) {
-            return ASpaceInstanceTypes[9];
-        } else if(returnATValue) {
-            return atValue;
-        } else {
-            return UNMAPPED;
-        }
-    }
-
-    /**
-     * Method to initASpace array holding the ASpace container types
-     */
-    private void initASpaceInstanceContainerTypes() {
-        ASpaceInstanceContainerTypes = new String[] {
-                "box",      // 0
-                "carton",   // 1
-                "case",     // 2
-                "folder",   // 3
-                "frame",    // 4
-                "object",   // 5
-                "page",     // 6
-                "reel",     // 7
-//                "volume"    // 8
-        };
+        return getASpaceEnumValue("instance_instance_type", atValue);
     }
 
     /**
@@ -1245,66 +611,11 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceInstanceContainerType(String atValue) {
+    public Object[] getASpaceInstanceContainerType(String atValue) {
         if(atValue == null || atValue.trim().isEmpty()) {
-            return "item";
+            atValue = "item";
         }
-
-        atValue = atValue.toLowerCase().trim();
-
-        if(atValue.equals("bin") && returnATValue) {
-            return atValue;
-        } else if(atValue.equals("box")) {
-            return ASpaceInstanceContainerTypes[0];
-        } else if(atValue.equals("box-folder") && returnATValue) {
-            return atValue;
-        } else if(atValue.equals("carton")) {
-            return ASpaceInstanceContainerTypes[1];
-        } else if(atValue.equals("cassette") && returnATValue) {
-            return atValue;
-        } else if(atValue.equals("disk") && returnATValue) {
-            return atValue;
-        } else if(atValue.equals("drawer") && returnATValue) {
-            return atValue;
-        } else if(atValue.equals("folder")) {
-            return ASpaceInstanceContainerTypes[3];
-        } else if(atValue.equals("frame")) {
-            return ASpaceInstanceContainerTypes[4];
-        } else if(atValue.equals("map-case") && returnATValue) {
-            return atValue;
-        } else if(atValue.equals("object")) {
-            return ASpaceInstanceContainerTypes[5];
-        } else if(atValue.equals("oversize") && returnATValue) {
-            return atValue;
-        } else if(atValue.equals("page")) {
-            return ASpaceInstanceContainerTypes[6];
-        } else if(atValue.equals("reel")) {
-            return ASpaceInstanceContainerTypes[7];
-        } else if(atValue.equals("reel-frame") && returnATValue) {
-            return atValue;
-//        } else if(atValue.equals("volume")) {
-//            return ASpaceInstanceContainerTypes[8];
-        } else if(returnATValue) {
-            if(validContainerTypes.contains(atValue)) {
-                return atValue;
-            } else {
-                return "item";
-            }
-        } else {
-            return UNMAPPED;
-        }
-    }
-
-    /**
-     * Method to init the aspace term types
-     */
-    private void initASpaceAcquisitionTypes() {
-        ASpaceAcquisitionTypes = new String[] {
-                "deposit",  // 0
-                "gift",     // 1
-                "purchase", // 2
-                "transfer"  // 3
-        };
+        return getASpaceEnumValue("container_type", atValue);
     }
 
     /**
@@ -1313,36 +624,8 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceAcquisitionType(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "";
-
-        atValue = atValue.toLowerCase();
-
-        if (atValue.contains("deposit")) {
-            return ASpaceAcquisitionTypes[0];
-        } else if(atValue.contains("gift")) {
-            return ASpaceAcquisitionTypes[1];
-        } else if(atValue.contains("purchase")) {
-            return ASpaceAcquisitionTypes[2];
-        } else if(atValue.contains("transfer")) {
-            return ASpaceAcquisitionTypes[3];
-        } else if(returnATValue) {
-            return atValue;
-        } else {
-            return UNMAPPED;
-        }
-    }
-
-    /**
-     * Method to init the ASpace accession resource type
-     */
-    private void initASpaceAccessionResourceTypes() {
-        ASpaceAccessionResourceTypes = new String[] {
-            "collection",
-            "papers",
-            "publications",
-            "records"
-        };
+    public Object[] getASpaceAcquisitionType(String atValue) {
+        return getASpaceEnumValue("accession_acquisition_type", atValue);
     }
 
     /**
@@ -1351,26 +634,9 @@ public class ASpaceEnumUtil {
      * @param atValue
      * @return
      */
-    public String getASpaceAccessionResourceType(String atValue) {
-        if(atValue == null || atValue.isEmpty()) return "collection";
-
-        atValue = atValue.toLowerCase();
-
-        if (atValue.equals("collection")) {
-            return ASpaceAccessionResourceTypes[0];
-        } else if(atValue.equals("papers")) {
-            return ASpaceAccessionResourceTypes[1];
-        } else if(atValue.equals("records")) {
-            return ASpaceAccessionResourceTypes[3];
-        } else if(returnATValue) {
-            if(validResourceTypes.contains(atValue)) {
-                return atValue;
-            } else {
-                return "collection";
-            }
-        } else {
-            return UNMAPPED;
-        }
+    public Object[] getASpaceAccessionResourceType(String atValue) {
+        if(atValue == null || atValue.isEmpty()) atValue = "collection";
+        return getASpaceEnumValue("accession_resource_type", atValue);
     }
 
     /**
@@ -1452,19 +718,64 @@ public class ASpaceEnumUtil {
         }
     }
 
+    public Object[] getASpaceEnumValue(String enumListName, String atValue) {
+        return getASpaceEnumValue(enumListName, atValue, true, null);
+    }
+
+    public Object[] getASpaceEnumValue(String enumListName, String atValue, boolean returnATValue, String defaultValue) {
+        if (dynamicEnums == null) {
+            System.out.println("dynamicEnums is null");
+            return new Object[]{null, false};
+            }
+        if (atValue == null) {
+            System.out.println("AT value is null in list " + enumListName);
+            return new Object[]{null, false};
+        }
+        atValue = atValue.trim().toLowerCase();
+        if (atValue.contains(" ")) {
+            StringBuilder newAtValue = new StringBuilder();
+            for (int i = 0; i < atValue.length(); i++) {
+                char ch = atValue.charAt(i);
+                if (ch == ' ') {
+                    ch = '_';
+                }
+                newAtValue.append(ch);
+            }
+            atValue = newAtValue.toString();
+        }
+        System.out.println(atValue);
+        try {
+            JSONArray enumValues = dynamicEnums.get(enumListName).getJSONArray("values");
+            for (int i = 0; i < enumValues.length(); i++) {
+                String value = enumValues.getString(i);
+                if (value.equalsIgnoreCase(atValue)) return new Object[]{value, true};
+            }
+            if (returnATValue) {
+                System.out.println("AT value not found but returning it anyway " + atValue);
+                return new Object[]{atValue, false};
+            }
+            return getASpaceEnumValue(enumListName, defaultValue, returnATValue, null);
+        } catch (JSONException e) {
+            System.out.println("Caught a JSON exception: returning null");
+            e.printStackTrace();
+            return new Object[]{null, false};
+        }
+    }
+
     /**
-     * Method to see if an AT value maps to an ASpace enum value
-     *
+     * method to get the enum value a lookup list item will map to
      * @param enumListName
      * @param atValue
+     * @param code
+     * @return an array with 2 items: a string with the mapped value and a boolean to tell if it is in AS already
      */
-    public boolean mapsToASpaceEnumValue(String enumListName, String atValue, String code) {
+    public Object[] mapsToASpaceEnumValue(String enumListName, String atValue, String code) {
         // if code is not empty then store it in hash so we can lookup later
         if(!code.isEmpty()) {
             lookupListValuesToCodes.put(atValue, code);
         }
 
-        String mappedValue = "";
+        Object[] mappedValue;
 
         if (enumListName.equals("linked_agent_archival_record_roles")) {
             mappedValue = getASpaceLinkedAgentRole(atValue);
@@ -1472,8 +783,8 @@ public class ASpaceEnumUtil {
             mappedValue = getASpaceNameSource(atValue);
         } else if(enumListName.equals("name_rule")) {
             mappedValue = getASpaceNameRule(atValue);
-        } else if(enumListName.equals("name_description_type")) {
-            mappedValue = getASpaceNameDescriptionType(atValue);
+//        } else if(enumListName.equals("name_description_type")) {
+//            mappedValue = getASpaceNameDescriptionType(atValue);
         } else if(enumListName.equals("accession_acquisition_type")) {
             mappedValue = getASpaceAcquisitionType(atValue);
         } else if(enumListName.equals("accession_resource_type")) {
@@ -1505,15 +816,10 @@ public class ASpaceEnumUtil {
         } else if(enumListName.equals("file_version_use_statement")) {
             mappedValue = getASpaceFileVersionUseStatement(atValue);
         } else {
-            mappedValue = UNMAPPED;
+            mappedValue = new Object[]{null, false};
         }
 
-        // see if there is a valid mapped value
-        if (mappedValue.equals(UNMAPPED)) {
-            return false;
-        } else {
-            return true;
-        }
+        return mappedValue;
     }
 
 
