@@ -36,8 +36,6 @@ public class ASpaceEnumUtil {
     private ArrayList<String> validContainerTypes = new ArrayList<String>();
     private ArrayList<String> validResourceTypes = new ArrayList<String>();
 
-    private String[] ASpaceSubjectSources = null;
-
     // A trying that is used to bypass
     public final static String UNMAPPED = "other_unmapped";
 
@@ -97,6 +95,7 @@ public class ASpaceEnumUtil {
             code =  "gmgpc";
         } else {
             code = lookupListValuesToCodes.get(atValue);
+            if (code == null) code = "local";
         }
         return getASpaceEnumValue("subject_source", code);
     }
@@ -686,6 +685,14 @@ public class ASpaceEnumUtil {
         return getASpaceEnumValue(enumListName, atValue, true, null);
     }
 
+    /**
+     * checks if an AT lookup list item is in AS already and maps to AS enum value
+     * @param enumListName
+     * @param atValue
+     * @param returnATValue
+     * @param defaultValue
+     * @return
+     */
     public Object[] getASpaceEnumValue(String enumListName, String atValue, boolean returnATValue, String defaultValue) {
         if (dynamicEnums == null) {
             return new Object[]{null, false};

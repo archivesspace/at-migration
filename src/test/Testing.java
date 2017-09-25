@@ -34,8 +34,9 @@ class Testing {
         TestUtils.resetDatabase();
         dbCopyFrame.main(TestUtils.empty);
         //Call constructors for any tests you want to run here
-        new dbCopyCLITest();
-        new ASpaceMapperTest();
+//        new dbCopyCLITest();
+//        new ASpaceMapperTest();
+//        new ASpaceEnumUtilTest();
 //        org.junit.runner.JUnitCore.main(testsToRun.toArray(new String[0]));
     }
 }

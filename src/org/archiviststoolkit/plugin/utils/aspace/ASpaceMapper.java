@@ -261,7 +261,7 @@ public class ASpaceMapper {
 
         // check to make sure we have valid term type,
         // otherwise use the default and add warning message
-        if(termType.equals(ASpaceEnumUtil.UNMAPPED)) {
+        if(termType == null) {
             String message = record.getSubjectTerm() + " :: Invalid Term Type: \"" + termTypeAT + "\", Changing to topical\n";
             aspaceCopyUtil.addErrorMessage(message);
 

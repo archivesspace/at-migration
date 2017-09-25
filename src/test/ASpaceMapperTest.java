@@ -3,6 +3,8 @@ package test;
 import junit.framework.JUnit4TestAdapter;
 import org.archiviststoolkit.model.Names;
 import org.archiviststoolkit.model.Subjects;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -14,11 +16,13 @@ public class ASpaceMapperTest extends Testing {
         tester.setSubjectId(1L);
         tester.setSubjectTerm("A test subject");
         tester.setSubjectSource("getty thesaurus of geographic names");
-        tester.setSubjectTermType("function");
+        tester.setSubjectTermType(" Function");
         tester.setVersion(1L);
+        TestUtils.addDynamicEnumVal("subject_term_type", "function");
+        TestUtils.addDynamicEnumVal("subject_source", "tgn");
         String json = TestUtils.mapper.convertSubject(tester);
+        TestUtils.print(json);
         Assert.assertTrue(json.contains("\"publish\":true"));
-        Assert.assertTrue(json.contains("\"source\":\"tgn\""));
         Assert.assertTrue(json.contains("\"term_type\":\"function\""));
     }
 
@@ -32,7 +36,11 @@ public class ASpaceMapperTest extends Testing {
         tester.setPersonalPrimaryName("Morrissey");
         tester.setPersonalRestOfName("Sarah Elizabeth");
         tester.setNameSource("nad");
+        TestUtils.addDynamicEnumVal("name_source", "nad");
+        TestUtils.addDynamicEnumVal("name_rule", "local");
+        TestUtils.addDynamicEnumVal("name_person_name_order", "inverted");
         String json = TestUtils.mapper.convertName(tester);
+        TestUtils.print(json);
         Assert.assertTrue(json.contains("\"source\":\"nad\""));
     }
 
