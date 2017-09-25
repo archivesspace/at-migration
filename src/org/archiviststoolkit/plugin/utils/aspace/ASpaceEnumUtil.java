@@ -15,6 +15,7 @@ import java.util.HashMap;
  * User: nathan
  * Date: 12/7/12
  * Time: 9:52 AM
+ * Updated by sarah morrissey 9/2017
  */
 public class ASpaceEnumUtil {
     private HashMap<String, String> languageCodes;
@@ -41,13 +42,6 @@ public class ASpaceEnumUtil {
     public final static String UNMAPPED = "other_unmapped";
 
     public boolean returnATValue = true; // set this to return the AR value instead of UNMAPPED
-
-//    /**
-//     * Main constructor
-//     */
-//    public ASpaceEnumUtil() {
-//        initASpaceSubjectSources();
-//    }
 
     /**
      * Method to set the language code hash map
@@ -76,23 +70,6 @@ public class ASpaceEnumUtil {
         return getASpaceEnumValue("subject_term_type", atValue, false, "topical");
     }
 
-//    /**
-//     * Initialize the array that holds the subject source
-//     */
-//    private void initASpaceSubjectSources() {
-//        ASpaceSubjectSources = new String[] {
-//                "aat",      // 0
-//                "rbgenr",   // 1
-//                "tgn",      // 2
-//                "lcsh",     // 3
-//                "local",    // 4
-//                "mesh",     // 5
-//                "gmgpc",    // 6
-////                "georeft",  // 7
-////                "dot"       // 8
-//        };
-//    }
-
     /**
      * Method to map the subject source
      * @param atValue
@@ -102,37 +79,24 @@ public class ASpaceEnumUtil {
 
         String code;
 
-//        if(atValue == null || atValue.isEmpty()) return "";
-
         atValue = atValue.toLowerCase();
 
         if(atValue.contains("art & architecture thesaurus")) {
             code = "aat";
-//            return ASpaceSubjectSources[0];
-//        } else if (atValue.contains("dictionary of occupational titles")) {
-////            return ASpaceSubjectSources[8];
         } else if (atValue.contains("genre terms: a thesaurus for use in rare book")) {
             code = "rbgenr";
-//            return ASpaceSubjectSources[1];
         } else if (atValue.contains("getty thesaurus of geographic names")) {
             code = "tgn";
-//            return ASpaceSubjectSources[2];
         } else if (atValue.contains("library of congress subject headings")) {
             code = "lcsh";
-//            return ASpaceSubjectSources[3];
         } else if (atValue.contains("local")) {
             code = "local";
-//            return ASpaceSubjectSources[4];
         } else if (atValue.contains("medical subject headings")) {
             code = "mesh";
-//            return ASpaceSubjectSources[5];
         } else if (atValue.contains("thesaurus for graphic materials")) {
             code =  "gmgpc";
-//        } else if (returnATValue) {
-//            return lookupListValuesToCodes.get(atValue);
         } else {
             code = lookupListValuesToCodes.get(atValue);
-//            return UNMAPPED;
         }
         return getASpaceEnumValue("subject_source", code);
     }

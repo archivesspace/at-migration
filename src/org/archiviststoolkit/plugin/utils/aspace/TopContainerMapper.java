@@ -11,6 +11,9 @@ import java.util.*;
 
 /**
  * class to add and manage top containers
+ *
+ * @author sarah morrissey
+ * date: 9/2017
  */
 public class TopContainerMapper {
 
