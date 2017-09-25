@@ -688,11 +688,9 @@ public class ASpaceEnumUtil {
 
     public Object[] getASpaceEnumValue(String enumListName, String atValue, boolean returnATValue, String defaultValue) {
         if (dynamicEnums == null) {
-            System.out.println("dynamicEnums is null");
             return new Object[]{null, false};
             }
         if (atValue == null) {
-            System.out.println("AT value is null in list " + enumListName);
             return new Object[]{null, false};
         }
         atValue = atValue.trim().toLowerCase();
@@ -707,7 +705,6 @@ public class ASpaceEnumUtil {
             }
             atValue = newAtValue.toString();
         }
-        System.out.println(atValue);
         try {
             JSONArray enumValues = dynamicEnums.get(enumListName).getJSONArray("values");
             for (int i = 0; i < enumValues.length(); i++) {
@@ -715,12 +712,10 @@ public class ASpaceEnumUtil {
                 if (value.equalsIgnoreCase(atValue)) return new Object[]{value, true};
             }
             if (returnATValue) {
-                System.out.println("AT value not found but returning it anyway " + atValue);
                 return new Object[]{atValue, false};
             }
             return getASpaceEnumValue(enumListName, defaultValue, returnATValue, null);
         } catch (JSONException e) {
-            System.out.println("Caught a JSON exception: returning null");
             e.printStackTrace();
             return new Object[]{null, false};
         }
