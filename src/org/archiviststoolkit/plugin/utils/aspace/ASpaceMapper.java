@@ -829,9 +829,9 @@ public class ASpaceMapper {
 
         JSONArray rightsStatementJA = new JSONArray();
         JSONObject rightStatementJS = new JSONObject();
-        rightStatementJS.put("rights_type", "intellectual_property");
-        rightStatementJS.put("ip_status", "copyrighted");
-        rightStatementJS.put("jurisdiction", "US"); // TODO 8/12/2013 this is not suppose to be required
+        rightStatementJS.put("rights_type", "copyright");
+        rightStatementJS.put("status", "copyrighted");
+//        rightStatementJS.put("jurisdiction", "US"); // TODO 8/12/2013 this is not suppose to be required
         rightsStatementJA.put(rightStatementJS);
         json.put("rights_statements", rightsStatementJA);
     }
@@ -2384,9 +2384,10 @@ public class ASpaceMapper {
      * @return
      */
     private String fixUrl(String url) {
-        if(url.isEmpty()) return "http://url.unspecified";
+        if(url.isEmpty()) return null;//"http://url.unspecified";
 
         String lowercaseUrl = url.toLowerCase();
+        url = url.trim();
 
         // check to see if its a proper uri format
         if(lowercaseUrl.contains("://")) {

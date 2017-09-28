@@ -1036,7 +1036,7 @@ public class ASpaceCopyUtil {
      * @throws Exception
      */
     public void addInstance(Accessions accession, JSONObject json) throws Exception {
-        String parentRepoURI = getRepositoryURI(accession.getRepository()) + "/";
+        String parentRepoURI = getRemappedRepositoryURI("accession", accession.getIdentifier(), accession.getRepository()) + "/";
 
         Set<AccessionsLocations> locations = accession.getLocations();
         if(locations == null || locations.size() == 0) return;
@@ -1443,7 +1443,7 @@ public class ASpaceCopyUtil {
         }
 
         // update the number of resource actually copied
-        //updateRecordTotals("Resource Records", total, copyCount);
+        updateRecordTotals("Resource Records", total, copyCount);
     }
 
     /**
@@ -2113,10 +2113,10 @@ public class ASpaceCopyUtil {
         float percent = (new Float(success)/new Float(total))*100.0f;
         String info = recordType + " : " + success + " / " + total + " (" + String.format("%.2f", percent) + "%)";
 
-        if(recordTotals.size() <= 8) {
+        if(recordTotals.size() <= 9) {
             recordTotals.add(info);
         } else {
-            recordTotals.set(8, info);
+            recordTotals.set(9, info);
         }
     }
 
