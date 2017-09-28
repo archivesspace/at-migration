@@ -1112,6 +1112,7 @@ public class dbCopyFrame extends JFrame {
 
                     //---- consoleTextArea ----
                     consoleTextArea.setRows(12);
+                    consoleTextArea.setLineWrap(true);
                     scrollPane1.setViewportView(consoleTextArea);
                 }
                 contentPanel.add(scrollPane1, cc.xywh(1, 25, 13, 1));
