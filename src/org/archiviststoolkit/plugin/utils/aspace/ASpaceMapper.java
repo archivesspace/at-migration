@@ -1637,6 +1637,8 @@ public class ASpaceMapper {
         Integer dateBegin = record.getDateBegin();
         Integer dateEnd = record.getDateEnd();
 
+        if (dateBegin == null && record instanceof Resources) {dateBegin = 0;}
+
         if (dateBegin != null) {
             dateJS.put("date_type", "inclusive");
 
@@ -2577,6 +2579,7 @@ public class ASpaceMapper {
         // must check to make sure ID is not null
         if(id != null) {
             id = id.trim();
+            id = id.toLowerCase();
         } else {
             id = "";
         }

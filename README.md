@@ -50,10 +50,12 @@ NOTES ON RUNNING THE PLUGIN IN COMMAND LINE MODE
 
 NOTES ON DATA MIGRATION DEFAULTS
 
-1. If a date is missing in AT but is required for AS the default date will be set to 1/1/1900.
+1. If a date is missing in AT but is required for AS the default date will be set to 1/1/1900 or 0 for integer dates.
 2. Many containers including all of those for accessions do not have meaningful identifiers in AT. Any such 
 container will be assigned a default container indication which will include the words "unknown container" as 
 well as information about it's content.
+3. Some IDs are checked for uniqueness in AS but not AT. In these cases if an ID is not unique the problem will be 
+corrected by adding ## along with some random string to the ID.
 
 NOTE ON CPU AND MEMORY USAGE
 
