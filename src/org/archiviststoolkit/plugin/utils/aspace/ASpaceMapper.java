@@ -24,6 +24,8 @@ public class ASpaceMapper {
     // String used when mapping AT access class to groups
     public static final String ACCESS_CLASS_PREFIX = "_AccessClass_";
 
+    public static final Date DEFAULT_DATE = new Date(0, 0, 1);
+
     // The utility class used to map to ASpace Enums
     private ASpaceEnumUtil enumUtil = new ASpaceEnumUtil();
 
@@ -831,7 +833,29 @@ public class ASpaceMapper {
         JSONObject rightStatementJS = new JSONObject();
         rightStatementJS.put("rights_type", "copyright");
         rightStatementJS.put("status", "copyrighted");
-//        rightStatementJS.put("jurisdiction", "US"); // TODO 8/12/2013 this is not suppose to be required
+        rightStatementJS.put("jurisdiction", "US"); // TODO 8/12/2013 this is not suppose to be required
+//        JSONObject dateJS = new JSONObject();
+//        dateJS.put("type", "single");
+//        dateJS.put("label", "other");
+//        dateJS.put("expression", record.getRightsTransferredDate().toString());
+        Date startDate = record.getRightsTransferredDate();
+        if (startDate == null) {
+            rightStatementJS.put("start_date", DEFAULT_DATE.toString());
+        } else {
+            rightStatementJS.put("start_date", record.getRightsTransferredDate());//dateJS);
+        }
+        JSONArray notesJA = new JSONArray();
+        String note = record.getRightsTransferredNote();
+        if (note != null && !(note.isEmpty())) {
+            JSONObject noteJS = new JSONObject();
+            noteJS.put("jsonmodel_type", "note_rights_statement");
+            noteJS.put("type", "additional_information");
+            JSONArray content = new JSONArray();
+            content.put(note);
+            noteJS.put("content", content);
+            notesJA.put(noteJS);
+        }
+        rightStatementJS.put("notes", notesJA);
         rightsStatementJA.put(rightStatementJS);
         json.put("rights_statements", rightsStatementJA);
     }
@@ -902,7 +926,7 @@ public class ASpaceMapper {
 
         if(accession.getRightsTransferred() != null && accession.getRightsTransferred()) {
             eventJS = new JSONObject();
-            eventJS.put("event_type", "rights_transferred");
+            eventJS.put("event_type", "copyright_transfer");//"rights_transferred");
             eventJS.put("outcome_note", accession.getRightsTransferredNote());
             addEventDate(eventJS, accession.getRightsTransferredDate(), accessionDate, "single", "event");
             addEventLinkedRecordAndAgent(eventJS, agentURI, accessionURI);
@@ -2156,7 +2180,7 @@ public class ASpaceMapper {
         // add the container now
         JSONObject containerJS = new JSONObject();
 
-        TopContainerMapper topContainer = new TopContainerMapper(analogInstance, parentRepoURI, aspaceCopyUtil);
+        TopContainerMapper topContainer = new TopContainerMapper(analogInstance, parentRepoURI);
         topContainer.addLocationURI(locationURI);
         containerJS.put("top_container", getReferenceObject(topContainer.getRef()));
 //        containerJS.put("type_1", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer1Type()));
@@ -2222,13 +2246,12 @@ public class ASpaceMapper {
      * Method to create a dummy instance to old the location information
      *
      *
-     * @param accession
      * @param locationNote
      * @return
      * @throws Exception
      */
     public JSONObject createAccessionInstance(Accessions accession, String locationURI, String locationNote,
-                                              String parentRepoURI) throws Exception {
+                                              String parentRepoURI, AccessionsLocations location) throws Exception {
         JSONObject instanceJS = new JSONObject();
 
         // set the type
@@ -2237,7 +2260,7 @@ public class ASpaceMapper {
         // add the container now
         JSONObject containerJS = new JSONObject();
 
-        TopContainerMapper topContainer = new TopContainerMapper(accession, parentRepoURI, aspaceCopyUtil);
+        TopContainerMapper topContainer = new TopContainerMapper(location, accession, parentRepoURI);
         topContainer.addLocationURI(locationURI, locationNote);
         containerJS.put("top_container", getReferenceObject(topContainer.getRef()));
 

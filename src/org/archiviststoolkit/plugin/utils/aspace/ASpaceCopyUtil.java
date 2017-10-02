@@ -241,8 +241,14 @@ public class ASpaceCopyUtil {
             print("Saving locations for top container -- " + topContainer);
             json.put("container_locations", locations);
 
+            String instanceClassName;
+            try {
+                instanceClassName = topContainer.getInstance().getClass().getName();
+            } catch (NullPointerException e) {
+                instanceClassName = "ArchivesSpace Container";
+            }
             String id = saveRecord(containerURI, json.toString(),
-                    topContainer.getInstance().getClass().getName() + "->" + topContainer.getAtID());
+                     instanceClassName + "->" + topContainer.getAtID());
             if(!id.equalsIgnoreCase(NO_ID)) {
                 print("Copied Top Container " + topContainer);
                 success++;
@@ -976,6 +982,7 @@ public class ASpaceCopyUtil {
                 addNames(accessionJS, accession);
 
                 // add an instance that holds the location information
+                TopContainerMapper.setaSpaceCopyUtil(this);
                 addInstance(accession, accessionJS);
 
                 String repoURI = getRemappedRepositoryURI("accession", accession.getIdentifier(), accession.getRepository());
@@ -1049,7 +1056,7 @@ public class ASpaceCopyUtil {
             String locationURI = locationURIMap.get(location.getLocation().getIdentifier());
             if(locationURI != null) {
                 String locationNote = location.getNote();
-                JSONObject instanceJS = mapper.createAccessionInstance(accession, locationURI, locationNote, parentRepoURI);
+                JSONObject instanceJS = mapper.createAccessionInstance(accession, locationURI, locationNote, parentRepoURI, location);
                 instancesJA.put(instanceJS);
             }
         }
@@ -1443,7 +1450,7 @@ public class ASpaceCopyUtil {
         }
 
         // update the number of resource actually copied
-        updateRecordTotals("Resource Records", total, copyCount);
+//        updateRecordTotals("Resource Records", total, copyCount);
     }
 
     /**
@@ -1613,6 +1620,7 @@ public class ASpaceCopyUtil {
 
         String resourceRepo = parentRepository.getShortName();
 
+        TopContainerMapper.setaSpaceCopyUtil(this);
         for (ArchDescriptionInstances ainstance : ainstances) {
             if (ainstance instanceof ArchDescriptionAnalogInstances) {
                 ArchDescriptionAnalogInstances analogInstance = (ArchDescriptionAnalogInstances)ainstance;
@@ -2113,11 +2121,16 @@ public class ASpaceCopyUtil {
         float percent = (new Float(success)/new Float(total))*100.0f;
         String info = recordType + " : " + success + " / " + total + " (" + String.format("%.2f", percent) + "%)";
 
-        if(recordTotals.size() <= 9) {
-            recordTotals.add(info);
+        if (recordType.equals("Resource Records") && recordTotals.size() > 8) {
+            recordTotals.set(8, info);
         } else {
-            recordTotals.set(9, info);
+            recordTotals.add(info);
         }
+//        if(recordTotals.size() <= 8) {
+//            recordTotals.add(info);
+//        } else {
+//            recordTotals.set(8, info);
+//        }
     }
 
     /**
