@@ -253,6 +253,8 @@ public class ASpaceMapper {
             json.put("source", "local");
         }
 
+        json.put("scope_note", record.getSubjectScopeNote());
+
         // see if to define term type as untyped
         boolean isDefault = aspaceCopyUtil.isTermTypeDefault();
 
@@ -1442,7 +1444,11 @@ public class ASpaceMapper {
             json.put("restrictions", record.getRestrictionsApply());
         }
 
-        json.put("repository_processing_note", record.getRepositoryProcessingNote());
+        StringBuilder sb = new StringBuilder().append(record.getRepositoryProcessingNote());
+        for (ResourcesComponents component: record.getResourcesComponents()) {
+            addRepositoryProcessingNote(sb, component);
+        }
+        json.put("repository_processing_note", sb.toString());
         json.put("container_summary", record.getContainerSummary());
 
 
@@ -1490,6 +1496,14 @@ public class ASpaceMapper {
         json.put("notes", notesJA);
 
         return json;
+    }
+
+    public void addRepositoryProcessingNote(StringBuilder sb, ResourcesComponents component) {
+        sb.append('\n');
+        sb.append(component);
+        sb.append(": ");
+        sb.append(component.getRepositoryProcessingNote());
+        for (ResourcesComponents child: component.getResourcesComponents()) addRepositoryProcessingNote(sb, child);
     }
 
     /**
