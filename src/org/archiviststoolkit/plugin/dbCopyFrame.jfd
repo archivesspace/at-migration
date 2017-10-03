@@ -51,7 +51,7 @@
             <string>javax.swing.JLabel</string>
             <void method="setProperty">
              <string>text</string>
-             <string>  Archives Space Version: v2.1.x</string>
+             <string>  Archives Space Version: v2.x</string>
             </void>
             <void method="setProperty">
              <string>horizontalTextPosition</string>
