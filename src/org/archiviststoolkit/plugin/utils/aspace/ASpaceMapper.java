@@ -24,6 +24,8 @@ public class ASpaceMapper {
     // String used when mapping AT access class to groups
     public static final String ACCESS_CLASS_PREFIX = "_AccessClass_";
 
+    public static final Date DEFAULT_DATE = new Date(0, 0, 1);
+
     // The utility class used to map to ASpace Enums
     private ASpaceEnumUtil enumUtil = new ASpaceEnumUtil();
 
@@ -243,7 +245,7 @@ public class ASpaceMapper {
 
         // set the subject source
         String source = record.getSubjectSource().trim();
-        source = enumUtil.getASpaceSubjectSource(source);
+        source = (String) enumUtil.getASpaceSubjectSource(source)[0];
         if(source != null && !source.isEmpty()) {
             json.put("source", source);
         } else {
@@ -251,17 +253,19 @@ public class ASpaceMapper {
             json.put("source", "local");
         }
 
+        json.put("scope_note", record.getSubjectScopeNote());
+
         // see if to define term type as untyped
         boolean isDefault = aspaceCopyUtil.isTermTypeDefault();
 
         // set the subject terms and term type
         String terms = record.getSubjectTerm();
         String termTypeAT = record.getSubjectTermType();
-        String termType = enumUtil.getASpaceTermType(termTypeAT);
+        String termType = (String) enumUtil.getASpaceTermType(termTypeAT)[0];
 
         // check to make sure we have valid term type,
         // otherwise use the default and add warning message
-        if(termType.equals(ASpaceEnumUtil.UNMAPPED)) {
+        if(termType == null) {
             String message = record.getSubjectTerm() + " :: Invalid Term Type: \"" + termTypeAT + "\", Changing to topical\n";
             aspaceCopyUtil.addErrorMessage(message);
 
@@ -421,8 +425,8 @@ public class ASpaceMapper {
 
         // get the mapped name source and rules
         if(record instanceof Names) {
-            String nameSource = enumUtil.getASpaceNameSource(((Names)record).getNameSource());
-            String nameRule = enumUtil.getASpaceNameRule(((Names)record).getNameRule());
+            String nameSource = (String) enumUtil.getASpaceNameSource(((Names)record).getNameSource())[0];
+            String nameRule = (String) enumUtil.getASpaceNameRule(((Names)record).getNameRule())[0];
 
             namesJS.put("source", nameSource);
             namesJS.put("rules", nameRule);
@@ -458,7 +462,7 @@ public class ASpaceMapper {
         // set values for name_person.rb schema
         namesJS.put("primary_name", primaryName);
         namesJS.put("title", title);
-        namesJS.put("name_order", enumUtil.getASpaceNameOrder(record.getPersonalDirectOrder()));
+        namesJS.put("name_order", enumUtil.getASpaceNameOrder(record.getPersonalDirectOrder())[0]);
         namesJS.put("prefix", record.getPersonalPrefix());
         namesJS.put("rest_of_name", record.getPersonalRestOfName());
         namesJS.put("suffix", record.getPersonalSuffix());
@@ -741,7 +745,7 @@ public class ASpaceMapper {
             extentJS.put("portion", "whole");
         }
 
-        extentJS.put("extent_type", enumUtil.getASpaceExtentType(record.getExtentType()));
+        extentJS.put("extent_type", enumUtil.getASpaceExtentType(record.getExtentType())[0]);
         extentJS.put("container_summary", record.getContainerSummary());
 
         if (record.getExtentNumber() != null) {
@@ -794,9 +798,9 @@ public class ASpaceMapper {
 
         json.put("suppressed", record.getInternalOnly());
 
-        json.put("acquisition_type", enumUtil.getASpaceAcquisitionType(record.getAcquisitionType()));
+        json.put("acquisition_type", enumUtil.getASpaceAcquisitionType(record.getAcquisitionType())[0]);
 
-        json.put("resource_type", enumUtil.getASpaceAccessionResourceType(record.getResourceType()));
+        json.put("resource_type", enumUtil.getASpaceAccessionResourceType(record.getResourceType())[0]);
 
         json.put("restrictions_apply", record.getRestrictionsApply());
 
@@ -829,9 +833,31 @@ public class ASpaceMapper {
 
         JSONArray rightsStatementJA = new JSONArray();
         JSONObject rightStatementJS = new JSONObject();
-        rightStatementJS.put("rights_type", "intellectual_property");
-        rightStatementJS.put("ip_status", "copyrighted");
+        rightStatementJS.put("rights_type", "copyright");
+        rightStatementJS.put("status", "copyrighted");
         rightStatementJS.put("jurisdiction", "US"); // TODO 8/12/2013 this is not suppose to be required
+//        JSONObject dateJS = new JSONObject();
+//        dateJS.put("type", "single");
+//        dateJS.put("label", "other");
+//        dateJS.put("expression", record.getRightsTransferredDate().toString());
+        Date startDate = record.getRightsTransferredDate();
+        if (startDate == null) {
+            rightStatementJS.put("start_date", DEFAULT_DATE.toString());
+        } else {
+            rightStatementJS.put("start_date", record.getRightsTransferredDate());//dateJS);
+        }
+        JSONArray notesJA = new JSONArray();
+        String note = record.getRightsTransferredNote();
+        if (note != null && !(note.isEmpty())) {
+            JSONObject noteJS = new JSONObject();
+            noteJS.put("jsonmodel_type", "note_rights_statement");
+            noteJS.put("type", "additional_information");
+            JSONArray content = new JSONArray();
+            content.put(note);
+            noteJS.put("content", content);
+            notesJA.put(noteJS);
+        }
+        rightStatementJS.put("notes", notesJA);
         rightsStatementJA.put(rightStatementJS);
         json.put("rights_statements", rightsStatementJA);
     }
@@ -902,7 +928,7 @@ public class ASpaceMapper {
 
         if(accession.getRightsTransferred() != null && accession.getRightsTransferred()) {
             eventJS = new JSONObject();
-            eventJS.put("event_type", "rights_transferred");
+            eventJS.put("event_type", "copyright_transfer");//"rights_transferred");
             eventJS.put("outcome_note", accession.getRightsTransferredNote());
             addEventDate(eventJS, accession.getRightsTransferredDate(), accessionDate, "single", "event");
             addEventLinkedRecordAndAgent(eventJS, agentURI, accessionURI);
@@ -992,7 +1018,7 @@ public class ASpaceMapper {
                 extentJS.put("number", "1");
             }
 
-            extentJS.put("extent_type", enumUtil.getASpaceExtentType(physicalDescription.getExtentType()));
+            extentJS.put("extent_type", enumUtil.getASpaceExtentType(physicalDescription.getExtentType())[0]);
             extentJS.put("container_summary", physicalDescription.getContainerSummary());
             extentJS.put("physical_details", physicalDescription.getPhysicalDetail());
             extentJS.put("dimensions", physicalDescription.getDimensions());
@@ -1012,9 +1038,9 @@ public class ASpaceMapper {
         // TODO 12/10/2012 Archivists needs to map this
         for (ArchDescriptionDates archDescriptionDate: archDescriptionDates) {
             JSONObject dateJS = new JSONObject();
-            dateJS.put("date_type", enumUtil.getASpaceDateType(archDescriptionDate));
-            dateJS.put("label", enumUtil.getASpaceDateEnum(archDescriptionDate.getDateType()));
-            dateJS.put("uncertain", enumUtil.getASpaceDateUncertainty(archDescriptionDate));
+            dateJS.put("date_type", enumUtil.getASpaceDateType(archDescriptionDate)[0]);
+            dateJS.put("label", enumUtil.getASpaceDateEnum(archDescriptionDate.getDateType())[0]);
+            dateJS.put("uncertain", enumUtil.getASpaceDateCertainty(archDescriptionDate)[0]);
 
             String dateExpression = archDescriptionDate.getDateExpression();
             dateJS.put("expression", dateExpression);
@@ -1036,8 +1062,8 @@ public class ASpaceMapper {
                 dateJS.put("expression", "unspecified");
             }
 
-            dateJS.put("era", enumUtil.getASpaceDateEra(archDescriptionDate.getEra()));
-            dateJS.put("calender", enumUtil.getASpaceDateCalender(archDescriptionDate.getCalendar()));
+            dateJS.put("era", enumUtil.getASpaceDateEra(archDescriptionDate.getEra())[0]);
+            dateJS.put("calender", enumUtil.getASpaceDateCalender(archDescriptionDate.getCalendar())[0]);
 
             dateJA.put(dateJS);
 
@@ -1100,7 +1126,7 @@ public class ASpaceMapper {
 
                 extentJS.put("portion", "whole");
                 extentJS.put("number", removeTrailingZero(deaccession.getExtent()));
-                extentJS.put("extent_type", enumUtil.getASpaceExtentType(deaccession.getExtentType()));
+                extentJS.put("extent_type", enumUtil.getASpaceExtentType(deaccession.getExtentType())[0]);
                 extentJS.put("container_summary", deaccession.getDescription());
 
                 extentJA.put(extentJS);
@@ -1128,11 +1154,11 @@ public class ASpaceMapper {
         json.put("processing_plan", record.getProcessingPlan());
 
         if(record.getProcessingPriority() != null && !record.getProcessingPriority().isEmpty()) {
-            json.put("processing_priority", enumUtil.getASpaceCollectionManagementRecordProcessingPriority(record.getProcessingPriority()));
+            json.put("processing_priority", enumUtil.getASpaceCollectionManagementRecordProcessingPriority(record.getProcessingPriority())[0]);
         }
 
         if(record.getProcessingStatus() != null && !record.getProcessingStatus().isEmpty()) {
-            json.put("processing_status", enumUtil.getASpaceCollectionManagementRecordProcessingStatus(record.getProcessingStatus()));
+            json.put("processing_status", enumUtil.getASpaceCollectionManagementRecordProcessingStatus(record.getProcessingStatus())[0]);
         }
 
         json.put("processors", record.getProcessors());
@@ -1232,7 +1258,7 @@ public class ASpaceMapper {
         // set the digital object type
         String type = record.getObjectType();
         if(type != null && !type.isEmpty()) {
-            json.put("digital_object_type", enumUtil.getASpaceDigitalObjectType(type));
+            json.put("digital_object_type", enumUtil.getASpaceDigitalObjectType(type)[0]);
         }
 
         // set the restrictions apply
@@ -1299,7 +1325,7 @@ public class ASpaceMapper {
             JSONObject fileVersionJS = new JSONObject();
 
             fileVersionJS.put("file_uri", fileVersion.getUri());
-            fileVersionJS.put("use_statement", enumUtil.getASpaceFileVersionUseStatement(fileVersion.getUseStatement()));
+            fileVersionJS.put("use_statement", enumUtil.getASpaceFileVersionUseStatement(fileVersion.getUseStatement())[0]);
             fileVersionJS.put("xlink_actuate_attribute", fileVersion.getEadDaoActuate());
             fileVersionJS.put("xlink_show_attribute", fileVersion.getEadDaoShow().toLowerCase());
 
@@ -1348,7 +1374,7 @@ public class ASpaceMapper {
             extentJS.put("portion", "whole");
         }
 
-        extentJS.put("extent_type", enumUtil.getASpaceExtentType(record.getExtentType()));
+        extentJS.put("extent_type", enumUtil.getASpaceExtentType(record.getExtentType())[0]);
         extentJS.put("container_summary", record.getContainerSummary());
 
         if (record.getExtentNumber() != null) {
@@ -1407,7 +1433,7 @@ public class ASpaceMapper {
         json.put("id_3", id_3);
 
         // get the level
-        String level = enumUtil.getASpaceResourceLevel(record.getLevel());
+        String level = (String) enumUtil.getASpaceResourceLevel(record.getLevel())[0];
         json.put("level", level);
 
         if(level.equals("otherlevel")) {
@@ -1417,8 +1443,22 @@ public class ASpaceMapper {
         if(record.getRestrictionsApply() != null && record.getRestrictionsApply()) {
             json.put("restrictions", record.getRestrictionsApply());
         }
-
-        json.put("repository_processing_note", record.getRepositoryProcessingNote());
+        StringBuilder sb = new StringBuilder();
+        String note = record.getRepositoryProcessingNote();
+        if (note != null && !(note.isEmpty())) {
+            sb.append(note);
+            sb.append('\n');
+        }
+        for (ResourcesComponents component: record.getResourcesComponents()) {
+            addRepositoryProcessingNote(sb, component);
+        }
+        String repoProcessingNote;
+        if (sb.length() > 65000) {
+            repoProcessingNote = sb.substring(0, 64999);
+        } else {
+            repoProcessingNote = sb.toString();
+        }
+        json.put("repository_processing_note", repoProcessingNote);
         json.put("container_summary", record.getContainerSummary());
 
 
@@ -1435,7 +1475,7 @@ public class ASpaceMapper {
         json.put("finding_aid_author", record.getAuthor());
 
         if(record.getDescriptionRules() != null) {
-            json.put("finding_aid_description_rules", enumUtil.getASpaceFindingAidDescriptionRule(record.getDescriptionRules()));
+            json.put("finding_aid_description_rules", enumUtil.getASpaceFindingAidDescriptionRule(record.getDescriptionRules())[0]);
         }
 
         json.put("finding_aid_language", record.getLanguageOfFindingAid());
@@ -1446,7 +1486,7 @@ public class ASpaceMapper {
         json.put("finding_aid_revision_description", record.getRevisionDescription());
 
         if(record.getFindingAidStatus() != null) {
-            json.put("finding_aid_status", enumUtil.getASpaceFindingAidStatus(record.getFindingAidStatus()));
+            json.put("finding_aid_status", enumUtil.getASpaceFindingAidStatus(record.getFindingAidStatus())[0]);
         }
 
         json.put("finding_aid_note", record.getFindingAidNote());
@@ -1466,6 +1506,18 @@ public class ASpaceMapper {
         json.put("notes", notesJA);
 
         return json;
+    }
+
+    public void addRepositoryProcessingNote(StringBuilder sb, ResourcesComponents component) {
+        if (sb.length() >= 65000) return;
+        String note = component.getRepositoryProcessingNote();
+        if (note != null && !(note.isEmpty())) {
+            sb.append(component);
+            sb.append(": ");
+            sb.append(note);
+            sb.append('\n');
+        }
+        for (ResourcesComponents child: component.getResourcesComponents()) addRepositoryProcessingNote(sb, child);
     }
 
     /**
@@ -1522,7 +1574,7 @@ public class ASpaceMapper {
 
         json.put("ref_id", refId);
 
-        String level = enumUtil.getASpaceArchivalObjectLevel(record.getLevel());
+        String level = (String) enumUtil.getASpaceArchivalObjectLevel(record.getLevel())[0];
         json.put("level", level);
 
         if(level.equals("otherlevel")) {
@@ -1558,7 +1610,7 @@ public class ASpaceMapper {
                 extentJS.put("number", "0");
             }
 
-            extentJS.put("extent_type", enumUtil.getASpaceExtentType(record.getExtentType()));
+            extentJS.put("extent_type", enumUtil.getASpaceExtentType(record.getExtentType())[0]);
             extentJS.put("container_summary", record.getContainerSummary());
             extentJA.put(extentJS);
         } else if(!record.getContainerSummary().isEmpty()) {
@@ -1612,6 +1664,8 @@ public class ASpaceMapper {
 
         Integer dateBegin = record.getDateBegin();
         Integer dateEnd = record.getDateEnd();
+
+        if (dateBegin == null && record instanceof Resources) {dateBegin = 0;}
 
         if (dateBegin != null) {
             dateJS.put("date_type", "inclusive");
@@ -1763,8 +1817,8 @@ public class ASpaceMapper {
         JSONObject noteJS = new JSONObject();
 
         noteJS.put("jsonmodel_type", "note_bioghist");
-        noteJS.put("publish", publishHashMap.get("names"));
-        noteJS.put("label", enumUtil.getASpaceNameDescriptionType(record.getDescriptionType()));
+//        noteJS.put("publish", publishHashMap.get("names"));
+//        noteJS.put("label", enumUtil.getASpaceNameDescriptionType(record.getDescriptionType()));
 
         JSONArray subnotesJA = new JSONArray();
 
@@ -1835,7 +1889,7 @@ public class ASpaceMapper {
 
             if(record instanceof DigitalObjects) {
                 noteJS.put("jsonmodel_type", "note_digital_object");
-                noteType = enumUtil.getASpaceDigitalObjectNoteType(noteType);
+                noteType = (String) enumUtil.getASpaceDigitalObjectNoteType(noteType)[0];
                 noteJS.put("type", noteType);
                 noteJS.put("content", contentJA);
             } else if(note.getMultiPart() != null && note.getMultiPart()) {
@@ -1843,7 +1897,7 @@ public class ASpaceMapper {
             } else {
                 // even though it could be a single part note, based on the type it
                 // needs to be a multi part note in ASpace
-                noteType = enumUtil.getASpaceSinglePartNoteType(noteType);
+                noteType = (String) enumUtil.getASpaceSinglePartNoteType(noteType)[0];
 
                 if(noteType.equals(ASpaceEnumUtil.UNMAPPED)) {
                     addMultiPartNote(noteJS, note);
@@ -1909,7 +1963,7 @@ public class ASpaceMapper {
 
         // create the parent json object of this note
         noteJS.put("jsonmodel_type", "note_multipart");
-        noteJS.put("type", enumUtil.getASpaceMultiPartNoteType(noteType));
+        noteJS.put("type", enumUtil.getASpaceMultiPartNoteType(noteType)[0]);
 
         JSONArray subnotesJA = new JSONArray();
 
@@ -2082,7 +2136,7 @@ public class ASpaceMapper {
             itemJS.put("jsonmodel_type", "note_index_item");
 
             itemJS.put("value", indexItem.getItemValue());
-            itemJS.put("type", enumUtil.getASpaceIndexItemType(indexItem.getItemType()));
+            itemJS.put("type", enumUtil.getASpaceIndexItemType(indexItem.getItemType())[0]);
             itemJS.put("reference", indexItem.getReference());
             //itemJS.put("reference", fixEmptyString(indexItem.getReference(), null));
             itemJS.put("reference_text", indexItem.getReferenceText());
@@ -2150,13 +2204,13 @@ public class ASpaceMapper {
         addExternalId(analogInstance, instanceJS, "analog_instance");
 
         // set the type
-        String type = enumUtil.getASpaceInstanceType(analogInstance.getInstanceType());
+        String type = (String) enumUtil.getASpaceInstanceType(analogInstance.getInstanceType())[0];
         instanceJS.put("instance_type", type);
 
         // add the container now
         JSONObject containerJS = new JSONObject();
 
-        TopContainerMapper topContainer = new TopContainerMapper(analogInstance, parentRepoURI, aspaceCopyUtil);
+        TopContainerMapper topContainer = new TopContainerMapper(analogInstance, parentRepoURI);
         topContainer.addLocationURI(locationURI);
         containerJS.put("top_container", getReferenceObject(topContainer.getRef()));
 //        containerJS.put("type_1", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer1Type()));
@@ -2164,14 +2218,14 @@ public class ASpaceMapper {
 //        containerJS.put("barcode_1", analogInstance.getBarcode());
 
         if(!analogInstance.getContainer2Type().isEmpty()) {
-            containerJS.put("type_2", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer2Type()));
+            containerJS.put("type_2", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer2Type())[0]);
             String indicator2 = analogInstance.getContainer2Indicator();
             if (indicator2 == null || indicator2.isEmpty()) indicator2 = "unknown";
             containerJS.put("indicator_2", indicator2);
         }
 
         if(!analogInstance.getContainer3Type().isEmpty()) {
-            containerJS.put("type_3", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer3Type()));
+            containerJS.put("type_3", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer3Type())[0]);
             String indicator3 = analogInstance.getContainer3Indicator();
             if (indicator3 == null || indicator3.isEmpty()) indicator3 = "unknown";
             containerJS.put("indicator_3", indicator3);
@@ -2222,13 +2276,12 @@ public class ASpaceMapper {
      * Method to create a dummy instance to old the location information
      *
      *
-     * @param accession
      * @param locationNote
      * @return
      * @throws Exception
      */
     public JSONObject createAccessionInstance(Accessions accession, String locationURI, String locationNote,
-                                              String parentRepoURI) throws Exception {
+                                              String parentRepoURI, AccessionsLocations location) throws Exception {
         JSONObject instanceJS = new JSONObject();
 
         // set the type
@@ -2237,7 +2290,7 @@ public class ASpaceMapper {
         // add the container now
         JSONObject containerJS = new JSONObject();
 
-        TopContainerMapper topContainer = new TopContainerMapper(accession, parentRepoURI, aspaceCopyUtil);
+        TopContainerMapper topContainer = new TopContainerMapper(location, accession, parentRepoURI);
         topContainer.addLocationURI(locationURI, locationNote);
         containerJS.put("top_container", getReferenceObject(topContainer.getRef()));
 
@@ -2329,12 +2382,12 @@ public class ASpaceMapper {
             String atValue = lookupListItem.getListItem();
             String code = lookupListItem.getCode();
 
-            if(!enumUtil.mapsToASpaceEnumValue(enumListName, atValue, code)) {
-                if(enumListName.equals("subject_source")) {
-                    valuesJA.put(code);
-                } else {
-                    valuesJA.put(atValue.toLowerCase());
-                }
+//            String toAdd;
+//            if (enumListName.equals("subject_source")) toAdd = code;
+//            else toAdd = atValue.toLowerCase();
+            Object[] mapped = enumUtil.mapsToASpaceEnumValue(enumListName, atValue, code);
+            if(!(Boolean) mapped[1]) {
+                valuesJA.put(mapped[0]);
             }
         }
 
@@ -2384,9 +2437,10 @@ public class ASpaceMapper {
      * @return
      */
     private String fixUrl(String url) {
-        if(url.isEmpty()) return "http://url.unspecified";
+        if(url.isEmpty()) return null;//"http://url.unspecified";
 
         String lowercaseUrl = url.toLowerCase();
+        url = url.trim();
 
         // check to see if its a proper uri format
         if(lowercaseUrl.contains("://")) {
@@ -2553,6 +2607,7 @@ public class ASpaceMapper {
         // must check to make sure ID is not null
         if(id != null) {
             id = id.trim();
+            id = id.toLowerCase();
         } else {
             id = "";
         }

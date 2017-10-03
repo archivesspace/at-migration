@@ -399,13 +399,25 @@ public class ASpaceClient {
                     String uri = (String) json.get("uri");
                     repos.put(shortName, uri);
                 }
-
+                loadExistingTopContainers(repos);
                 return repos;
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
+    }
+
+    private void loadExistingTopContainers(HashMap<String, String> repos) throws Exception {
+        for (String repoURI: repos.values()) {
+            for (int i = 1; true; i++) {
+                String container = get(repoURI + "/top_containers/" + i, null);
+                if (container == null || container.isEmpty()) {break;}
+                JSONObject containerJS = new JSONObject(container);
+                new TopContainerMapper(containerJS);
+            }
+
+        }
     }
 
     /**

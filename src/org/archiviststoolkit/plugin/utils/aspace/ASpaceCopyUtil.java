@@ -184,6 +184,7 @@ public class ASpaceCopyUtil {
     public static final String TERM_UNTYPED = "-term_untyped";
     public static final String TERM_DEFAULT = "-term_default";
     private String termTypeOption = TERM_DEFAULT;
+    private boolean enumsSet = false;
 
     /**
      * The main constructor, used when running as a stand alone application
@@ -240,8 +241,14 @@ public class ASpaceCopyUtil {
             print("Saving locations for top container -- " + topContainer);
             json.put("container_locations", locations);
 
+            String instanceClassName;
+            try {
+                instanceClassName = topContainer.getInstance().getClass().getName();
+            } catch (NullPointerException e) {
+                instanceClassName = "ArchivesSpace Container";
+            }
             String id = saveRecord(containerURI, json.toString(),
-                    topContainer.getInstance().getClass().getName() + "->" + topContainer.getAtID());
+                     instanceClassName + "->" + topContainer.getAtID());
             if(!id.equalsIgnoreCase(NO_ID)) {
                 print("Copied Top Container " + topContainer);
                 success++;
@@ -439,6 +446,7 @@ public class ASpaceCopyUtil {
         // first load the dynamic enums current is ASpace
         HashMap<String, JSONObject> dynamicEnums = aspaceClient.loadDynamicEnums();
         mapper.setASpaceDynamicEnums(dynamicEnums);
+        enumsSet = true;
         mapper.setReturnATValue(false);
 
         if(dynamicEnums == null) {
@@ -467,12 +475,18 @@ public class ASpaceCopyUtil {
             // we may need to add additional values to some lookup list now
             if(listName.equalsIgnoreCase("Extent type")) {
                 sourceRCD.addExtentTypes(lookupList);
+                lookupList.addListItem("unknown");
             } else if(listName.equals("Salutation")) {
                 sourceRCD.addSalutations(lookupList);
             } else if(listName.equals("Name source")) {
                 lookupList.addListItem("ingest");
+                lookupList.addListItem("local");
             } else if(listName.equals("Container types")) {
                 lookupList.addListItem("item");
+            } else if(listName.equals("Resource type")) {
+                lookupList.addListItem("collection");
+            } else if(listName.equals("Date type")) {
+                lookupList.addListItem("other");
             }
 
             JSONObject updatedEnumJS = mapper.mapLookList(lookupList);
@@ -968,6 +982,7 @@ public class ASpaceCopyUtil {
                 addNames(accessionJS, accession);
 
                 // add an instance that holds the location information
+                TopContainerMapper.setaSpaceCopyUtil(this);
                 addInstance(accession, accessionJS);
 
                 String repoURI = getRemappedRepositoryURI("accession", accession.getIdentifier(), accession.getRepository());
@@ -1028,7 +1043,7 @@ public class ASpaceCopyUtil {
      * @throws Exception
      */
     public void addInstance(Accessions accession, JSONObject json) throws Exception {
-        String parentRepoURI = getRepositoryURI(accession.getRepository()) + "/";
+        String parentRepoURI = getRemappedRepositoryURI("accession", accession.getIdentifier(), accession.getRepository()) + "/";
 
         Set<AccessionsLocations> locations = accession.getLocations();
         if(locations == null || locations.size() == 0) return;
@@ -1041,7 +1056,7 @@ public class ASpaceCopyUtil {
             String locationURI = locationURIMap.get(location.getLocation().getIdentifier());
             if(locationURI != null) {
                 String locationNote = location.getNote();
-                JSONObject instanceJS = mapper.createAccessionInstance(accession, locationURI, locationNote, parentRepoURI);
+                JSONObject instanceJS = mapper.createAccessionInstance(accession, locationURI, locationNote, parentRepoURI, location);
                 instancesJA.put(instanceJS);
             }
         }
@@ -1211,6 +1226,9 @@ public class ASpaceCopyUtil {
      * @param threads
      */
     public void copyResourceRecords(int max, int threads) throws Exception {
+        if (!enumsSet) mapper.setASpaceDynamicEnums(aspaceClient.loadDynamicEnums());
+        enumsSet = true;
+
         currentRecordType = "Resource Record";
 
         // first delete previously saved resource records if that option was selected by user
@@ -1432,7 +1450,7 @@ public class ASpaceCopyUtil {
         }
 
         // update the number of resource actually copied
-        //updateRecordTotals("Resource Records", total, copyCount);
+//        updateRecordTotals("Resource Records", total, copyCount);
     }
 
     /**
@@ -1546,7 +1564,7 @@ public class ASpaceCopyUtil {
             if(nameURI != null) {
                 JSONObject linkedAgentJS = new JSONObject();
 
-                linkedAgentJS.put("role", enumUtil.getASpaceLinkedAgentRole(aname.getNameLinkFunction()));
+                linkedAgentJS.put("role", enumUtil.getASpaceLinkedAgentRole(aname.getNameLinkFunction())[0]);
                 linkedAgentJS.put("relator", enumUtil.getASpaceLinkedAgentRelator(aname.getRole()));
 
                 // add the name form as a term
@@ -1602,6 +1620,7 @@ public class ASpaceCopyUtil {
 
         String resourceRepo = parentRepository.getShortName();
 
+        TopContainerMapper.setaSpaceCopyUtil(this);
         for (ArchDescriptionInstances ainstance : ainstances) {
             if (ainstance instanceof ArchDescriptionAnalogInstances) {
                 ArchDescriptionAnalogInstances analogInstance = (ArchDescriptionAnalogInstances)ainstance;
@@ -2102,11 +2121,16 @@ public class ASpaceCopyUtil {
         float percent = (new Float(success)/new Float(total))*100.0f;
         String info = recordType + " : " + success + " / " + total + " (" + String.format("%.2f", percent) + "%)";
 
-        if(recordTotals.size() <= 8) {
-            recordTotals.add(info);
-        } else {
+        if (recordType.equals("Resource Records") && recordTotals.size() > 8) {
             recordTotals.set(8, info);
+        } else {
+            recordTotals.add(info);
         }
+//        if(recordTotals.size() <= 8) {
+//            recordTotals.add(info);
+//        } else {
+//            recordTotals.set(8, info);
+//        }
     }
 
     /**

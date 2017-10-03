@@ -4,6 +4,9 @@ package test;
 import org.archiviststoolkit.plugin.dbdialog.RemoteDBConnectDialogLight;
 import org.archiviststoolkit.plugin.utils.aspace.ASpaceCopyUtil;
 import org.archiviststoolkit.plugin.utils.aspace.ASpaceMapper;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.*;
 import java.sql.Connection;
@@ -27,6 +30,21 @@ class TestUtils {
     public static boolean trimData = false;
     public static int startNum = 0;
     public static int numToCopy = 50;
+    static HashMap<String, JSONObject> dynamicEnums = new HashMap<String, JSONObject>();
+    private static JSONObject json;
+    static {
+        try {
+            json = new JSONObject();
+            json.put("name", "language_iso639_2");
+            json.put("values", new JSONArray());
+            TestUtils.dynamicEnums.put("language_iso639_2", json);
+            json.put("name", "agent_contact_salutation");
+            json.put("values", new JSONArray());
+            TestUtils.dynamicEnums.put("agent_contact_salutation", json);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
     private static String propertiesUrl = "C:/Users/morrissey/Desktop/at-mig-6/dbcopy.properties";
     private static String atURL;
     private static String at_username;
@@ -51,6 +69,14 @@ class TestUtils {
     }
 
     private static Properties properties = new Properties();
+
+    public static void addDynamicEnumVal(String enumName, String value) throws JSONException {
+        JSONObject json = new JSONObject();
+        json.put("name", enumName);
+        json.put("values", new JSONArray().put(value));
+        dynamicEnums.put(enumName, json);
+        mapper.setASpaceDynamicEnums(dynamicEnums);
+    }
 
     public static void setProperties() throws IOException {
         if (!testMode) return;

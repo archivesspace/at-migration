@@ -1,4 +1,8 @@
 #!/bin/sh
+#This must be run from the at-migration directory
+
+# get current working directory
+cwd=$(pwd)
 
 # copy the plugin.xml file
 cp -v plugin.xml out/production/ScriptAT
@@ -7,9 +11,9 @@ cd out/production/ScriptAT
 
 zip -rv scriptAT.zip . -i \*.class *.bsh *.xml -x test/*
 
-mv -v scriptAT.zip ../../../../
+mv -v scriptAT.zip C:/"Program Files"/"Archivists Toolkit 2.0"/plugins #This should be wherever AT is installed
 
 # create a zip of the source code
-cd ../../../
+cd $cwd
 
 zip -vr scriptAT_src.zip src -x "*.svn*" "*.DS_Store*"
