@@ -1443,12 +1443,22 @@ public class ASpaceMapper {
         if(record.getRestrictionsApply() != null && record.getRestrictionsApply()) {
             json.put("restrictions", record.getRestrictionsApply());
         }
-
-        StringBuilder sb = new StringBuilder().append(record.getRepositoryProcessingNote());
+        StringBuilder sb = new StringBuilder();
+        String note = record.getRepositoryProcessingNote();
+        if (note != null && !(note.isEmpty())) {
+            sb.append(note);
+            sb.append('\n');
+        }
         for (ResourcesComponents component: record.getResourcesComponents()) {
             addRepositoryProcessingNote(sb, component);
         }
-        json.put("repository_processing_note", sb.toString());
+        String repoProcessingNote;
+        if (sb.length() > 65000) {
+            repoProcessingNote = sb.substring(0, 64999);
+        } else {
+            repoProcessingNote = sb.toString();
+        }
+        json.put("repository_processing_note", repoProcessingNote);
         json.put("container_summary", record.getContainerSummary());
 
 
@@ -1499,10 +1509,14 @@ public class ASpaceMapper {
     }
 
     public void addRepositoryProcessingNote(StringBuilder sb, ResourcesComponents component) {
-        sb.append('\n');
-        sb.append(component);
-        sb.append(": ");
-        sb.append(component.getRepositoryProcessingNote());
+        if (sb.length() >= 65000) return;
+        String note = component.getRepositoryProcessingNote();
+        if (note != null && !(note.isEmpty())) {
+            sb.append(component);
+            sb.append(": ");
+            sb.append(note);
+            sb.append('\n');
+        }
         for (ResourcesComponents child: component.getResourcesComponents()) addRepositoryProcessingNote(sb, child);
     }
 
