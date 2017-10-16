@@ -271,6 +271,8 @@ public class dbCopyCLI {
 
             ascopy.addContainerData();
 
+            ascopy.addAssessments();
+
             // DEBUG code which checks to see that all ISO dates are valid
             if(checkISODates) {
                 ascopy.checkISODates();

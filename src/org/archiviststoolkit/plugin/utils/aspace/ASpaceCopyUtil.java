@@ -3,6 +3,7 @@ package org.archiviststoolkit.plugin.utils.aspace;
 import org.apache.commons.httpclient.NameValuePair;
 import org.archiviststoolkit.ApplicationFrame;
 import org.archiviststoolkit.model.*;
+import org.archiviststoolkit.mydomain.DomainObject;
 import org.archiviststoolkit.plugin.dbCopyFrame;
 import org.archiviststoolkit.plugin.dbdialog.RemoteDBConnectDialogLight;
 import org.archiviststoolkit.plugin.utils.ScriptDataUtils;
@@ -14,6 +15,7 @@ import org.json.JSONObject;
 import javax.swing.*;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Set;
 
@@ -26,7 +28,11 @@ import java.util.Set;
  */
 public class ASpaceCopyUtil {
 
-    public static final String SUPPORTED_ASPACE_VERSION = "v2.1";
+    private static final Class[] recordsToCopy = new Class[]{LookupList.class, Repositories.class, Locations.class,
+            Users.class, Subjects.class, Names.class, Accessions.class, DigitalObjects.class, Resources.class,
+            Assessments.class};
+
+    public static final String SUPPORTED_ASPACE_VERSION = "v2.1 & v2.2";
 
     // used to get session from the source and destination databases
     private RemoteDBConnectDialogLight sourceRCD;
@@ -82,6 +88,36 @@ public class ASpaceCopyUtil {
 
     // hashmap that maps resource from old database with copy in new database
     private HashMap<Long, String> resourceURIMap = new HashMap<Long, String>();
+
+    private HashMap<Long, String> assessmentURIMap = new HashMap<Long, String>();
+
+    private HashMap<String, HashMap<String, Integer>> assessmentAttributeDefinitions = new HashMap<String, HashMap<String, Integer>>();
+
+    private Boolean copyAssessments;
+
+    public String getURIMapping(DomainObject record) {
+
+        Long recordIdentifier = record.getIdentifier();
+        Class recordClass = record.getClass();
+
+        if (recordClass.toString().contains("Locations")) {
+            return locationURIMap.get(recordIdentifier);
+        } else if (recordClass.toString().contains("Subjects")) {
+            return subjectURIMap.get(recordIdentifier);
+        } else if (recordClass.toString().contains("Names")) {
+            return nameURIMap.get(recordIdentifier);
+        } else if (recordClass.toString().contains("Accessions")) {
+            return accessionURIMap.get(recordIdentifier);
+        } else if (recordClass.toString().contains("DigitalObjects")) {
+            return digitalObjectURIMap.get(recordIdentifier);
+        } else if (recordClass.toString().contains("Resources")) {
+            return resourceURIMap.get(recordIdentifier);
+        } else if (recordClass.toString().contains("Assessments")) {
+            return assessmentURIMap.get(recordIdentifier);
+        } else {
+            return null;
+        }
+    }
 
     // stop watch object for keeping tract of time
     private StopWatch stopWatch = null;
@@ -145,6 +181,7 @@ public class ASpaceCopyUtil {
     private final String ACCESSION_KEY = "accessionURIMap";
     private final String DIGITAL_OBJECT_KEY = "digitalObjectURIMap";
     private final String RESOURCE_KEY = "resourceURIMap";
+    private final String ASSESSMENT_KEY = "assessmentURIMap";
     private final String REPOSITORY_MISMATCH_KEY = "repositoryMismatchMap";
     private final String RECORD_TOTAL_KEY = "copyProgress";
 
@@ -427,6 +464,22 @@ public class ASpaceCopyUtil {
             int end = version.lastIndexOf(".");
             aspaceVersion = version.substring(0, end);
         } catch (Exception e) { }
+    }
+
+    public void setCopyAssessments() {
+         if (aspaceVersion.isEmpty()) {
+             String message = "Cannot determine your version of ArchivesSpace. Do you want to attempt to\n" +
+                     "copy assessments to ArchivesSpace? (This will only work with version 2.2.)";
+             while (copyAssessments == null) {
+                 int result = JOptionPane.showConfirmDialog(null, message, "Copy assessments?",
+                         JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                 if (result == JOptionPane.NO_OPTION) {
+                     copyAssessments = false;
+                 } else if (result == JOptionPane.YES_OPTION) {
+                     copyAssessments = true;
+                 }
+             }
+         }
     }
 
     /**
@@ -881,6 +934,144 @@ public class ASpaceCopyUtil {
 
         // refresh the database connection to prevent heap space error
         freeMemory();
+    }
+
+    public void addAssessments() throws Exception {
+
+        if (aspaceVersion.contains("2.2")) {
+            System.out.println("Copying assessments ...");
+        } else if (aspaceVersion.isEmpty()) {
+            if (copyAssessments == null) setCopyAssessments();
+            if (!copyAssessments) return;
+            System.out.println("Unknown version of ASpace.\nAttempting to copy assessments ...");
+        } else {
+            System.out.println("ASpace version does not support assessments. Can not copy.");
+            print("ASpace version " + aspaceVersion + " does not support assessments.\nSkipping copy assessments.");
+            addErrorMessage("Can not copy assessments. ASpace version " + aspaceVersion + " does not support.");
+            return;
+        }
+
+        loadAssessmentAtributeDefinitions();
+
+        ArrayList<Assessments> records = sourceRCD.getAssessments();
+
+        // these are used to update the progress bar
+        int total = records.size();
+        int count = 0;
+        int success = 0;
+        int unlinkedCount = 0;
+
+        for (Assessments assessment : records) {
+            if (stopCopy) return;
+            
+            String repoURI = getRemappedRepositoryURI("assessment", assessment.getIdentifier(), assessment.getRepository());
+            String uri = repoURI + ASpaceClient.ASSESSMENT_ENDPOINT;
+
+            String jsonText = (String) mapper.convert(assessment);
+            if (jsonText != null) {
+                String id = saveRecord(uri, jsonText, "Assessment->" + assessment.getAssessmentId());
+
+                if(!id.equalsIgnoreCase(NO_ID)) {
+                    uri = uri + "/" + id;
+                    assessmentURIMap.put(assessment.getIdentifier(), uri);
+                    print("Copied Assessment: " + assessment + " :: " + id);
+                    success++;
+                } else {
+                    print("Fail -- Assessment: " + assessment);
+                }
+            } else {
+                print("Fail -- Assessment to JSON: " + assessment);
+            }
+
+            count++;
+            updateProgress("Assessments", total, count);
+        }
+
+        updateRecordTotals("Assessments", total, success);
+
+        // refresh the database connection to prevent heap space error
+        freeMemory();
+    }
+
+    // when an assessment attribute definition is added this is how to know what id it was assigned
+    private int nextAssesAttrDefnID = 1;
+
+    /**
+     * loads the default assessment attribute definitions from ASpace (as well as any other existing to be safe)
+     * @throws Exception
+     */
+    private void loadAssessmentAtributeDefinitions() throws Exception {
+        boolean globalSet = false;
+
+        //first add all the repo URIs to an array list so that the admin repo is first in the loop
+        ArrayList<String> repos = new ArrayList<String>();
+        repos.add(ASpaceClient.ADMIN_REPOSITORY_ENDPOINT);
+        repos.addAll(repositoryURIMap.values());
+
+        for (String repoURI: repos) {
+
+            //admin repo will be in repos twice so skip it the second time
+            if (repoURI.equals(ASpaceClient.ADMIN_REPOSITORY_ENDPOINT)) {
+                if (globalSet) continue;
+                globalSet = true;
+            }
+
+            //add the repository and have it map to an empty hash map that will store its definitions
+            assessmentAttributeDefinitions.put(repoURI, new HashMap<String, Integer>());
+
+            //get the definitions from ASpace and add each one to that repo's hashmap (label and type map to id)
+            JSONObject result = new JSONObject(aspaceClient.get(repoURI + ASpaceClient.ASSESSMENT_ATTR_DEFNS_ENDPOINT, null));
+            JSONArray definitionsJA = (JSONArray) result.get("definitions");
+            for (int i = 0; i < definitionsJA.length(); i++) {
+                JSONObject definitionJS = (JSONObject) definitionsJA.get(i);
+                String key = definitionJS.get("label").toString() + " - " + definitionJS.get("type").toString();
+                //don't need to add it if its already in the global map
+                if (!assessmentAttributeDefinitions.get(ASpaceClient.ADMIN_REPOSITORY_ENDPOINT).containsKey(key)) {
+                    assessmentAttributeDefinitions.get(repoURI).put(key, (Integer) definitionJS.get("id"));
+                    nextAssesAttrDefnID++;
+                }
+            }
+        }
+    }
+
+    /**
+     * gets the mapping for a assessment attribute definition if it already exists. Otherwise adds the definition
+     * @param repo
+     * @param label
+     * @param type
+     * @return
+     */
+    public Integer getAssessmentAttributeID(Repositories repo, String label, String type) throws Exception {
+        Integer id;
+        String key = label + " - " + type;
+
+        //first see if it is in the global assessment attributes list
+        id = assessmentAttributeDefinitions.get(aspaceClient.ADMIN_REPOSITORY_ENDPOINT).get(key);
+        if (id != null) return id;
+
+        //next see if it is in the repository specific assessment attributes list
+        String repoURI = repositoryURIMap.get(repo.getShortName());
+        id = assessmentAttributeDefinitions.get(repoURI).get(key);
+        if (id != null) return id;
+
+        //otherwise add it to the repository assessment attributes list
+        JSONObject defn = new JSONObject();
+        defn.put("label", label);
+        defn.put("type", type);
+        JSONObject previous = new JSONObject(aspaceClient.get(repoURI + aspaceClient.ASSESSMENT_ATTR_DEFNS_ENDPOINT,
+                null));
+        JSONArray previousJA = (JSONArray) previous.get("definitions");
+        id = nextAssesAttrDefnID++;
+        previousJA.put(defn);
+        JSONObject json = new JSONObject();
+        json.put("definitions", previousJA);
+        saveRecord(repoURI + aspaceClient.ASSESSMENT_ATTR_DEFNS_ENDPOINT, json.toString(),
+                "Assessment Attributes->" + type);
+        assessmentAttributeDefinitions.get(repoURI).put(key, id);
+        //decrement errors because it counts this as an error for some reason
+        saveErrorCount--;
+        aspaceErrorCount--;
+        return id;
     }
 
     /**
@@ -2356,6 +2547,7 @@ public class ASpaceCopyUtil {
         uriMap.put(ACCESSION_KEY, accessionURIMap);
         uriMap.put(DIGITAL_OBJECT_KEY, digitalObjectURIMap);
         uriMap.put(RESOURCE_KEY, resourceURIMap);
+        uriMap.put(ASSESSMENT_KEY, assessmentURIMap);
 
         // store the record totals array list here also
         uriMap.put(RECORD_TOTAL_KEY, recordTotals);
@@ -2387,6 +2579,7 @@ public class ASpaceCopyUtil {
             accessionURIMap = (HashMap<Long,String>)uriMap.get(ACCESSION_KEY);
             digitalObjectURIMap = (HashMap<Long,String>)uriMap.get(DIGITAL_OBJECT_KEY);
             resourceURIMap = (HashMap<Long,String>)uriMap.get(RESOURCE_KEY);
+            assessmentURIMap = (HashMap<Long,String>)uriMap.get(ASSESSMENT_KEY);
 
             // load the repository mismatch map if its not null
             if(uriMap.containsKey(REPOSITORY_MISMATCH_KEY)) {

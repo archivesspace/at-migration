@@ -314,6 +314,7 @@ public class dbCopyFrame extends JFrame {
                     //Check if working
                     System.out.println("Version: " + aspaceVersion);
 
+                    if (aspaceVersion.isEmpty()) ascopy.setCopyAssessments();
                     if(!aspaceVersion.isEmpty() && !ASpaceCopyUtil.SUPPORTED_ASPACE_VERSION.contains(aspaceVersion)) {
                         String message =  "Unsupported Archivesspace Version\nSupport Versions: " +
                                 ASpaceCopyUtil.SUPPORTED_ASPACE_VERSION + " ...\n";
@@ -396,6 +397,8 @@ public class dbCopyFrame extends JFrame {
                     }
 
                     if (!copyStopped) ascopy.addContainerData();
+
+                    if (!copyStopped) ascopy.addAssessments();
 
                     ascopy.cleanUp();
 

@@ -198,7 +198,8 @@ public class TopContainerMapper {
         }
         LocationJSONObject json = new LocationJSONObject(uri, note);
 
-        alreadyAdded.get(this).locationURIs.add(json);
+        Info info = alreadyAdded.get(this);
+        if (info != null) info.locationURIs.add(json);
     }
 
     public void addLocationURI(String uri) throws Exception {addLocationURI(uri, "");}

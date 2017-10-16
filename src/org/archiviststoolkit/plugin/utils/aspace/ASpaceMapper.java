@@ -99,6 +99,7 @@ public class ASpaceMapper {
     // string builder used for finding bad dates
     private ArrayList<String> datesList = null;
     private boolean checkISODates = false;
+    private JSONArray unknownName;
 
     /**
      *  Main constructor
@@ -201,6 +202,8 @@ public class ASpaceMapper {
             return convertResourceComponent((ResourcesComponents) record);
         } else if (record instanceof DigitalObjects) {
             return convertDigitalObject((DigitalObjects) record);
+        } else if (record instanceof Assessments) {
+            return convertAssessment((Assessments) record);
         } else {
             return null;
         }
@@ -836,10 +839,6 @@ public class ASpaceMapper {
         rightStatementJS.put("rights_type", "copyright");
         rightStatementJS.put("status", "copyrighted");
         rightStatementJS.put("jurisdiction", "US"); // TODO 8/12/2013 this is not suppose to be required
-//        JSONObject dateJS = new JSONObject();
-//        dateJS.put("type", "single");
-//        dateJS.put("label", "other");
-//        dateJS.put("expression", record.getRightsTransferredDate().toString());
         Date startDate = record.getRightsTransferredDate();
         if (startDate == null) {
             rightStatementJS.put("start_date", DEFAULT_DATE.toString());
@@ -1040,7 +1039,7 @@ public class ASpaceMapper {
             JSONObject dateJS = new JSONObject();
             dateJS.put("date_type", enumUtil.getASpaceDateType(archDescriptionDate)[0]);
             dateJS.put("label", enumUtil.getASpaceDateEnum(archDescriptionDate.getDateType())[0]);
-            dateJS.put("uncertain", enumUtil.getASpaceDateCertainty(archDescriptionDate)[0]);
+            dateJS.put("certainty", enumUtil.getASpaceDateCertainty(archDescriptionDate)[0]);
 
             String dateExpression = archDescriptionDate.getDateExpression();
             dateJS.put("expression", dateExpression);
@@ -1631,6 +1630,117 @@ public class ASpaceMapper {
         }
 
         return json;
+    }
+
+    private String convertAssessment(Assessments record) throws Exception {
+
+        JSONObject json = new JSONObject();
+
+        addExternalId(record, json, "assessment");
+
+        JSONArray recordsJA = new JSONArray();
+
+        String recordUri;
+        for (AssessmentsAccessions accession : record.getAccessions()) {
+            recordUri = aspaceCopyUtil.getURIMapping(accession.getAccession());
+            recordsJA.put(getReferenceObject(recordUri));
+        }
+        for (AssessmentsDigitalObjects digitalObject: record.getDigitalObjects()) {
+            recordUri = aspaceCopyUtil.getURIMapping(digitalObject.getDigitalObject());
+            recordsJA.put(getReferenceObject(recordUri));
+        }
+        for (AssessmentsResources resource : record.getResources()) {
+            recordUri = aspaceCopyUtil.getURIMapping(resource.getResource());
+            recordsJA.put(getReferenceObject(recordUri));
+        }
+
+        json.put("records", recordsJA);
+
+        print("Adding agent record for who did survey ...");
+        json.put("surveyed_by", addAssessmentsAgent(record.getWhoDidSurvey(), record));
+
+        Date surveyBegin = record.getDateOfSurvey();
+        if (surveyBegin == null) surveyBegin = DEFAULT_DATE;
+        String surveyBeginStr = new SimpleDateFormat("yyyy-MM-dd").format(surveyBegin);
+        json.put("survey_begin", surveyBeginStr);
+
+        String reviewer = record.getWhoNeedsToReview();
+        if (reviewer != null && !(reviewer.isEmpty())) json.put("reviewer", addAssessmentsAgent(reviewer, record));
+
+        addAssessmentsAttributes(json, record);
+
+        return json.toString();
+    }
+
+    private JSONArray addAssessmentsAgent(String name, Assessments assessment) throws Exception {
+
+        JSONObject json = new JSONObject();
+
+        JSONArray namesJA = new JSONArray();
+        JSONObject nameJSON = new JSONObject();
+
+        name = name.trim();
+        boolean unknown = false;
+        if (name == null || name.isEmpty()) {
+            if (unknownName != null) return unknownName;
+            name = "unknown";
+            unknown = true;
+        }
+        nameJSON.put("primary_name", name);
+        nameJSON.put("sort_name", name);
+        nameJSON.put("source", enumUtil.getASpaceNameSource(null)[0]);
+        nameJSON.put("name_order", enumUtil.getASpaceNameOrder(null)[0]);
+        namesJA.put(nameJSON);
+        json.put("names", namesJA);
+
+        String endpoint = "/agents/people";
+        String id = aspaceCopyUtil.saveRecord(endpoint , json.toString(), "Assessments->" + assessment.getIdentifier());
+
+        String uri = endpoint + "/" + id;
+
+        JSONArray ja = new JSONArray();
+        ja.put(getReferenceObject(uri));
+        if (unknown) unknownName = ja;
+        return ja;
+    }
+
+    private void addAssessmentsAttributes(JSONObject json, Assessments record) throws Exception {
+
+        Repositories repo = record.getRepository();
+
+        //first add the formats
+        JSONArray formatsJA = new JSONArray();
+        HashMap<String, Boolean> formats = new HashMap<String, Boolean>();
+        formats.put("Architectural Materials", record.getArchitecturalMaterials());
+        formats.put("Glass", record.getGlass());
+        formats.put("Art Originals", record.getArtOriginals());
+        formats.put("Photographs", record.getPhotographs());
+        formats.put("Artifacts", record.getArtifacts());
+        formats.put("Scrapbooks", record.getScrapbooks());
+        formats.put("Audio Materials", record.getAudioMaterials());
+        formats.put("Technical Drawings & Schematics", record.getTechnicalDrawingsAndSchematics());
+        formats.put("Biological Specimens", record.getBiologicalSpecimens());
+        formats.put("Textiles", record.getTextiles());
+        formats.put("Botanical Specimens", record.getBotanicalSpecimens());
+        formats.put("Vellum & Parchment", record.getVellumAndParchment());
+        formats.put("Computer Storage Units", record.getComputerStorageUnits());
+        formats.put("Video Materials", record.getVideoMaterials());
+        formats.put("Film (negative, slide, or motion picture)", record.getFilm());
+        formats.put("Other", record.getOther());
+        formats.put("Special Format 1", record.getSpecialFormat1());
+        formats.put("Special Format 2", record.getSpecialFormat2());
+
+        for (String format : formats.keySet()) {
+            if (formats.get(format)) {
+                JSONObject formatJSON = new JSONObject();
+                int id = aspaceCopyUtil.getAssessmentAttributeID(repo, format, "format");
+                formatJSON.put("definition_id", id);
+                formatJSON.put("value", "true");
+                formatsJA.put(formatJSON);
+            }
+        }
+
+        json.put("formats", formatsJA);
     }
 
     /**

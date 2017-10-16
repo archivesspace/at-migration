@@ -32,7 +32,6 @@ class Testing {
      */
     public static void main(String[] args) throws Exception {
         TestUtils.resetDatabase();
-        dbCopyFrame.main(TestUtils.empty);
         //Call constructors for any tests you want to run here
 //        new dbCopyCLITest();
 //        new ASpaceMapperTest();

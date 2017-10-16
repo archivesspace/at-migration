@@ -95,7 +95,7 @@ public class ASpaceEnumUtil {
             code =  "gmgpc";
         } else {
             code = lookupListValuesToCodes.get(atValue);
-            if (code == null) code = "local";
+            if (code == null || code.isEmpty()) code = "local";
         }
         return getASpaceEnumValue("subject_source", code);
     }
@@ -108,8 +108,8 @@ public class ASpaceEnumUtil {
      */
     public Object[] getASpaceNameSource(String atValue) {
 
-        atValue = atValue.toLowerCase();
         if (atValue == null || atValue.trim().isEmpty()) atValue = "local";
+        atValue = atValue.toLowerCase();
 
         if(atValue.contains("naco")) {
             atValue = "naf";
@@ -129,6 +129,7 @@ public class ASpaceEnumUtil {
      */
     public Object[] getASpaceNameOrder(Boolean directOrder) {
         String atValue;
+        if (directOrder == null) {directOrder = true;}
         if(directOrder) {
             atValue = "direct";
         } else {

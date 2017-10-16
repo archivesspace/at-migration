@@ -11,6 +11,8 @@ import org.archiviststoolkit.plugin.utils.StopWatch;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import javax.swing.*;
+import java.net.ConnectException;
 import java.util.HashMap;
 
 /**
@@ -44,6 +46,8 @@ public class ASpaceClient {
     public static final String ENUM_ENDPOINT = "/config/enumerations";
     public static final String BATCH_IMPORT_ENDPOINT = "/batch_imports?migration=ArchivistToolkit";
     public static final String INDEXER_ENDPOINT = "/aspace-indexer/";
+    public static final String ASSESSMENT_ENDPOINT = "/assessments";
+    public static final String ASSESSMENT_ATTR_DEFNS_ENDPOINT = "/assessment_attribute_definitions";
 
     private HttpClient httpclient = new HttpClient();
     private String host = "";
@@ -200,7 +204,20 @@ public class ASpaceClient {
         // Execute request
         try {
 
-            int statusCode = httpclient.executeMethod(post);
+            int statusCode;
+            try {
+                statusCode = httpclient.executeMethod(post);
+            } catch (ConnectException e) {
+                boolean ready = false;
+                String message = "Connection has been lost.\nCheck that your web server and Archives\nSpace session " +
+                        "are still running.";
+                while (!ready) {
+                    int result = JOptionPane.showConfirmDialog(null, message, "Fix connection",
+                            JOptionPane.OK_CANCEL_OPTION, JOptionPane.ERROR_MESSAGE);
+                    if (result == JOptionPane.OK_OPTION) ready = true;
+                }
+                return executePost(post, idName, atId, jsonText);
+            }
 
             // Display status code
             String statusMessage = "Status code: " + statusCode +
