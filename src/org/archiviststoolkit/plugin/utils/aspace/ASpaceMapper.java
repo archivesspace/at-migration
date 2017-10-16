@@ -1741,6 +1741,61 @@ public class ASpaceMapper {
         }
 
         json.put("formats", formatsJA);
+
+        //next the conservation issues
+        JSONArray conservationJA = new JSONArray();
+        HashMap<String, Boolean> conservationIssues = new HashMap<String, Boolean>();
+        conservationIssues.put("Potential Mold or Mold Damage", record.getPotentialMoldOrMoldDamage());
+        conservationIssues.put("Recent Pest Damage", record.getRecentPestDamage());
+        conservationIssues.put("Deteriorating Film Base", record.getDeterioratingFilmBase());
+        conservationIssues.put("Special Conservation Issue 1", record.getSpecialConservationIssue1());
+        conservationIssues.put("Special Conservation Issue 2", record.getSpecialConservationIssue2());
+        conservationIssues.put("Special Conservation Issue 3", record.getSpecialConservationIssue3());
+        conservationIssues.put("Brittle Paper", record.getBrittlePaper());
+        conservationIssues.put("Metal Fasteners", record.getMetalFasteners());
+        conservationIssues.put("Newspaper", record.getNewspaper());
+        conservationIssues.put("Tape", record.getTape());
+        conservationIssues.put("Thermofax Paper", record.getThermofaxPaper());
+        conservationIssues.put("Other Conservation Issue 1", record.getOtherConservationIssue1());
+        conservationIssues.put("Other Conservation Issue 2", record.getOtherConservationIssue2());
+        conservationIssues.put("Other Conservation Issue 3", record.getOtherConservationIssue3());
+
+        for (String conservationIssue : conservationIssues.keySet()) {
+            if (conservationIssues.get(conservationIssue)) {
+                JSONObject conservationJSON = new JSONObject();
+                int id = aspaceCopyUtil.getAssessmentAttributeID(repo, conservationIssue, "conservation_issue");
+                conservationJSON.put("definition_id", id);
+                conservationJSON.put("value", "true");
+                conservationJA.put(conservationJSON);
+            }
+        }
+
+        json.put("conservation_issues", conservationJA);
+
+        //finally the ratings
+        JSONArray ratingsJA = new JSONArray();
+        HashMap<String, Integer> ratings = new HashMap<String, Integer>();
+        ratings.put("Physical Condition", record.getConditionOfMaterial());
+        ratings.put("Physical Access (arrangement)", record.getPhysicalAccess());
+        ratings.put("Documentation Quality", record.getDocumentationQuality());
+        ratings.put("Housing Quality", record.getQualityOfHousing());
+        ratings.put("Intellectual Access (description)", record.getIntellectualAccess());
+        ratings.put("Interest", record.getInterest());
+        ratings.put("Numerical Rating 1", record.getUserNumericalRating1());
+        ratings.put("Numerical Rating 2", record.getUserNumericalRating2());
+
+        for (String rating : ratings.keySet()) {
+            Integer value = ratings.get(rating);
+            if (value != null) {
+                JSONObject ratingJSON = new JSONObject();
+                int id = aspaceCopyUtil.getAssessmentAttributeID(repo, rating, "rating");
+                ratingJSON.put("definition_id", id);
+                ratingJSON.put("value", value.toString());
+                ratingsJA.put(ratingJSON);
+            }
+        }
+
+        json.put("ratings", ratingsJA);
     }
 
     /**

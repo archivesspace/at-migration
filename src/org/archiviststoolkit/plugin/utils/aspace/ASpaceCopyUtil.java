@@ -13,7 +13,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import javax.swing.*;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -27,10 +30,6 @@ import java.util.Set;
  * Utility class for copying data from the AT to Archive Space
  */
 public class ASpaceCopyUtil {
-
-    private static final Class[] recordsToCopy = new Class[]{LookupList.class, Repositories.class, Locations.class,
-            Users.class, Subjects.class, Names.class, Accessions.class, DigitalObjects.class, Resources.class,
-            Assessments.class};
 
     public static final String SUPPORTED_ASPACE_VERSION = "v2.1 & v2.2";
 
@@ -331,6 +330,8 @@ public class ASpaceCopyUtil {
 
         // map used when copying lookup list items to the archive space backend
         lookupListMap.put("subject term source", ASpaceClient.VOCABULARY_ENDPOINT);
+
+        TopContainerMapper.setaSpaceCopyUtil(this);
 
         // start the stop watch object so we can see how long this data transfer takes
         startWatch();
