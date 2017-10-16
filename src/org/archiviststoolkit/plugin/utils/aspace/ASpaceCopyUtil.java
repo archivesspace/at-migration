@@ -246,62 +246,62 @@ public class ASpaceCopyUtil {
         init();
     }
 
-    public void addContainerData() throws Exception {
-        print("Adding data for top containers ...");
-
-        Set<TopContainerMapper> records = TopContainerMapper.getAlreadyAdded().keySet();
-
-        // these are used to update the progress bar
-        int total = records.size();
-        int count = 0;
-        int success = 0;
-        
-        for (TopContainerMapper topContainer: records) {
-
-            if (stopCopy) return;
-
-            JSONArray locations = topContainer.getContainerLocations();
-            if (locations == null) {
-                count++;
-                success++;
-                updateProgress("Top Containers", total, count);
-                continue;
-            }
-
-            String containerURI = topContainer.getRef();
-            JSONObject json = getRecord(containerURI);
-            if (json == null) {
-                print("Record was not saved -- " + topContainer + "\nCan't add its locations\n");
-                continue;
-            }
-
-            print("Saving locations for top container -- " + topContainer);
-            json.put("container_locations", locations);
-
-            String instanceClassName;
-            try {
-                instanceClassName = topContainer.getInstance().getClass().getName();
-            } catch (NullPointerException e) {
-                instanceClassName = "ArchivesSpace Container";
-            }
-            String id = saveRecord(containerURI, json.toString(),
-                     instanceClassName + "->" + topContainer.getAtID());
-            if(!id.equalsIgnoreCase(NO_ID)) {
-                print("Copied Top Container " + topContainer);
-                success++;
-            } else {
-                print("Fail -- Top Container: " + topContainer);
-            }
-
-            count++;
-            updateProgress("Top Containers", total, count);
-        }
-
-        updateRecordTotals("Top Containers", total, success);
-
-        // refresh the database connection to prevent heap space error
-        freeMemory();
-    }
+//    public void addContainerData() throws Exception {
+//        print("Adding data for top containers ...");
+//
+//        Set<TopContainerMapper> records = TopContainerMapper.getAlreadyAdded().keySet();
+//
+//        // these are used to update the progress bar
+//        int total = records.size();
+//        int count = 0;
+//        int success = 0;
+//
+//        for (TopContainerMapper topContainer: records) {
+//
+//            if (stopCopy) return;
+//
+//            JSONArray locations = topContainer.getContainerLocations();
+//            if (locations == null) {
+//                count++;
+//                success++;
+//                updateProgress("Top Containers", total, count);
+//                continue;
+//            }
+//
+//            String containerURI = topContainer.getRef();
+//            JSONObject json = getRecord(containerURI);
+//            if (json == null) {
+//                print("Record was not saved -- " + topContainer + "\nCan't add its locations\n");
+//                continue;
+//            }
+//
+//            print("Saving locations for top container -- " + topContainer);
+//            json.put("container_locations", locations);
+//
+//            String instanceClassName;
+//            try {
+//                instanceClassName = topContainer.getInstance().getClass().getName();
+//            } catch (NullPointerException e) {
+//                instanceClassName = "ArchivesSpace Container";
+//            }
+//            String id = saveRecord(containerURI, json.toString(),
+//                     instanceClassName + "->" + topContainer.getAtID());
+//            if(!id.equalsIgnoreCase(NO_ID)) {
+//                print("Copied Top Container " + topContainer);
+//                success++;
+//            } else {
+//                print("Fail -- Top Container: " + topContainer);
+//            }
+//
+//            count++;
+//            updateProgress("Top Containers", total, count);
+//        }
+//
+//        updateRecordTotals("Top Containers", total, success);
+//
+//        // refresh the database connection to prevent heap space error
+//        freeMemory();
+//    }
 
     /**
      * Method to initiate certain variables that are needed to work

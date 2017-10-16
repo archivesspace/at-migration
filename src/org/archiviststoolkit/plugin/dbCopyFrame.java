@@ -396,7 +396,7 @@ public class dbCopyFrame extends JFrame {
                         ascopy.copyResourceRecords(resourcesToCopy, threads);
                     }
 
-                    if (!copyStopped) ascopy.addContainerData();
+//                    if (!copyStopped) ascopy.addContainerData();
 
                     if (!copyStopped) ascopy.addAssessments();
 

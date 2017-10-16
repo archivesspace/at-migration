@@ -269,7 +269,7 @@ public class dbCopyCLI {
 
             ascopy.copyResourceRecords(numberOfResourcesToCopy, clientThreads);
 
-            ascopy.addContainerData();
+//            ascopy.addContainerData();
 
             ascopy.addAssessments();
 

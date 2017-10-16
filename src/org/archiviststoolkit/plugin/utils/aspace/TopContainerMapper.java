@@ -42,9 +42,15 @@ public class TopContainerMapper {
     private class Info {
         public String uri;
         private Set<LocationJSONObject> locationURIs = new HashSet<LocationJSONObject>();
+        String indicator;
+        String type;
+        String barcode;
 
-        public Info(String uri) {
+        public Info(String uri, TopContainerMapper container) {
             this.uri = uri;
+            this.indicator = container.indicator;
+            this.type = container.type;
+            this.barcode = container.barcode;
         }
     }
 
@@ -144,6 +150,7 @@ public class TopContainerMapper {
         jsonObject.put("indicator", indicator);
         jsonObject.put("type", type);
         jsonObject.put("barcode", barcode);
+        jsonObject.put("container_locations", new JSONArray());
         String id = aSpaceCopyUtil.saveRecord(parentRepoURI + "top_containers", jsonObject.toString(),
                 instance.getClass().getSimpleName() + "->" + atID);
         if (!(id.equalsIgnoreCase("no id assigned"))) {
@@ -152,6 +159,23 @@ public class TopContainerMapper {
             aSpaceCopyUtil.print("Fail -- Instance: " + printableInstance());
         }
         return parentRepoURI + "top_containers/" + id;
+    }
+
+    /**
+     * method that resaves a top container record. Mainly for adding additional locations.
+     * @param uri
+     * @throws Exception
+     */
+    private void resaveTopContainer(String uri) throws Exception {
+        JSONObject json = aSpaceCopyUtil.getRecord(uri);
+        json.put("container_locations", getContainerLocations());
+        String instanceClassName;
+            try {
+                instanceClassName = getInstance().getClass().getName();
+            } catch (NullPointerException e) {
+                instanceClassName = "ArchivesSpace Container";
+            }
+        aSpaceCopyUtil.saveRecord(uri, json.toString(),instanceClassName + "->" + getAtID());
     }
 
     @Override
@@ -180,7 +204,7 @@ public class TopContainerMapper {
      */
     public void addToExisting(String uri) {
         if (uri.contains("10000001") || uri.contains("no id assigned")) return;
-        alreadyAdded.put(this, new Info(uri));
+        alreadyAdded.put(this, new Info(uri, this));
     }
 
     /**
@@ -199,7 +223,10 @@ public class TopContainerMapper {
         LocationJSONObject json = new LocationJSONObject(uri, note);
 
         Info info = alreadyAdded.get(this);
-        if (info != null) info.locationURIs.add(json);
+        if (info != null) {
+            info.locationURIs.add(json);
+            resaveTopContainer(info.uri);
+        }
     }
 
     public void addLocationURI(String uri) throws Exception {addLocationURI(uri, "");}
