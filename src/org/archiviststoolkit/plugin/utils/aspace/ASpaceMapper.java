@@ -1632,6 +1632,12 @@ public class ASpaceMapper {
         return json;
     }
 
+    /**
+     * method to convert an AT assessment to an AS assessment
+     * @param record
+     * @return
+     * @throws Exception
+     */
     private String convertAssessment(Assessments record) throws Exception {
 
         JSONObject json = new JSONObject();
@@ -1660,14 +1666,38 @@ public class ASpaceMapper {
         json.put("surveyed_by", addAssessmentsAgent(record.getWhoDidSurvey(), record));
 
         Date surveyBegin = record.getDateOfSurvey();
+        //use the date the assessment record was created if the date of survey is not specified
+        if (surveyBegin == null) surveyBegin = record.getCreated();
         if (surveyBegin == null) surveyBegin = DEFAULT_DATE;
         String surveyBeginStr = new SimpleDateFormat("yyyy-MM-dd").format(surveyBegin);
         json.put("survey_begin", surveyBeginStr);
 
+        Double duration = record.getAmountOfTimeSurveyTook();
+        if (duration != null) json.put("surveyed_duration", duration + " hours");
+
+        Double extent = record.getTotalExtent();
+        if (extent != null) json.put("surveyed_extent", extent + " feet");
+
+        json.put("review_required", record.getReviewNeeded());
+
         String reviewer = record.getWhoNeedsToReview();
         if (reviewer != null && !(reviewer.isEmpty())) json.put("reviewer", addAssessmentsAgent(reviewer, record));
 
+        json.put("review_note", record.getReviewNote());
+
+        json.put("inactive", record.getInactive());
+
         addAssessmentsAttributes(json, record);
+
+        json.put("general_assessment_note", record.getGeneralNote());
+        json.put("special_format_note", record.getSpecialFormatNote());
+        json.put("exhibition_value_note", record.getExhibitionValueNote());
+
+        Double monetaryValue = record.getMonetaryValue();
+        if (monetaryValue != null) json.put("monetary_value", monetaryValue.toString());
+        json.put("monetary_value_note", record.getMonetaryValueNote());
+
+        json.put("conservation_note", record.getConservationNote());
 
         return json.toString();
     }
