@@ -221,13 +221,26 @@ public class TopContainerMapper {
      * @return a json object for the container location
      * @throws JSONException
      */
-    private static JSONObject getLocationJSON(String uri, String note) throws JSONException {
+    private JSONObject getLocationJSON(String uri, String note) throws JSONException {
         JSONObject json = new JSONObject();
         json.put("ref", uri);
         json.put("status", "current");
         json.put("note", note);
-        //TODO find out if this info is stored in AT
-        json.put("start_date", ASpaceMapper.DEFAULT_DATE.toString());
+
+        //set start date for location to date record was created
+        Date startDate = null;
+        try {
+            if (instance instanceof AccessionsLocations) {
+                startDate = accession.getCreated();
+            } else if (instance instanceof ArchDescriptionAnalogInstances) {
+                ArchDescriptionAnalogInstances aIn = (ArchDescriptionAnalogInstances) instance;
+                if (aIn.getResource() != null) startDate = aIn.getResource().getCreated();
+                if (aIn.getResourceComponent() != null) startDate = aIn.getResourceComponent().getCreated();
+            }
+        } finally {
+            if (startDate == null) startDate = ASpaceMapper.DEFAULT_DATE;
+        }
+        json.put("start_date", startDate.toString());
         return json;
     }
 

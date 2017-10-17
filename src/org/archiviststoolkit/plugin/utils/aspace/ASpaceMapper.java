@@ -1443,21 +1443,7 @@ public class ASpaceMapper {
         if(record.getRestrictionsApply() != null && record.getRestrictionsApply()) {
             json.put("restrictions", record.getRestrictionsApply());
         }
-//        StringBuilder sb = new StringBuilder();
-//        String note = record.getRepositoryProcessingNote();
-//        if (note != null && !(note.isEmpty())) {
-//            sb.append(note);
-//            sb.append('\n');
-//        }
-//        for (ResourcesComponents component: record.getResourcesComponents()) {
-//            addRepositoryProcessingNote(sb, component);
-//        }
-//        String repoProcessingNote;
-//        if (sb.length() > 65000) {
-//            repoProcessingNote = sb.substring(0, 64999);
-//        } else {
-//            repoProcessingNote = sb.toString();
-//        }
+
         json.put("repository_processing_note", record.getRepositoryProcessingNote());//repoProcessingNote);
         json.put("container_summary", record.getContainerSummary());
 
