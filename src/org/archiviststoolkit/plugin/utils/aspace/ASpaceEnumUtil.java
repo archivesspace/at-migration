@@ -608,6 +608,11 @@ public class ASpaceEnumUtil {
         return getASpaceEnumValue("accession_resource_type", atValue);
     }
 
+    public Object[] getASpaceRightsBasis(String atValue) {
+        if (atValue == null || atValue.isEmpty()) atValue = "archivists_toolkit";
+        return getASpaceEnumValue("rights_statement_other_rights_basis", atValue);
+    }
+
     /**
      * Method to set the hash map that holds the dynamic enums
      *
@@ -682,6 +687,8 @@ public class ASpaceEnumUtil {
             return dynamicEnums.get("subject_source");
         } else if (listName.equalsIgnoreCase("File use attributes")) {
             return dynamicEnums.get("file_version_use_statement");
+        } else if (listName.equalsIgnoreCase("Rights Basis")) {
+            return dynamicEnums.get("rights_statement_other_rights_basis");
         } else {
             return null;
         }
@@ -795,6 +802,8 @@ public class ASpaceEnumUtil {
             mappedValue = getASpaceSubjectSource(atValue);
         } else if(enumListName.equals("file_version_use_statement")) {
             mappedValue = getASpaceFileVersionUseStatement(atValue);
+        } else  if (enumListName.equals("rights_statement_other_rights_basis")) {
+            mappedValue = getASpaceRightsBasis(atValue);
         } else {
             mappedValue = new Object[]{null, false};
         }

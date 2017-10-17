@@ -462,6 +462,11 @@ public class ASpaceCopyUtil {
         eventList.addListItem("rights_transferred");
         records.add(eventList);
 
+        LookupList rightsBasisList = new LookupList();
+        rightsBasisList.setListName("Rights Basis");
+        rightsBasisList.addListItem("archivists_toolkit");
+        records.add(rightsBasisList);
+
         // these are used to update the progress bar
         int total = records.size();
         int count = 0;

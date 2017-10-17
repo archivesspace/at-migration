@@ -837,15 +837,13 @@ public class ASpaceMapper {
 
         JSONArray rightsStatementJA = new JSONArray();
         JSONObject rightStatementJS = new JSONObject();
-        rightStatementJS.put("rights_type", "copyright");
-        rightStatementJS.put("status", "copyrighted");
-        rightStatementJS.put("jurisdiction", "US"); // TODO 8/12/2013 this is not suppose to be required
+        rightStatementJS.put("rights_type", "other");
+        rightStatementJS.put("other_rights_basis", enumUtil.getASpaceRightsBasis(null)[0]);
+//        rightStatementJS.put("status", "copyrighted");
+//        rightStatementJS.put("jurisdiction", "US"); // TODO 8/12/2013 this is not suppose to be required
         Date startDate = record.getRightsTransferredDate();
-        if (startDate == null) {
-            rightStatementJS.put("start_date", DEFAULT_DATE.toString());
-        } else {
-            rightStatementJS.put("start_date", record.getRightsTransferredDate());//dateJS);
-        }
+        if (startDate == null) startDate = DEFAULT_DATE;
+        rightStatementJS.put("start_date", startDate.toString());
         JSONArray notesJA = new JSONArray();
         String note = record.getRightsTransferredNote();
         if (note != null && !(note.isEmpty())) {
