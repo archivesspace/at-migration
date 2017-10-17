@@ -101,7 +101,7 @@ public class TopContainerMapper {
         this.accession = accessionLocation.getAccession();
         if (this.accession == null) {this.accession = accession;}
         instance = accessionLocation;
-        type = "item";
+//        type = "item";
 
         //pull barcode from the accessionLocation the accession instance housed here was created for
         barcode = accessionLocation.getLocation().getBarcode();

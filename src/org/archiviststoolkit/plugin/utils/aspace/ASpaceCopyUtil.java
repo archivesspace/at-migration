@@ -536,7 +536,7 @@ public class ASpaceCopyUtil {
                 lookupList.addListItem("ingest");
                 lookupList.addListItem("local");
             } else if(listName.equals("Container types")) {
-                lookupList.addListItem("item");
+                lookupList.addListItem("unknown_item");
             } else if(listName.equals("Resource type")) {
                 lookupList.addListItem("collection");
             } else if(listName.equals("Date type")) {

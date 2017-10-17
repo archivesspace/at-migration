@@ -39,8 +39,6 @@ public class ASpaceEnumUtil {
     // A trying that is used to bypass
     public final static String UNMAPPED = "other_unmapped";
 
-    public boolean returnATValue = true; // set this to return the AR value instead of UNMAPPED
-
     /**
      * Method to set the language code hash map
      */
@@ -569,21 +567,27 @@ public class ASpaceEnumUtil {
     /**
      * Method to return the equivalent ASpace instance container type
      *
-     * if statements with "&& returnATValue" should really be removed, but depending on if the
-     * enum is ASpace is expanded then this will save some work
-     *
      * @param atValue
      * @return
      */
     public Object[] getASpaceInstanceContainerType(String atValue) {
-        if(atValue == null || atValue.trim().isEmpty()) {
-            atValue = "item";
-        }
         return getASpaceEnumValue("container_type", atValue);
     }
 
     /**
-     * Method to get the ASpace type
+     * if it is a sub-container the type can not be empty - corrects these
+     * @param atValue
+     * @return
+     */
+    public Object[] getASpaceSubContainerType(String atValue) {
+        if(atValue == null || atValue.trim().isEmpty()) {
+            atValue = "unknown_item";
+        }
+        return getASpaceInstanceContainerType(atValue);
+    }
+
+    /**
+     * Method to get the ASpace accession_acquisition_type
      *
      * @param atValue
      * @return
@@ -593,7 +597,7 @@ public class ASpaceEnumUtil {
     }
 
     /**
-     * Method to return the AccessionResourceType
+     * Method to return the accession_resource_type
      *
      * @param atValue
      * @return
@@ -682,7 +686,13 @@ public class ASpaceEnumUtil {
         }
     }
 
-    public Object[] getASpaceEnumValue(String enumListName, String atValue) {
+    /**
+     * for configurable enum lists
+     * @param enumListName
+     * @param atValue
+     * @return
+     */
+    private Object[] getASpaceEnumValue(String enumListName, String atValue) {
         return getASpaceEnumValue(enumListName, atValue, true, null);
     }
 
@@ -694,35 +704,37 @@ public class ASpaceEnumUtil {
      * @param defaultValue
      * @return
      */
-    public Object[] getASpaceEnumValue(String enumListName, String atValue, boolean returnATValue, String defaultValue) {
+    private Object[] getASpaceEnumValue(String enumListName, String atValue, boolean returnATValue, String defaultValue) {
+        //this really shouldn't occur but is here as a safety measure
         if (dynamicEnums == null) {
             return new Object[]{null, false};
             }
+
+        //if value is null go ahead and return it
         if (atValue == null) {
             return new Object[]{null, false};
         }
+
+        //convert AT value to typical ASpace enum format
         atValue = atValue.trim().toLowerCase();
-        if (atValue.contains(" ")) {
-            StringBuilder newAtValue = new StringBuilder();
-            for (int i = 0; i < atValue.length(); i++) {
-                char ch = atValue.charAt(i);
-                if (ch == ' ') {
-                    ch = '_';
-                }
-                newAtValue.append(ch);
-            }
-            atValue = newAtValue.toString();
-        }
+        atValue = atValue.replace(" ", "_");
+
         try {
+            //if there is a value in ASpace that matches return this and true
             JSONArray enumValues = dynamicEnums.get(enumListName).getJSONArray("values");
             for (int i = 0; i < enumValues.length(); i++) {
                 String value = enumValues.getString(i);
                 if (value.equalsIgnoreCase(atValue)) return new Object[]{value, true};
             }
+
+            //if there is no matching value in ASpace but the list is configurable return the value from AT and false
             if (returnATValue) {
                 return new Object[]{atValue, false};
             }
+
+            //otherwise try to return the defalt value
             return getASpaceEnumValue(enumListName, defaultValue, returnATValue, null);
+
         } catch (JSONException e) {
             e.printStackTrace();
             return new Object[]{null, false};

@@ -2408,21 +2408,26 @@ public class ASpaceMapper {
         TopContainerMapper topContainer = new TopContainerMapper(analogInstance, parentRepoURI);
         topContainer.addLocationURI(locationURI);
         containerJS.put("top_container", getReferenceObject(topContainer.getRef()));
-//        containerJS.put("type_1", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer1Type()));
-//        containerJS.put("indicator_1", fixEmptyString(analogInstance.getContainer1Indicator(), "not specified"));
-//        containerJS.put("barcode_1", analogInstance.getBarcode());
 
-        if(!analogInstance.getContainer2Type().isEmpty()) {
-            containerJS.put("type_2", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer2Type())[0]);
-            String indicator2 = analogInstance.getContainer2Indicator();
-            if (indicator2 == null || indicator2.isEmpty()) indicator2 = "unknown";
+        String type2 = analogInstance.getContainer2Type();
+        String indicator2 = analogInstance.getContainer2Indicator();
+        String type3 = analogInstance.getContainer3Type();
+        String indicator3 = analogInstance.getContainer3Indicator();
+
+        boolean have2 = !(type2 == null || type2.isEmpty()) || !(indicator2 == null || indicator2.isEmpty());
+        boolean have3 = !(type3 == null || type3.isEmpty()) || !(indicator3 == null || indicator3.isEmpty());
+
+        //add container 2 type and indicator - must be done if there is a container 3 because 2 is required to create 3
+        if(have2 || have3) {
+            containerJS.put("type_2", enumUtil.getASpaceSubContainerType(type2)[0]);
+            if (indicator2 == null || indicator2.isEmpty()) indicator2 = "unknown container";
             containerJS.put("indicator_2", indicator2);
         }
 
-        if(!analogInstance.getContainer3Type().isEmpty()) {
-            containerJS.put("type_3", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer3Type())[0]);
-            String indicator3 = analogInstance.getContainer3Indicator();
-            if (indicator3 == null || indicator3.isEmpty()) indicator3 = "unknown";
+        //add container 3
+        if(have3) {
+            containerJS.put("type_3", enumUtil.getASpaceSubContainerType(type3)[0]);
+            if (indicator3 == null || indicator3.isEmpty()) indicator3 = "unknown container";
             containerJS.put("indicator_3", indicator3);
         }
 
@@ -2554,7 +2559,6 @@ public class ASpaceMapper {
      * @param value
      */
     public void setReturnATValue(boolean value) {
-        enumUtil.returnATValue = value;
     }
 
     /**
