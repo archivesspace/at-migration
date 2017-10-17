@@ -218,19 +218,20 @@ public class ASpaceEnumUtil {
     }
 
     /**
-     * map the date uncertainty
+     * map the date certainty
      *
      * @param archDescriptionDate
      * @return
      */
     public Object[] getASpaceDateCertainty(ArchDescriptionDates archDescriptionDate) {
-        String atValue;
-        if(archDescriptionDate != null && archDescriptionDate.getCertainty() != null &&  archDescriptionDate.getCertainty()) {
-            atValue = "inferred";
-        } else {
-            atValue = "questionable";
+        String atValue = null;
+        if(archDescriptionDate != null && archDescriptionDate.getCertainty() != null &&  !archDescriptionDate.getCertainty()) {
+            atValue = "approximate";
         }
-        return getASpaceEnumValue("date_certainty", atValue, false, "questionable");
+//        } else {
+//            atValue = "questionable";
+//        }
+        return getASpaceEnumValue("date_certainty", atValue, false, null);
     }
 
     /**

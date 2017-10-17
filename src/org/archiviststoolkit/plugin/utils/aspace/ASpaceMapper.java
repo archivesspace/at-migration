@@ -24,6 +24,7 @@ public class ASpaceMapper {
     // String used when mapping AT access class to groups
     public static final String ACCESS_CLASS_PREFIX = "_AccessClass_";
 
+    //default date for use when no other date is available
     public static final Date DEFAULT_DATE = new Date(0, 0, 1);
 
     // The utility class used to map to ASpace Enums
@@ -2405,10 +2406,12 @@ public class ASpaceMapper {
         // add the container now
         JSONObject containerJS = new JSONObject();
 
+        //add the top container
         TopContainerMapper topContainer = new TopContainerMapper(analogInstance, parentRepoURI);
         topContainer.addLocationURI(locationURI);
         containerJS.put("top_container", getReferenceObject(topContainer.getRef()));
 
+        //now for the sub-container
         String type2 = analogInstance.getContainer2Type();
         String indicator2 = analogInstance.getContainer2Indicator();
         String type3 = analogInstance.getContainer3Type();
