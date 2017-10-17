@@ -135,9 +135,8 @@ public class TopContainerMapper {
 
     /**
      * adds a top container to the ASpace database
-     * TODO add the foreign key
      * @return the uri of the top container
-     * @throws JSONException
+     * @throws Exception
      */
     private String addTopContainer() throws Exception {
         JSONObject jsonObject = new JSONObject();
@@ -158,11 +157,12 @@ public class TopContainerMapper {
     }
 
     /**
-     * method that resaves a top container record. Mainly for adding additional locations.
-     * @param uri
+     * method that adds a location to a previously saved top container record
+     * @param uri of the container
+     * @param location json object for the container location to be added
      * @throws Exception
      */
-    private void resaveTopContainer(String uri, JSONObject location) throws Exception {
+    private void saveTopContainerLocation(String uri, JSONObject location) throws Exception {
         JSONObject json = aSpaceCopyUtil.getRecord(uri);
         JSONArray locationsJA = (JSONArray) json.get("container_locations");
         locationsJA.put(location);
@@ -177,7 +177,8 @@ public class TopContainerMapper {
     }
 
     /**
-     * add a top container to the list of containers that have already been added so that it won't be duplicated
+     * add a top container to the list of containers that have already been added so that it won't be duplicated     *
+     * @param uri of the top container
      */
     public void addToExisting(String uri) {
         if (uri.contains("10000001") || uri.contains("no id assigned")) return;
@@ -185,7 +186,7 @@ public class TopContainerMapper {
     }
 
     /**
-     * gets the reference to the matching top container
+     * gets the uri reference to the matching top container
      * @return uri for top container
      */
     public String getRef() {
@@ -193,6 +194,12 @@ public class TopContainerMapper {
         return alreadyAdded.get(new MiniContainer(this)).uri;
     }
 
+    /**
+     * adds a location for a container if it is not already associated with said container
+     * @param uri of the location
+     * @param note for accession containers the note from accession location record
+     * @throws Exception
+     */
     public void addLocationURI(String uri, String note) throws Exception {
         if (uri == null || uri.isEmpty()) {
             return;
@@ -201,12 +208,19 @@ public class TopContainerMapper {
 
         Info info = alreadyAdded.get(new MiniContainer(this));
         if (info != null) {
-            if (info.locationURIs.add(uri)) resaveTopContainer(info.uri, json);
+            if (info.locationURIs.add(uri)) saveTopContainerLocation(info.uri, json);
         }
     }
 
     public void addLocationURI(String uri) throws Exception {addLocationURI(uri, "");}
 
+    /**
+     * method to get a json object for a containers location
+     * @param uri the location's uri
+     * @param note for accession containers the note for the accession location, otherwise null
+     * @return a json object for the container location
+     * @throws JSONException
+     */
     private static JSONObject getLocationJSON(String uri, String note) throws JSONException {
         JSONObject json = new JSONObject();
         json.put("ref", uri);
@@ -222,6 +236,10 @@ public class TopContainerMapper {
         return type + " " + indicator + " -- " + printableInstance();
     }
 
+    /**
+     * gives information about what AT record the top container was created from
+     * @return class and id of item the container was created from
+     */
     private String printableInstance() {
         if (instance == null) return "ArchivesSpace Container";
         return instance.getClass().getSimpleName() + " " + atID;
