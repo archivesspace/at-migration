@@ -256,7 +256,11 @@ public class ASpaceClient {
                     response = new JSONObject(responseBody);
                 }
 
-                id = response.getString(idName);
+                if (post.getURI().toString().contains(ASSESSMENT_ATTR_DEFNS_ENDPOINT)) {
+                    if (response.getString("status").equalsIgnoreCase("updated")) id = "ok";
+                } else {
+                    id = response.getString(idName);
+                }
 
                 if (id == null || id.trim().isEmpty()) {
                     errorBuffer.append("Endpoint: ").append(post.getURI()).append("\n").

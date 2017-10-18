@@ -51,7 +51,8 @@ NOTES ON RUNNING THE PLUGIN IN COMMAND LINE MODE
 NOTES ON DATA MIGRATION DEFAULTS
 
 1. If a date is missing in AT but is required for AS the default date will be set to 1/1/1900 or 0 for integer dates.
-2. Many containers including all of those for accessions do not have meaningful identifiers in AT. Any such 
+2. The start date specified for a container location is the creation date of the associated resource/accession.
+3. Many containers including all of those for accessions do not have meaningful identifiers in AT. Any such 
 container will be assigned a default container indication which will include the words "unknown container" as 
 well as information about it's content.
 3. Sometimes AT records will have an indicator but no container type for either container 2 or 3. This is not 
@@ -59,6 +60,15 @@ allowed in AS so the default for AS will be "unknown_item" so that the indicator
 a container 3 is specified without a container 2.
 4. Some IDs are checked for uniqueness in AS but not AT. In these cases if an ID is not unique the problem will be 
 corrected by adding ## along with some random string to the ID.
+
+HOW TOP CONTAINER UNIQUENESS IS DETERMINED
+
+Archivist's Toolkit does not include the concept of distinct top containers but rather the same container may 
+be entered many times for multiple instances. For this reason it was necessary to determine a set of rules for 
+determining what constitutes a unique top container. For top containers created from instances, they are considered 
+to be the same if either the repository and barcode match or if the repository, indicator, and container type 
+match. As for accessions, no instances exist in Archivist's Toolkit. In stead, a top container is created for each 
+location the accession is linked to.
 
 NOTE ON CPU AND MEMORY USAGE
 

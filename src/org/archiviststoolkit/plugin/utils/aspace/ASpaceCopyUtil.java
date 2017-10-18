@@ -1018,9 +1018,6 @@ public class ASpaceCopyUtil {
         saveRecord(repoURI + aspaceClient.ASSESSMENT_ATTR_DEFNS_ENDPOINT, json.toString(),
                 "Assessment Attributes->" + type);
         assessmentAttributeDefinitions.get(repoURI).put(key, id);
-        //decrement errors because it counts this as an error for some reason
-        saveErrorCount--;
-        aspaceErrorCount--;
         return id;
     }
 
