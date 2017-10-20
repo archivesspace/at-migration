@@ -1,5 +1,6 @@
 package org.archiviststoolkit.plugin.utils.aspace;
 
+import com.mysql.jdbc.CommunicationsException;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.NameValuePair;
@@ -48,6 +49,7 @@ public class ASpaceClient {
     public static final String INDEXER_ENDPOINT = "/aspace-indexer/";
     public static final String ASSESSMENT_ENDPOINT = "/assessments";
     public static final String ASSESSMENT_ATTR_DEFNS_ENDPOINT = "/assessment_attribute_definitions";
+    public static final String TOP_CONTAINER_ENDPOINT = "/top_containers";
 
     private HttpClient httpclient = new HttpClient();
     private String host = "";
@@ -110,7 +112,7 @@ public class ASpaceClient {
     /**
      * Method to get the session using the admin login
      */
-    public boolean getSession() {
+    public boolean getSession() throws IntentionalExitException {
         boolean haveSession = false;
 
         // get a session id using the admin login
@@ -136,6 +138,8 @@ public class ASpaceClient {
                 // default indexer port of 8090 was not changed
                 indexerHost = host.replace("89", "90");
             }
+        } catch (IntentionalExitException e) {
+            throw e;
         } catch (Exception e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         }
@@ -207,15 +211,27 @@ public class ASpaceClient {
             int statusCode;
             try {
                 statusCode = httpclient.executeMethod(post);
+                if (statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR) {
+                    throw new IntentionalExitException("Could not connect to server ...\nFix connection then resume ...");
+                }
             } catch (ConnectException e) {
                 boolean ready = false;
-                String message = "Connection has been lost.\nCheck that your web server and Archives\nSpace session " +
-                        "are still running.";
+                String message = "Connection has been lost. Check your \n" +
+                        "connection to Archives Space and your \n" +
+                        "web server and then press 'yes' to \n" +
+                        "contiue migration. Otherwise press \n" +
+                        "'no' to save your URI maps and \n" +
+                        "continue this migration later.";
                 while (!ready) {
-                    int result = JOptionPane.showConfirmDialog(null, message, "Fix connection",
-                            JOptionPane.OK_CANCEL_OPTION, JOptionPane.ERROR_MESSAGE);
-                    if (result == JOptionPane.OK_OPTION) ready = true;
+                    int result = JOptionPane.showConfirmDialog(null, message, "Lost connection",
+                            JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE);
+                    if (result == JOptionPane.YES_OPTION) {
+                        ready = true;
+                    } else if (result == JOptionPane.NO_OPTION) {
+                        throw new IntentionalExitException();
+                    }
                 }
+
                 return executePost(post, idName, atId, jsonText);
             }
 
@@ -348,7 +364,7 @@ public class ASpaceClient {
             if (debug) System.out.println("get: " + fullUrl);
 
             int statusCode = httpclient.executeMethod(get);
-
+//bookmark
             String statusMessage = "Status code: " + statusCode +
                     "\nStatus text: " + get.getStatusText();
 
@@ -411,7 +427,9 @@ public class ASpaceClient {
 
         try {
             String jsonText = get(REPOSITORY_ENDPOINT, null);
+            System.out.println(jsonText);
             JSONArray jsonArray = new JSONArray(jsonText);
+            System.out.println(jsonArray);
 
             if (jsonArray.length() != 0) {
                 for (int i = 0; i < jsonArray.length(); i++) {
@@ -420,7 +438,10 @@ public class ASpaceClient {
                     String uri = (String) json.get("uri");
                     repos.put(shortName, uri);
                 }
+
+                //we don't need to load the top containers if only assessments still need to be copied
                 loadExistingTopContainers(repos);
+
                 return repos;
             }
         } catch (Exception e) {
@@ -431,11 +452,22 @@ public class ASpaceClient {
 
     private void loadExistingTopContainers(HashMap<String, String> repos) throws Exception {
         for (String repoURI: repos.values()) {
-            for (int i = 1; true; i++) {
-                String container = get(repoURI + "/top_containers/" + i, null);
-                if (container == null || container.isEmpty()) {break;}
-                JSONObject containerJS = new JSONObject(container);
-                new TopContainerMapper(containerJS);
+            NameValuePair[] params = new NameValuePair[1];
+            params[0] = new NameValuePair("page", "1");
+            JSONObject page1JS = new JSONObject(get(repoURI + TOP_CONTAINER_ENDPOINT, params));
+            int lastPage = (Integer) page1JS.get("last_page");
+            for (int page = 1; page <= lastPage; page++) {
+                params[0] = new NameValuePair("page", page + "");
+                JSONObject pageJS = new JSONObject(get(repoURI + TOP_CONTAINER_ENDPOINT, params));
+                JSONArray results = (JSONArray) pageJS.get("results");
+                for (int i = 0; i < results.length(); i++) {
+                    String container = results.getString(i);
+                    if (container == null || container.isEmpty()) {
+                        break;
+                    }
+                    JSONObject containerJS = new JSONObject(container);
+                    new TopContainerMapper(containerJS);
+                }
             }
 
         }

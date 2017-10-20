@@ -8,6 +8,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.Serializable;
 import java.util.*;
 
 /**
@@ -19,7 +20,7 @@ import java.util.*;
 public class TopContainerMapper {
 
     //keys are containers that have been added to ASpace and values are objects that store that container's information
-    private static Map<MiniContainer, Info> alreadyAdded = new HashMap<MiniContainer, Info>();
+    private static HashMap<MiniContainer, Info> alreadyAdded = new HashMap<MiniContainer, Info>();
 
     //used for making unique identifiers for containers without indicators
     private static int unknownCount = 1;
@@ -262,7 +263,7 @@ public class TopContainerMapper {
      * holds only the data needed to determine if containers are equivalent
      * used in the already added map in place of the top container object to minimize memory usage
      */
-    private class MiniContainer {
+    private static class MiniContainer {
 
         private String parentRepoURI;
         private String indicator;
@@ -274,6 +275,18 @@ public class TopContainerMapper {
             this.indicator = container.indicator;
             this.type = container.type;
             this.barcode = container.barcode;
+        }
+
+        MiniContainer(String ... args) {
+            this.parentRepoURI = args[0];
+            this.indicator = args[1];
+            this.type = args[2];
+            this.barcode = args[3];
+        }
+
+        @Override
+        public String toString() {
+            return parentRepoURI + SEPARATOR + indicator + SEPARATOR + type + SEPARATOR + barcode;
         }
 
         @Override
@@ -301,12 +314,46 @@ public class TopContainerMapper {
     /**
      * stores the information for a top container as it was added to ASpace
      */
-    private class Info {
+    private static class Info {
         public String uri;
         private Set<String> locationURIs = new HashSet<String>();
 
         public Info(String uri) {
             this.uri = uri;
+        }
+
+        public Info(String ... args) {
+            this.uri = args[0];
+            for (int i = 1; i < args.length; i++) locationURIs.add(args[i]);
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder value = new StringBuilder(uri);
+            for (String uri: locationURIs) {
+                value.append(SEPARATOR);
+                value.append(uri);
+            }
+            return value.toString();
+        }
+    }
+
+    private static String[] fromString(String stringForm) {
+        return stringForm.split(SEPARATOR);
+    }
+
+    private static final String SEPARATOR = "! . . . !";
+
+    public static HashMap<String, String> getAlreadyAddedStringForm() {
+        HashMap<String, String> alreadyAddedStringForm = new HashMap<String, String>();
+        return alreadyAddedStringForm;
+    }
+
+    public static void setAlreadyAdded(HashMap<String, String> topContainerURIMap) {
+        for (String key: topContainerURIMap.keySet()) {
+            MiniContainer miniContainer = new MiniContainer(fromString(key));
+            Info info = new Info(fromString(topContainerURIMap.get(key)));
+            alreadyAdded.put(miniContainer, info);
         }
     }
 }

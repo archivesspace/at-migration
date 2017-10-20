@@ -3,6 +3,7 @@ package org.archiviststoolkit.plugin;
 import org.archiviststoolkit.plugin.dbdialog.RemoteDBConnectDialogLight;
 import org.archiviststoolkit.plugin.utils.aspace.ASpaceClient;
 import org.archiviststoolkit.plugin.utils.aspace.ASpaceCopyUtil;
+import org.archiviststoolkit.plugin.utils.aspace.IntentionalExitException;
 import org.hibernate.Session;
 
 import java.io.*;
@@ -236,28 +237,32 @@ public class dbCopyCLI {
             } else {
                 System.out.println("Administrator authenticated ...\n");
             }
-
-            // first load the notes etc types and resource from the destination database
-            ascopy.loadRepositories();
+//
+//            // first load the notes etc types and resource from the destination database
+//            ascopy.loadRepositories();
 
             if (continueFromResources && ascopy.uriMapFileExist()) {
                 ascopy.loadURIMaps();
             } else {
-                if(!copyOnlyResources) {
-                    ascopy.copyLookupList();
-                    ascopy.copyRepositoryRecords();
-                    ascopy.mapRepositoryGroups();
-                    ascopy.copyLocationRecords();
-                    ascopy.copyUserRecords();
-                    ascopy.copySubjectRecords();
-                    ascopy.copyNameRecords();
-                    ascopy.copyAccessionRecords();
-                    ascopy.copyDigitalObjectRecords();
-
-                    // save the record maps for possible future use
-                    ascopy.saveURIMaps();
-                }
+                ascopy.loadRepositories();
             }
+//                if(!copyOnlyResources) {
+            ascopy.copyLookupList();
+            ascopy.copyRepositoryRecords();
+            ascopy.mapRepositoryGroups();
+            ascopy.copyLocationRecords();
+            //just so it gets removed from recordsToCopy
+            ascopy.addAdminUser(null, null, null);
+            ascopy.copyUserRecords();
+            ascopy.copySubjectRecords();
+            ascopy.copyNameRecords();
+            ascopy.copyAccessionRecords();
+            ascopy.copyDigitalObjectRecords();
+
+            // save the record maps for possible future use
+//            ascopy.saveURIMaps();
+//                }
+//            }
 
             // set the number of resources to copy
             int numberOfResourcesToCopy = 1000000;
@@ -274,7 +279,7 @@ public class dbCopyCLI {
             ascopy.addAssessments();
 
             // DEBUG code which checks to see that all ISO dates are valid
-            if(checkISODates) {
+            if (checkISODates) {
                 ascopy.checkISODates();
             }
 
@@ -286,13 +291,19 @@ public class dbCopyCLI {
 
             // now save the migration log
             saveLogFile("migration_log-" + getDatabaseNameFromURL(atUrl) + ".txt", migrationErrors);
+        } catch (IntentionalExitException e) {
+            System.out.println(e.getMessage());
+            if (ascopy != null) ascopy.saveURIMaps();
+            else System.out.println("Could not save URI maps ...\nMigration will need to be restarted ...");
         } catch (Exception e) {
             System.out.println("Unrecoverable exception, migration stopped ...\n\n");
 
-            if (ascopy != null) {
+            if(ascopy != null) {
+                ascopy.saveURIMaps();
                 System.out.println(ascopy.getCurrentRecordInfo() + "\n\n");
+            } else {
+                System.out.println("Could not save URI maps ...\nMigration will need to be restarted ...");
             }
-            e.printStackTrace();
         }
     }
 
