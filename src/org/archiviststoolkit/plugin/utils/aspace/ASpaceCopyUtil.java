@@ -196,9 +196,6 @@ public class ASpaceCopyUtil {
     // Specifies whether to use the batch import functionality of aspace
     private boolean useBatchImport = false;
 
-    // Specifies whether to delete the previously saved resource records. Useful for testing purposes
-    private boolean deleteSavedResources = false;
-
     // this list is used to copy a specific resource
     private ArrayList<String> resourcesIDsList;
 
@@ -279,6 +276,7 @@ public class ASpaceCopyUtil {
         lookupListMap.put("subject term source", ASpaceClient.VOCABULARY_ENDPOINT);
 
         TopContainerMapper.setaSpaceCopyUtil(this);
+        TopContainerMapper.clearAlreadyAdded();
 
         recordsToCopy = new LinkedList<String>();
         recordsToCopy.add("Lookup List");
@@ -709,8 +707,6 @@ public class ASpaceCopyUtil {
 
         records = new ArrayList<Locations>(records.subList(numAttempted, total));
 
-        updateProgress("Locations", total, count);
-
         for (Locations location : records) {
             if(stopCopy) return;
 
@@ -933,6 +929,8 @@ public class ASpaceCopyUtil {
             if(ignoreNames && name.getArchDescriptionNames().size() == 0) {
                 unlinkedCount++;
                 numUnlinked++;
+                count++;
+                numAttempted++;
                 print("Not Copying Unlinked Name: " + name);
                 continue;
             }
@@ -1184,6 +1182,8 @@ public class ASpaceCopyUtil {
             if(ignoreSubjects && subject.getArchDescriptionSubjects().size() == 0) {
                 unlinkedCount++;
                 numUnlinked++;
+                count++;
+                numAttempted++;
                 print("Not Copying Unlinked Subject: " + subject);
                 continue;
             }
@@ -1568,7 +1568,7 @@ public class ASpaceCopyUtil {
 
 //        print("Copying " + records.size() + " Resource records ...");
 
-        copyCount = 0; // keep track of the number of resource records copied
+        copyCount = numSuccessful; // keep track of the number of resource records copied
 
         // these are used to update the progress bar
         int total = records.size();
@@ -1733,7 +1733,6 @@ public class ASpaceCopyUtil {
 
                             if(!bids.equals(NO_ID) && bids.length() != 0) {
                                 if(!simulateRESTCalls) {
-                                    System.out.println("bids: " + bids);
                                     JSONObject bidsJS = new JSONObject(bids);
                                     resourceURI = (new JSONArray(bidsJS.getString(resourceURI))).getString(0);
 
@@ -2238,44 +2237,6 @@ public class ASpaceCopyUtil {
     }
 
     /**
-     * Method to delete any previously saved resource records on the ASpace backend.
-     * Useful for testing purposes, but not much else
-     */
-    private void deleteSavedResources() {
-        print("\nNumber of Resources to Delete: " + resourceURIMap.size());
-        ArrayList<Long> deletedKeys = new ArrayList<Long>();
-
-        // initialize the progress bar
-        updateProgress("Resource", resourceURIMap.size(), -1);
-
-        int count = 1;
-        for(Long key: resourceURIMap.keySet()) {
-            try {
-                String uri = resourceURIMap.get(key);
-                print("Deleting Resource: " + uri);
-
-                String message = aspaceClient.deleteRecord(uri);
-                print(message + "\n");
-                deletedKeys.add(key);
-
-                // update the progress bar
-                updateProgress("Resource", 0, count);
-                count++;
-            } catch (Exception e) {
-                e.printStackTrace();
-                print("Error deleting ... \n" + e.getMessage());
-            }
-        }
-
-        // remove the deleted keys now, since we can't modify a
-        // hashmap while we still iterating over it
-        for(Long key: deletedKeys) {
-            resourceURIMap.remove(key);
-        }
-
-    }
-
-    /**
      * Method to return the new repository for a given domain object.
      *
      * @param oldRepository
@@ -2692,6 +2653,9 @@ public class ASpaceCopyUtil {
      * Method to save the URI maps to a binary file
      */
     public void saveURIMaps() {
+
+        if (simulateRESTCalls) return;
+
         HashMap uriMap = new HashMap();
 
         uriMap.put(REPOSITORY_KEY, repositoryURIMap);
@@ -2730,6 +2694,8 @@ public class ASpaceCopyUtil {
             uriMap.put(REPOSITORY_MISMATCH_KEY, repositoryMismatchMap);
         }
 
+        uriMap.put("IDs", mapper.getIDs());
+
         // save to file system now
         print("\nSaving URI Maps ...");
 
@@ -2737,7 +2703,6 @@ public class ASpaceCopyUtil {
             ScriptDataUtils.saveScriptData(uriMapFile, uriMap);
         } catch (Exception e) {
             print("Unable to save URI map file " + uriMapFile.getName());
-            System.out.println(e.getMessage());
         }
     }
 
@@ -2779,6 +2744,9 @@ public class ASpaceCopyUtil {
             if(uriMap.containsKey(REPOSITORY_MISMATCH_KEY)) {
                 repositoryMismatchMap = (HashMap<String,String>)uriMap.get(REPOSITORY_MISMATCH_KEY);
             }
+
+            HashMap<String, ArrayList<String>> iDs = (HashMap<String, ArrayList<String>>) uriMap.get("IDs");
+            mapper.setIDs(iDs);
 
             // load the record totals so far
             if(uriMap.containsKey(RECORD_TOTAL_KEY)) {
@@ -2846,15 +2814,6 @@ public class ASpaceCopyUtil {
      */
     public void setUseBatchImport(boolean useBatchImport) {
         this.useBatchImport = useBatchImport;
-    }
-
-    /**
-     * Method to specify whether to delete the save resources.
-     *
-     * @param deleteSavedResources
-     */
-    public void setDeleteSavedResources(boolean deleteSavedResources) {
-        this.deleteSavedResources = deleteSavedResources;
     }
 
     /**

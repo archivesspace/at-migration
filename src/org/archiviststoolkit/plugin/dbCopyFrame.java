@@ -123,10 +123,10 @@ public class dbCopyFrame extends JFrame {
         //ignoreUnlinkedSubjectsCheckBox.setVisible(false);
         //publishPanel.setVisible(false);
         batchImportCheckBox.setVisible(false);
-        deleteResourcesCheckBox.setVisible(false);
+//        deleteResourcesCheckBox.setVisible(false);
         numResourceToCopyLabel.setVisible(false);
         numResourceToCopyTextField.setVisible(false);
-        deleteResourcesCheckBox.setVisible(false);
+//        deleteResourcesCheckBox.setVisible(false);
         //resourcesToCopyTextField.setVisible(false);
         recordURIComboBox.setVisible(false);
         paramsLabel.setVisible(false);
@@ -310,7 +310,6 @@ public class dbCopyFrame extends JFrame {
                     }
 
                     // check the current aspace version to make sure
-                    //will need to modify this
                     String aspaceVersion = ascopy.getASpaceVersion();
 
                     //Check if working
@@ -367,10 +366,6 @@ public class dbCopyFrame extends JFrame {
                     if (!copyStopped) ascopy.copyAccessionRecords();
                     if (!copyStopped) ascopy.copyDigitalObjectRecords();
 
-                    // save the record maps for possible future use
-//                    ascopy.saveURIMaps();
-//                    }
-
                     // get the number of resources to copy here to allow it to be reset while the migration
                     // has been started, but migration of resources has not yet started
                     int resourcesToCopy = 1000000;
@@ -378,9 +373,9 @@ public class dbCopyFrame extends JFrame {
 
                     try {
                         boolean useBatchImport = batchImportCheckBox.isSelected();
-                        boolean deleteSavedResources = deleteResourcesCheckBox.isSelected();
+//                        boolean deleteSavedResources = deleteResourcesCheckBox.isSelected();
                         ascopy.setUseBatchImport(useBatchImport);
-                        ascopy.setDeleteSavedResources(deleteSavedResources);
+//                        ascopy.setDeleteSavedResources(deleteSavedResources);
 
                         // get the number of threads to run the copy process in
                         threads = Integer.parseInt(threadsTextField.getText());
@@ -391,8 +386,7 @@ public class dbCopyFrame extends JFrame {
                         } else {
                             resourcesToCopy = resourcesIDsList.size();
                         }
-                    } catch (NumberFormatException nfe) {
-                    }
+                    } catch (NumberFormatException nfe) {}
 
                     // check to make sure we didn't stop the copy process or resource to copy is
                     // not set to zero. Setting resources to copy to zero is a convenient way
@@ -401,8 +395,6 @@ public class dbCopyFrame extends JFrame {
                         ascopy.setResourcesToCopyList(resourcesIDsList);
                         ascopy.copyResourceRecords(resourcesToCopy, threads);
                     }
-
-//                    if (!copyStopped) ascopy.addContainerData();
 
                     if (!copyStopped) ascopy.addAssessments();
 
@@ -414,9 +406,9 @@ public class dbCopyFrame extends JFrame {
                     migrationErrors = ascopy.getSaveErrorMessages() + "\n\nTotal errors/warnings: " + errorCount;
                 } catch (IntentionalExitException e) {
                     consoleTextArea.setText(e.getMessage());
-                    consoleTextArea.append("Will attempt to save URI maps ...");
+                    consoleTextArea.append("\nWill attempt to save URI maps ...");
                     if (ascopy != null) ascopy.saveURIMaps();
-                    else consoleTextArea.append("Could not save URI maps ...\nMigration will need to be restarted ...");
+                    else consoleTextArea.append("\nCould not save URI maps ...\nMigration will need to be restarted ...");
                 } catch (Exception e) {
                     consoleTextArea.setText("Unrecoverable exception, migration stopped ...\n\n");
 
@@ -802,7 +794,7 @@ public class dbCopyFrame extends JFrame {
         batchImportCheckBox = new JCheckBox();
         numResourceToCopyLabel = new JLabel();
         numResourceToCopyTextField = new JTextField();
-        deleteResourcesCheckBox = new JCheckBox();
+//        deleteResourcesCheckBox = new JCheckBox();
         resourcesToCopyTextField = new JTextField();
         outputConsoleLabel = new JLabel();
         copyProgressBar = new JProgressBar();
@@ -1112,9 +1104,9 @@ public class dbCopyFrame extends JFrame {
                 numResourceToCopyTextField.setText("100000");
                 contentPanel.add(numResourceToCopyTextField, cc.xywh(9, 19, 5, 1));
 
-                //---- deleteResourcesCheckBox ----
-                deleteResourcesCheckBox.setText("Delete Previously Saved Resources");
-                contentPanel.add(deleteResourcesCheckBox, cc.xy(1, 21));
+//                //---- deleteResourcesCheckBox ----
+//                deleteResourcesCheckBox.setText("Delete Previously Saved Resources");
+//                contentPanel.add(deleteResourcesCheckBox, cc.xy(1, 21));
 
                 //---- resourcesToCopyTextField ----
                 resourcesToCopyTextField.setText("-refid_unique, -term_default");
@@ -1312,7 +1304,7 @@ public class dbCopyFrame extends JFrame {
     private JCheckBox batchImportCheckBox;
     private JLabel numResourceToCopyLabel;
     private JTextField numResourceToCopyTextField;
-    private JCheckBox deleteResourcesCheckBox;
+//    private JCheckBox deleteResourcesCheckBox;
     private JTextField resourcesToCopyTextField;
     private JLabel outputConsoleLabel;
     private JProgressBar copyProgressBar;

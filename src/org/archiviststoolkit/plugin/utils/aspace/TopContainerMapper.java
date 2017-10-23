@@ -280,13 +280,18 @@ public class TopContainerMapper {
         MiniContainer(String ... args) {
             this.parentRepoURI = args[0];
             this.indicator = args[1];
-            this.type = args[2];
-            this.barcode = args[3];
+            if (args.length > 2) {
+                if (args[2].contains("type: ")) {
+                    this.type = args[2].substring(6);
+                    if (args.length > 3) this.barcode = args[3];
+                }
+                else this.barcode = args[2];
+            }
         }
 
         @Override
         public String toString() {
-            return parentRepoURI + SEPARATOR + indicator + SEPARATOR + type + SEPARATOR + barcode;
+            return parentRepoURI + SEPARATOR + indicator + SEPARATOR + "type: " + type + SEPARATOR + barcode;
         }
 
         @Override
@@ -346,6 +351,9 @@ public class TopContainerMapper {
 
     public static HashMap<String, String> getAlreadyAddedStringForm() {
         HashMap<String, String> alreadyAddedStringForm = new HashMap<String, String>();
+        for (MiniContainer container : alreadyAdded.keySet()) {
+            alreadyAddedStringForm.put(container.toString(), alreadyAdded.get(container).toString());
+        }
         return alreadyAddedStringForm;
     }
 
@@ -355,5 +363,9 @@ public class TopContainerMapper {
             Info info = new Info(fromString(topContainerURIMap.get(key)));
             alreadyAdded.put(miniContainer, info);
         }
+    }
+
+    public static void clearAlreadyAdded() {
+        alreadyAdded = new HashMap<MiniContainer, Info>();
     }
 }

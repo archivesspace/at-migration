@@ -46,6 +46,23 @@ public class ASpaceMapper {
     private ArrayList<String> resourceIDs = new ArrayList<String>();
     private ArrayList<String> eadIDs = new ArrayList<String>();
 
+    //TODO implement this and have these be saved with uri maps
+    public void setIDs(HashMap<String, ArrayList<String>> iDs) {
+        digitalObjectIDs = iDs.get("digital object");
+        accessionIDs = iDs.get("accession");
+        resourceIDs = iDs.get("resource");
+        eadIDs = iDs.get("ead");
+    }
+
+    public HashMap<String, ArrayList<String>> getIDs() {
+        HashMap<String, ArrayList<String>> iDs = new HashMap<String, ArrayList<String>>();
+        iDs.put("digital object", digitalObjectIDs);
+        iDs.put("accession", accessionIDs);
+        iDs.put("resource", resourceIDs);
+        iDs.put("ead", eadIDs);
+        return iDs;
+    }
+
     // variable names in bean shell script that will indicate whether it can override
     // the default mapping operation with itself
     private static final String SUBJECT_MAPPER = "@subject";
