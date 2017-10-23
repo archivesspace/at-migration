@@ -262,6 +262,10 @@ public class ASpaceClient {
                     JSONArray responseJA = new JSONArray(responseBody);
                     response = responseJA.getJSONObject(responseJA.length() - 1);
 
+                    if (response.toString().contains("Server error: Failed to connect to the database")) {
+                        throw new IntentionalExitException("Could not connect to server ...\nFix connection then resume ...");
+                    }
+
                     errorBuffer.append("Endpoint: ").append(post.getURI()).append("\n").
                             append("AT Identifier: ").append(atId).append("\n").
                             append(statusMessage).append("\n\n").append(response.toString(2)).append("\n");

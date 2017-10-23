@@ -980,7 +980,7 @@ public class ASpaceCopyUtil {
         numAttempted = 0;
         numSuccessful = 0;
 
-        updateRecordTotals("Names", total, success);
+        updateRecordTotals("Names", total, success, unlinkedCount);
 
         // add error message indicating any records that were not copied because they
         // were not linked to any other records
@@ -1035,25 +1035,58 @@ public class ASpaceCopyUtil {
 
         for (Assessments assessment : records) {
             if (stopCopy) return;
-            
-            String repoURI = getRemappedRepositoryURI("assessment", assessment.getIdentifier(), assessment.getRepository());
-            String uri = repoURI + ASpaceClient.ASSESSMENT_ENDPOINT;
 
             String jsonText = (String) mapper.convert(assessment);
-            if (jsonText != null) {
-                String id = saveRecord(uri, jsonText, "Assessment->" + assessment.getAssessmentId());
 
-                if(!id.equalsIgnoreCase(NO_ID)) {
-                    uri = uri + "/" + id;
-                    assessmentURIMap.put(assessment.getIdentifier(), uri);
-                    print("Copied Assessment: " + assessment + " :: " + id);
-                    success++;
-                    numSuccessful++;
+            boolean successful = true;
+
+            HashSet<Repositories> linkedRepos = new HashSet<Repositories>();
+
+            for (AssessmentsDigitalObjects digitalObject : assessment.getDigitalObjects()) {
+                linkedRepos.add(digitalObject.getDigitalObject().getRepository());
+            }
+            for (AssessmentsResources resource : assessment.getResources()) {
+                linkedRepos.add(resource.getResource().getRepository());
+            }
+            for (AssessmentsAccessions accession : assessment.getAccessions()) {
+                linkedRepos.add(accession.getAccession().getRepository());
+            }
+
+            /*
+            since the repositories of all records attached to an assessment must be the same as the assessment's
+            repository it is necessary to add a separate assessment for each linked repository
+             */
+            for (Repositories repo: linkedRepos) {
+
+                assessment.setRepository(repo);
+
+                String repoURI = getRemappedRepositoryURI("assessment", assessment.getIdentifier(), assessment.getRepository());
+                String uri = repoURI + ASpaceClient.ASSESSMENT_ENDPOINT;
+
+                String repoJSON = mapper.addAssessmentsRecords(jsonText, assessment);
+//                String jsonText = (String) mapper.convert(assessment);
+                if (jsonText != null) {
+                    String id = saveRecord(uri, repoJSON, "Assessment->" + assessment.getAssessmentId());
+
+                    if(!id.equalsIgnoreCase(NO_ID)) {
+                        uri = uri + "/" + id;
+                        assessmentURIMap.put(assessment.getIdentifier(), uri);
+                        print("Copied Assessment: " + assessment + " :: " + id);
+//                        success++;
+//                        numSuccessful++;
+                    } else {
+                        print("Fail -- Assessment: " + assessment);
+                        successful = false;
+                    }
                 } else {
-                    print("Fail -- Assessment: " + assessment);
+                    print("Fail -- Assessment to JSON: " + assessment);
+                    successful = false;
                 }
-            } else {
-                print("Fail -- Assessment to JSON: " + assessment);
+            }
+
+            if (successful) {
+                success++;
+                numSuccessful++;
             }
 
             count++;
@@ -1220,7 +1253,7 @@ public class ASpaceCopyUtil {
         numAttempted = 0;
         numSuccessful = 0;
 
-        updateRecordTotals("Subjects", total, success);
+        updateRecordTotals("Subjects", total, success, unlinkedCount);
 
         // add error message indicating any records that were not copied because they
         // were not linked to any other records
@@ -1568,13 +1601,13 @@ public class ASpaceCopyUtil {
 
 //        print("Copying " + records.size() + " Resource records ...");
 
-        copyCount = numSuccessful; // keep track of the number of resource records copied
+        copyCount = 0;//numSuccessful; // keep track of the number of resource records copied
 
         // these are used to update the progress bar
         int total = records.size();
-        int count = numAttempted;
+        int count = 0;//numAttempted;
 
-        records = new ArrayList<Resources>(records.subList(numAttempted, total));
+//        records = new ArrayList<Resources>(records.subList(numAttempted, total));
 
         print("Copying " + records.size() + " Resource records ...");
 
@@ -2421,9 +2454,11 @@ public class ASpaceCopyUtil {
      * @param total
      * @param success
      */
-    private synchronized void updateRecordTotals(String recordType, int total, int success) {
+    private synchronized void updateRecordTotals(String recordType, int total, int success, int unlinkedCount) {
         float percent = (new Float(success)/new Float(total))*100.0f;
-        String info = recordType + " : " + success + " / " + total + " (" + String.format("%.2f", percent) + "%)";
+        String unlinkedMessage = "";
+        if (unlinkedCount != 0) unlinkedMessage += " ---" + unlinkedCount + " unlinked--- ";
+        String info = recordType + " : " + success + " / " + total + unlinkedMessage + " (" + String.format("%.2f", percent) + "%)";
 
         if (recordType.equals("Resource Records") && recordTotals.size() > 8) {
             recordTotals.set(8, info);
@@ -2435,6 +2470,10 @@ public class ASpaceCopyUtil {
 //        } else {
 //            recordTotals.set(8, info);
 //        }
+    }
+
+    private synchronized void updateRecordTotals(String recordType, int total, int success) {
+        updateRecordTotals(recordType, total, success, 0);
     }
 
     /**

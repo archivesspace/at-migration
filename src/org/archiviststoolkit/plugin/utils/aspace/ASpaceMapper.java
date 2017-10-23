@@ -1648,24 +1648,6 @@ public class ASpaceMapper {
 
         addExternalId(record, json, "assessment");
 
-        JSONArray recordsJA = new JSONArray();
-
-        String recordUri;
-        for (AssessmentsAccessions accession : record.getAccessions()) {
-            recordUri = aspaceCopyUtil.getURIMapping(accession.getAccession());
-            recordsJA.put(getReferenceObject(recordUri));
-        }
-        for (AssessmentsDigitalObjects digitalObject: record.getDigitalObjects()) {
-            recordUri = aspaceCopyUtil.getURIMapping(digitalObject.getDigitalObject());
-            recordsJA.put(getReferenceObject(recordUri));
-        }
-        for (AssessmentsResources resource : record.getResources()) {
-            recordUri = aspaceCopyUtil.getURIMapping(resource.getResource());
-            recordsJA.put(getReferenceObject(recordUri));
-        }
-
-        json.put("records", recordsJA);
-
         print("Adding agent record for who did survey ...");
         json.put("surveyed_by", addAssessmentsAgent(record.getWhoDidSurvey(), record));
 
@@ -1702,6 +1684,40 @@ public class ASpaceMapper {
         json.put("monetary_value_note", record.getMonetaryValueNote());
 
         json.put("conservation_note", record.getConservationNote());
+
+        return json.toString();
+    }
+
+    public String addAssessmentsRecords(String jsonText, Assessments record) throws Exception {
+
+        JSONObject json = new JSONObject(jsonText);
+
+        JSONArray recordsJA = new JSONArray();
+
+        String recordUri;
+        for (AssessmentsAccessions accession : record.getAccessions()) {
+            Accessions accessionRecord = accession.getAccession();
+            if (accessionRecord.getRepository().equals(record.getRepository())) {
+                recordUri = aspaceCopyUtil.getURIMapping(accessionRecord);
+                recordsJA.put(getReferenceObject(recordUri));
+            }
+        }
+        for (AssessmentsDigitalObjects digitalObject: record.getDigitalObjects()) {
+            DigitalObjects digitalObjectRecord = digitalObject.getDigitalObject();
+            if (digitalObjectRecord.getRepository().equals(record.getRepository())) {
+                recordUri = aspaceCopyUtil.getURIMapping(digitalObjectRecord);
+                recordsJA.put(getReferenceObject(recordUri));
+            }
+        }
+        for (AssessmentsResources resource : record.getResources()) {
+            Resources resourceRecord = resource.getResource();
+            if (resourceRecord.getRepository().equals(record.getRepository())) {
+                recordUri = aspaceCopyUtil.getURIMapping(resourceRecord);
+                recordsJA.put(getReferenceObject(recordUri));
+            }
+        }
+
+        json.put("records", recordsJA);
 
         return json.toString();
     }
@@ -2860,7 +2876,8 @@ public class ASpaceMapper {
         } else if(endpoint.equals(ASpaceClient.RESOURCE_ENDPOINT)) {
             String message = null;
 
-            if(!resourceIDs.contains(id)) {
+            //I think its fine without checking for duplicate resource IDs and this causes a problem if checked
+            if(true) {//!resourceIDs.contains(id)) {
                 resourceIDs.add(id);
             } else {
                 String fullId = "";
