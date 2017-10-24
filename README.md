@@ -48,7 +48,7 @@ NOTES ON RUNNING THE PLUGIN IN COMMAND LINE MODE
 1. Edit the dbcopy.properties to point to the desired AT database and ASpace Instance
 2. Run the "dbCopyCLI" class making sure all the *.jar files in "lib" are in the Classpath.
 
-NOTES ON DATA MIGRATION
+NOTES ON DATA MIGRATION AND DEFAULTS
 
 1. If a date is missing in AT but is required for AS the default date will be set to 1/1/1900 or 0 for integer dates.
 2. The start date specified for a container location is the creation date of the associated resource/accession.
@@ -62,9 +62,19 @@ a container 3 is specified without a container 2.
 corrected by adding ## along with some random string to the ID.
 5. If an assessment is linked to records from multiple repositories, duplicate assessments are created - one for 
 each linked repository.
-6. If a problem occurs during migration, URI maps should be saved and allow you to continue from where you left 
-off by checking the 'continue previous migration' box. This should work fairly seamlessly, but you should check the 
-record migration stopped at as the migrator may correct for a duplicate ID where there is not actually one.
+
+CONTINUING A PREVIOUS MIGRATION
+
+1. If a problem occurs during migration, URI maps should be saved and allow you to continue from where you left 
+off by checking the 'continue previous migration' box.
+2. If you are running the migration tool as an Archivist's Toolkit plugin and a connection problem occurs and 
+causes the migration to stop, restart AT before attempting to continue migration.
+2. You can also continue a migration if you manually cancel it.
+3. This should work fairly seamlessly, but you should check the record the migration stopped at as the migrator 
+may correct for a duplicate ID where there is not actually one.
+4. It is not necessary to run the repository check again when continuing a migration.
+5. You should save your error log and repository check report even if you plan to continue a migration, as these 
+logs reset when you continue a migration.
 
 HOW TOP CONTAINER UNIQUENESS IS DETERMINED
 

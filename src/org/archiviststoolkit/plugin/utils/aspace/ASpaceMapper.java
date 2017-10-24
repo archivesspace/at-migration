@@ -41,21 +41,28 @@ public class ASpaceMapper {
 
     // these store the ids of all accessions, resources, and digital objects loaded so we can
     // check for uniqueness before copying them to the ASpace backend
-    private ArrayList<String> digitalObjectIDs = new ArrayList<String>();
-    private ArrayList<String> accessionIDs = new ArrayList<String>();
-    private ArrayList<String> resourceIDs = new ArrayList<String>();
-    private ArrayList<String> eadIDs = new ArrayList<String>();
+    private HashSet<String> digitalObjectIDs = new HashSet<String>();
+    private HashSet<String> accessionIDs = new HashSet<String>();
+    private HashSet<String> resourceIDs = new HashSet<String>();
+    private HashSet<String> eadIDs = new HashSet<String>();
 
-    //TODO implement this and have these be saved with uri maps
-    public void setIDs(HashMap<String, ArrayList<String>> iDs) {
+    /**
+     * sets the IDs that are already in use
+     * @param iDs
+     */
+    public void setIDs(HashMap<String, HashSet<String>> iDs) {
         digitalObjectIDs = iDs.get("digital object");
         accessionIDs = iDs.get("accession");
         resourceIDs = iDs.get("resource");
         eadIDs = iDs.get("ead");
     }
 
-    public HashMap<String, ArrayList<String>> getIDs() {
-        HashMap<String, ArrayList<String>> iDs = new HashMap<String, ArrayList<String>>();
+    /**
+     * gets the IDs that are already in use
+     * @return a hash map where the keys are the types of IDs
+     */
+    public HashMap<String, HashSet<String>> getIDs() {
+        HashMap<String, HashSet<String>> iDs = new HashMap<String, HashSet<String>>();
         iDs.put("digital object", digitalObjectIDs);
         iDs.put("accession", accessionIDs);
         iDs.put("resource", resourceIDs);
@@ -277,52 +284,23 @@ public class ASpaceMapper {
         json.put("scope_note", record.getSubjectScopeNote());
 
         json = addSubjectTerm(record, json);
-//
-//        // see if to define term type as untyped
-//        boolean isDefault = aspaceCopyUtil.isTermTypeDefault();
-//
-//        // set the subject terms and term type
-//        String terms = record.getSubjectTerm();
-//        String termTypeAT = record.getSubjectTermType();
-//        String termType = (String) enumUtil.getASpaceTermType(termTypeAT)[0];
-//
-//        // check to make sure we have valid term type,
-//        // otherwise use the default and add warning message
-//        if(termType == null) {
-//            String message = record.getSubjectTerm() + " :: Invalid Term Type: \"" + termTypeAT + "\", Changing to topical\n";
-//            aspaceCopyUtil.addErrorMessage(message);
-//
-//            // change term type so record can save for now
-//            termType = "topical";
-//        }
-//
-//        String[] sa = terms.split("\\s*--\\s*");
-//        JSONArray termsJA = new JSONArray();
-//
-//        for(int i = 0; i < sa.length; i++) {
-//            // check to see if to mark term after the first one as untyped
-//            if(i > 0 && !isDefault) {
-//                termType = "untyped";
-//            }
-//
-//            String term = sa[i];
-//            JSONObject termJS = new JSONObject();
-//            termJS.put("term", term);
-//            termJS.put("term_type", termType);
-//            termJS.put("vocabulary", vocabularyURI);
-//
-//            termsJA.put(termJS);
-//        }
-//
-//        json.put("terms", termsJA);
+
         json.put("vocabulary", vocabularyURI);
 
         return json.toString();
     }
 
+    /**
+     * adds subject terms to a json object
+     * @param record subject from AT
+     * @param json json object to add terms to
+     * @return
+     * @throws Exception
+     */
     public JSONObject addSubjectTerm(Subjects record, JSONObject json) throws Exception {
         JSONArray termsJA;
         try {
+            //if there is already a list with some terms start with it
             termsJA = (JSONArray) json.get("terms");
         } catch (JSONException e) {
             termsJA = new JSONArray();
@@ -649,7 +627,7 @@ public class ASpaceMapper {
     }
 
     /**
-     * Method to convert an AT subject record to
+     * Method to convert an AT repository record
      *
      * @param record
      * @return
@@ -674,6 +652,12 @@ public class ASpaceMapper {
         return json.toString();
     }
 
+    /**
+     * converts an AT location record
+     * @param record
+     * @return
+     * @throws Exception
+     */
     public String convertLocation(Locations record) throws Exception {
         // Main json object
         JSONObject json = new JSONObject();
@@ -709,7 +693,7 @@ public class ASpaceMapper {
     }
 
      /**
-     * Method to convert an AT subject record to
+     * Method to convert an AT subject record
      *
      * @param record
      * @return
@@ -905,11 +889,13 @@ public class ASpaceMapper {
         JSONObject rightStatementJS = new JSONObject();
         rightStatementJS.put("rights_type", "other");
         rightStatementJS.put("other_rights_basis", enumUtil.getASpaceRightsBasis(null)[0]);
-//        rightStatementJS.put("status", "copyrighted");
-//        rightStatementJS.put("jurisdiction", "US"); // TODO 8/12/2013 this is not suppose to be required
+
+        //add the start date or default date if null
         Date startDate = record.getRightsTransferredDate();
         if (startDate == null) startDate = DEFAULT_DATE;
         rightStatementJS.put("start_date", startDate.toString());
+
+        //add the note if there is one
         JSONArray notesJA = new JSONArray();
         String note = record.getRightsTransferredNote();
         if (note != null && !(note.isEmpty())) {
@@ -922,6 +908,7 @@ public class ASpaceMapper {
             notesJA.put(noteJS);
         }
         rightStatementJS.put("notes", notesJA);
+
         rightsStatementJA.put(rightStatementJS);
         json.put("rights_statements", rightsStatementJA);
     }
@@ -1558,18 +1545,6 @@ public class ASpaceMapper {
         return json;
     }
 
-//    public void addRepositoryProcessingNote(StringBuilder sb, ResourcesComponents component) {
-//        if (sb.length() >= 65000) return;
-//        String note = component.getRepositoryProcessingNote();
-//        if (note != null && !(note.isEmpty())) {
-//            sb.append(component);
-//            sb.append(": ");
-//            sb.append(note);
-//            sb.append('\n');
-//        }
-//        for (ResourcesComponents child: component.getResourcesComponents()) addRepositoryProcessingNote(sb, child);
-//    }
-
     /**
      * Method to convert a resource record into an archival object
      *
@@ -1737,6 +1712,13 @@ public class ASpaceMapper {
         return json.toString();
     }
 
+    /**
+     * method to add the linked records with matching repository to an assessment
+     * @param jsonText
+     * @param record
+     * @return
+     * @throws Exception
+     */
     public String addAssessmentsRecords(String jsonText, Assessments record) throws Exception {
 
         JSONObject json = new JSONObject(jsonText);
@@ -1771,6 +1753,13 @@ public class ASpaceMapper {
         return json.toString();
     }
 
+    /**
+     * adds an ASpace agent and gives a reference to it to be used as an assessment agent
+     * @param name
+     * @param assessment
+     * @return
+     * @throws Exception
+     */
     private JSONArray addAssessmentsAgent(String name, Assessments assessment) throws Exception {
 
         JSONObject json = new JSONObject();
@@ -1781,10 +1770,13 @@ public class ASpaceMapper {
         name = name.trim();
         boolean unknown = false;
         if (name == null || name.isEmpty()) {
+            //if a default name 'unknown' has already been added use that instead of adding again
             if (unknownName != null) return unknownName;
             name = "unknown";
             unknown = true;
         }
+
+        //map the name to an ASpace agent
         nameJSON.put("primary_name", name);
         nameJSON.put("sort_name", name);
         nameJSON.put("source", enumUtil.getASpaceNameSource(null)[0]);
@@ -1792,9 +1784,11 @@ public class ASpaceMapper {
         namesJA.put(nameJSON);
         json.put("names", namesJA);
 
+        //save the agent to ASpace
         String endpoint = "/agents/people";
         String id = aspaceCopyUtil.saveRecord(endpoint , json.toString(), "Assessments->" + assessment.getIdentifier());
 
+        //return a JSONArray with a reference to the agent
         String uri = endpoint + "/" + id;
 
         JSONArray ja = new JSONArray();

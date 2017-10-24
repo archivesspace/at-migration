@@ -84,12 +84,17 @@ public class ASpaceCopyUtil {
     // hashmap that maps resource from old database with copy in new database
     private HashMap<Long, String> resourceURIMap = new HashMap<Long, String>();
 
+    // maps AT assessment identifier with uri of copy in AS database
     private HashMap<Long, String> assessmentURIMap = new HashMap<Long, String>();
 
-    private HashMap<String, HashMap<String, Integer>> assessmentAttributeDefinitions = new HashMap<String, HashMap<String, Integer>>();
+    // hashmap that maps a repo with its term definitions which are in turn mapped with their IDs
+    private HashMap<String, HashMap<String, Integer>> assessmentAttributeDefinitions =
+            new HashMap<String, HashMap<String, Integer>>();
 
+    // used to determine whether to attempt to copy assessments when ASpace version can not be determined
     private Boolean copyAssessments;
 
+    // returns the uri of a record in ASpace - works with most record types
     public String getURIMapping(DomainObject record) {
 
         Long recordIdentifier = record.getIdentifier();
@@ -184,10 +189,12 @@ public class ASpaceCopyUtil {
     private final String REPOSITORY_GROUP_KEY = "repositoryGroupMap";
     private final String RECORD_TOTAL_KEY = "copyProgress";
     private final String RECORD_ATTEMPTED_KEY = "progressBookmark";
+    private final String LOOKUP_LIST_VALUES_TO_CODES_KEY = "lookupListValuesToCodes";
 
     // An Array List for storing the total number of main records transferred
     ArrayList<String> recordTotals = new ArrayList<String>();
 
+    // these are used to keep track of where the migration is so it can be resumed
     private LinkedList<String> recordsToCopy = new LinkedList<String>();
     private int numAttempted = 0;
     private int numSuccessful = 0;
@@ -278,9 +285,11 @@ public class ASpaceCopyUtil {
         // map used when copying lookup list items to the archive space backend
         lookupListMap.put("subject term source", ASpaceClient.VOCABULARY_ENDPOINT);
 
+        //set static variables in TopContainerMapper
         TopContainerMapper.setaSpaceCopyUtil(this);
         TopContainerMapper.clearAlreadyAdded();
 
+        //initialize the default records to copy list with all records
         recordsToCopy = new LinkedList<String>();
         recordsToCopy.add("Lookup List");
         recordsToCopy.add("Repositories");
@@ -429,6 +438,9 @@ public class ASpaceCopyUtil {
         } catch (Exception e) { }
     }
 
+    /**
+     * prompts the user to select if they want to copy assessments or not for the case when AS version is unknown
+     */
     public void setCopyAssessments() {
          if (aspaceVersion.isEmpty()) {
              String message = "Cannot determine your version of ArchivesSpace. Do you want to attempt to\n" +
@@ -548,7 +560,7 @@ public class ASpaceCopyUtil {
     }
 
     /**
-     * Method to load the vocabularies from ASpace backend
+     * Method to load the repositories from ASpace backend
      *
      * @return
      */
@@ -574,10 +586,6 @@ public class ASpaceCopyUtil {
         print("Copying repository records ...");
 
         ArrayList<Repositories> records = sourceRCD.getRepositories();
-
-//        if (recordsToCopy.peek().equals("Repositories")) {
-//            records = new ArrayList<Repositories>(records.subList(numAttempted, records.size()));
-//        }
 
         // these are used to update the progress bar
         int total = records.size();
@@ -698,10 +706,6 @@ public class ASpaceCopyUtil {
         print("Copying locations records ...");
 
         ArrayList<Locations> records = sourceRCD.getLocations();
-
-//        if (recordsToCopy.peek().equals("Locations")) {
-//            records = new ArrayList<Locations>(records.subList(numAttempted, records.size()));
-//        }
 
         // these are used to update the progress bar and import log
         int total = records.size();
@@ -2750,6 +2754,8 @@ public class ASpaceCopyUtil {
 
         uriMap.put("IDs", mapper.getIDs());
 
+        uriMap.put(LOOKUP_LIST_VALUES_TO_CODES_KEY, enumUtil.getLookupListValuesToCodes());
+
         // save to file system now
         print("\nSaving URI Maps ...");
 
@@ -2800,8 +2806,11 @@ public class ASpaceCopyUtil {
                 repositoryMismatchMap = (HashMap<String,String>)uriMap.get(REPOSITORY_MISMATCH_KEY);
             }
 
-            HashMap<String, ArrayList<String>> iDs = (HashMap<String, ArrayList<String>>) uriMap.get("IDs");
+            HashMap<String, HashSet<String>> iDs = (HashMap<String, HashSet<String>>) uriMap.get("IDs");
             mapper.setIDs(iDs);
+
+            HashMap<String, String> lookupListCodes = (HashMap<String, String>) uriMap.get(LOOKUP_LIST_VALUES_TO_CODES_KEY);
+            enumUtil.setLookupListValuesToCodes(lookupListCodes);
 
             // load the record totals so far
             if(uriMap.containsKey(RECORD_TOTAL_KEY)) {

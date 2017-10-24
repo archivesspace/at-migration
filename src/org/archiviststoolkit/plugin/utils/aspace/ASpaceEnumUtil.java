@@ -30,6 +30,14 @@ public class ASpaceEnumUtil {
     // Hash map that maps AT values to AT codes
     private HashMap<String, String> lookupListValuesToCodes = new HashMap<String, String>();
 
+    public HashMap<String, String> getLookupListValuesToCodes() {
+        return lookupListValuesToCodes;
+    }
+
+    public void setLookupListValuesToCodes(HashMap<String, String> lookupListValuesToCodes) {
+        this.lookupListValuesToCodes = lookupListValuesToCodes;
+    }
+
     // Array list that hold values that are currently in the ASpace backend
     // They is needed, because for some reason, there are values in the AT records
     // which are not in the appropriate LookupListItem table
