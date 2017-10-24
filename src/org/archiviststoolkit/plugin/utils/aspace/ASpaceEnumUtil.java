@@ -461,7 +461,12 @@ public class ASpaceEnumUtil {
         } else if(atValue.contains("physical facet")) {
             atValue = "physfacet";
         }
-        return getASpaceEnumValue(enumName, atValue, false, defaultValue);
+        Object[] value = getASpaceEnumValue(enumName, atValue, false, defaultValue);
+        if (value[0].equals(defaultValue)) {
+            Object[] multiValue = getASpaceMultiPartNoteType(atValue);
+            if (!(multiValue[0] == null || multiValue[0].equals("odd"))) value = multiValue;
+        }
+        return value;
     }
 
     /**
