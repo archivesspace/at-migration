@@ -213,7 +213,7 @@ public class ASpaceClient {
                 statusCode = httpclient.executeMethod(post);
                 if (statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR) {
                     appendToErrorBuffer("Problem connecting to server");
-                    throw new IntentionalExitException("Could not connect to server ...\nFix connection then resume ...");
+                    throw new IntentionalExitException("Could not connect to server ...\nFix connection then resume ...", atId);
                 }
             } catch (ConnectException e) {
                 boolean ready = false;
@@ -230,7 +230,7 @@ public class ASpaceClient {
                         ready = true;
                     } else if (result == JOptionPane.NO_OPTION) {
                         appendToErrorBuffer("Problem connecting to ArchivesSpace");
-                        throw new IntentionalExitException();
+                        throw new IntentionalExitException("Problem connecting to ArchivesSpace ...\nFix connection then resume ...",  atId);
                     }
                 }
 
@@ -263,7 +263,7 @@ public class ASpaceClient {
                     response = responseJA.getJSONObject(responseJA.length() - 1);
 
                     if (response.toString().contains("Server error: Failed to connect to the database")) {
-                        throw new IntentionalExitException("Could not connect to server ...\nFix connection then resume ...");
+                        throw new IntentionalExitException("Could not connect to server ...\nFix connection then resume ...", atId);
                     }
 
                     errorBuffer.append("Endpoint: ").append(post.getURI()).append("\n").

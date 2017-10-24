@@ -734,6 +734,12 @@ public class ASpaceEnumUtil {
                 String value = enumValues.getString(i);
                 if (value.equalsIgnoreCase(atValue)) return new Object[]{value, true};
             }
+            if (!returnATValue) {
+                for (int i = 0; i < enumValues.length(); i++) {
+                    String value = enumValues.getString(i);
+                    if (atValue.contains(value) || value.contains(atValue)) return new Object[]{value, true};
+                }
+            }
 
             //if there is no matching value in ASpace but the list is configurable return the value from AT and false
             if (returnATValue) {

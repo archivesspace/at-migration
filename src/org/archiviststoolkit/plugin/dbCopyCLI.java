@@ -26,7 +26,7 @@ public class dbCopyCLI {
 
     private int clientThreads = 1;
 
-    private boolean continueFromResources = false;
+    private boolean continueFromURIMaps = false;
 
     private String resetPassword = "archive";
 
@@ -91,7 +91,7 @@ public class dbCopyCLI {
         tracerDatabase = properties.getProperty("tracerDatabase");
         clientThreads = new Integer(properties.getProperty("clientThreads"));
         checkRepositoryMismatch = new Boolean(properties.getProperty("checkRepositoryMismatch"));
-        continueFromResources = new Boolean(properties.getProperty("continueFromResources"));
+        continueFromURIMaps = new Boolean(properties.getProperty("continueFromURIMaps"));
         resetPassword = properties.getProperty("resetPassword");
         simulateRESTCalls = new Boolean(properties.getProperty("simulateRESTCalls"));
         ignoreUnlinkedNames = new Boolean(properties.getProperty("ignoreUnlinkedNames"));
@@ -241,7 +241,7 @@ public class dbCopyCLI {
 //            // first load the notes etc types and resource from the destination database
 //            ascopy.loadRepositories();
 
-            if (continueFromResources && ascopy.uriMapFileExist()) {
+            if (continueFromURIMaps && ascopy.uriMapFileExist()) {
                 ascopy.loadURIMaps();
             } else {
                 ascopy.loadRepositories();

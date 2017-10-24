@@ -276,6 +276,58 @@ public class ASpaceMapper {
 
         json.put("scope_note", record.getSubjectScopeNote());
 
+        json = addSubjectTerm(record, json);
+//
+//        // see if to define term type as untyped
+//        boolean isDefault = aspaceCopyUtil.isTermTypeDefault();
+//
+//        // set the subject terms and term type
+//        String terms = record.getSubjectTerm();
+//        String termTypeAT = record.getSubjectTermType();
+//        String termType = (String) enumUtil.getASpaceTermType(termTypeAT)[0];
+//
+//        // check to make sure we have valid term type,
+//        // otherwise use the default and add warning message
+//        if(termType == null) {
+//            String message = record.getSubjectTerm() + " :: Invalid Term Type: \"" + termTypeAT + "\", Changing to topical\n";
+//            aspaceCopyUtil.addErrorMessage(message);
+//
+//            // change term type so record can save for now
+//            termType = "topical";
+//        }
+//
+//        String[] sa = terms.split("\\s*--\\s*");
+//        JSONArray termsJA = new JSONArray();
+//
+//        for(int i = 0; i < sa.length; i++) {
+//            // check to see if to mark term after the first one as untyped
+//            if(i > 0 && !isDefault) {
+//                termType = "untyped";
+//            }
+//
+//            String term = sa[i];
+//            JSONObject termJS = new JSONObject();
+//            termJS.put("term", term);
+//            termJS.put("term_type", termType);
+//            termJS.put("vocabulary", vocabularyURI);
+//
+//            termsJA.put(termJS);
+//        }
+//
+//        json.put("terms", termsJA);
+        json.put("vocabulary", vocabularyURI);
+
+        return json.toString();
+    }
+
+    public JSONObject addSubjectTerm(Subjects record, JSONObject json) throws Exception {
+        JSONArray termsJA;
+        try {
+            termsJA = (JSONArray) json.get("terms");
+        } catch (JSONException e) {
+            termsJA = new JSONArray();
+        }
+
         // see if to define term type as untyped
         boolean isDefault = aspaceCopyUtil.isTermTypeDefault();
 
@@ -295,7 +347,6 @@ public class ASpaceMapper {
         }
 
         String[] sa = terms.split("\\s*--\\s*");
-        JSONArray termsJA = new JSONArray();
 
         for(int i = 0; i < sa.length; i++) {
             // check to see if to mark term after the first one as untyped
@@ -313,9 +364,7 @@ public class ASpaceMapper {
         }
 
         json.put("terms", termsJA);
-        json.put("vocabulary", vocabularyURI);
-
-        return json.toString();
+        return json;
     }
 
     /**

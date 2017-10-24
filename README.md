@@ -48,7 +48,7 @@ NOTES ON RUNNING THE PLUGIN IN COMMAND LINE MODE
 1. Edit the dbcopy.properties to point to the desired AT database and ASpace Instance
 2. Run the "dbCopyCLI" class making sure all the *.jar files in "lib" are in the Classpath.
 
-NOTES ON DATA MIGRATION DEFAULTS
+NOTES ON DATA MIGRATION
 
 1. If a date is missing in AT but is required for AS the default date will be set to 1/1/1900 or 0 for integer dates.
 2. The start date specified for a container location is the creation date of the associated resource/accession.
@@ -60,6 +60,11 @@ allowed in AS so the default for AS will be "unknown_item" so that the indicator
 a container 3 is specified without a container 2.
 4. Some IDs are checked for uniqueness in AS but not AT. In these cases if an ID is not unique the problem will be 
 corrected by adding ## along with some random string to the ID.
+5. If an assessment is linked to records from multiple repositories, duplicate assessments are created - one for 
+each linked repository.
+6. If a problem occurs during migration, URI maps should be saved and allow you to continue from where you left 
+off by checking the 'continue previous migration' box. This should work fairly seamlessly, but you should check the 
+record migration stopped at as the migrator may correct for a duplicate ID where there is not actually one.
 
 HOW TOP CONTAINER UNIQUENESS IS DETERMINED
 

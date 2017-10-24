@@ -70,6 +70,8 @@ public class ASpaceCopyUtil {
     // hashmap that maps subjects from old database with copy in new database
     private HashMap<Long, String> subjectURIMap = new HashMap<Long, String>();
 
+    private HashMap<String, String> otherSubjectURIMap = new HashMap<String, String>();
+
     // hashmap that maps names from old database with copy in new database
     private HashMap<Long, String> nameURIMap = new HashMap<Long, String>();
 
@@ -170,6 +172,7 @@ public class ASpaceCopyUtil {
     private final String LOCATION_KEY = "locationURIMap";
     private final String USER_KEY = "userURIMap";
     private final String SUBJECT_KEY = "subjectURIMap";
+    private final String OTHER_SUBJECT_KEY = "otherSubjectURIMap";
     private final String NAME_KEY = "nameURIMap";
     private final String ACCESSION_KEY = "accessionURIMap";
     private final String DIGITAL_OBJECT_KEY = "digitalObjectURIMap";
@@ -1227,13 +1230,28 @@ public class ASpaceCopyUtil {
                 continue;
             }
 
-            String jsonText = (String) mapper.convert(subject);
+            String jsonText;
+            String otherURIMapKey = subject.getSubjectTerm() + " " + subject.getSubjectSource();
+            String uri;
+            boolean alreadyExists = otherSubjectURIMap.containsKey(otherURIMapKey);
+
+            if (alreadyExists) {
+                uri = otherSubjectURIMap.get(otherURIMapKey);
+                JSONObject json = getRecord(uri);
+                json = mapper.addSubjectTerm(subject, json);
+                jsonText = json.toString();
+            } else {
+                jsonText = (String) mapper.convert(subject);
+                uri = ASpaceClient.SUBJECT_ENDPOINT;
+            }
+
             if (jsonText != null) {
-                String id = saveRecord(ASpaceClient.SUBJECT_ENDPOINT, jsonText, "Subject->" + subject.getSubjectTerm());
+                String id = saveRecord(uri, jsonText, "Subject->" + subject.getSubjectTerm());
 
                 if(!id.equalsIgnoreCase(NO_ID)) {
-                    String uri = ASpaceClient.SUBJECT_ENDPOINT + "/" + id;
+                    if (!alreadyExists) uri = ASpaceClient.SUBJECT_ENDPOINT + "/" + id;
                     subjectURIMap.put(subject.getIdentifier(), uri);
+                    if (!alreadyExists) otherSubjectURIMap.put(otherURIMapKey, uri);
                     print("Copied Subject: " + subject + " :: " + id);
                     success++;
                     numSuccessful++;
@@ -1241,6 +1259,7 @@ public class ASpaceCopyUtil {
                     print("Fail -- Subject: " + subject);
                 }
             } else {
+
                 print("Fail -- Subject to JSON: " + subject);
             }
 
@@ -2465,11 +2484,6 @@ public class ASpaceCopyUtil {
         } else {
             recordTotals.add(info);
         }
-//        if(recordTotals.size() <= 8) {
-//            recordTotals.add(info);
-//        } else {
-//            recordTotals.set(8, info);
-//        }
     }
 
     private synchronized void updateRecordTotals(String recordType, int total, int success) {
@@ -2711,6 +2725,7 @@ public class ASpaceCopyUtil {
         // or we not generating from ASpace backend data
         uriMap.put(LOCATION_KEY, locationURIMap);
         uriMap.put(SUBJECT_KEY, subjectURIMap);
+        uriMap.put(OTHER_SUBJECT_KEY, otherSubjectURIMap);
         uriMap.put(NAME_KEY, nameURIMap);
         uriMap.put(ACCESSION_KEY, accessionURIMap);
         uriMap.put(DIGITAL_OBJECT_KEY, digitalObjectURIMap);
@@ -2754,6 +2769,7 @@ public class ASpaceCopyUtil {
 
             locationURIMap = (HashMap<Long,String>)uriMap.get(LOCATION_KEY);
             subjectURIMap = (HashMap<Long,String>)uriMap.get(SUBJECT_KEY);
+            otherSubjectURIMap = (HashMap<String, String>)uriMap.get(OTHER_SUBJECT_KEY);
             nameURIMap = (HashMap<Long,String>)uriMap.get(NAME_KEY);
             accessionURIMap = (HashMap<Long,String>)uriMap.get(ACCESSION_KEY);
             digitalObjectURIMap = (HashMap<Long,String>)uriMap.get(DIGITAL_OBJECT_KEY);

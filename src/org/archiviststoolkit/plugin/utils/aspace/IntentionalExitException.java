@@ -8,6 +8,10 @@ package org.archiviststoolkit.plugin.utils.aspace;
  */
 public class IntentionalExitException extends Exception {
 
+    public IntentionalExitException(String message, String atID) {
+        super(message + "\nStopped at AT Identifier: " + atID);
+    }
+
     public IntentionalExitException() {
         super("Exiting migration ...");
     }
