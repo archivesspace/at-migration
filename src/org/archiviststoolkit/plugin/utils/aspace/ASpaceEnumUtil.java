@@ -84,8 +84,6 @@ public class ASpaceEnumUtil {
         String code;
 
         code = lookupListValuesToCodes.get(atValue);
-        System.out.println(atValue);
-        System.out.println(code);
 
         atValue = atValue.toLowerCase();
 
@@ -107,8 +105,7 @@ public class ASpaceEnumUtil {
             if (code == null || code.isEmpty()) code = "local";
             else code = code.replace(".", "");
         }
-        System.out.println(code);
-        System.out.println(getASpaceEnumValue("subject_source", code)[0] + "\n");
+
         return getASpaceEnumValue("subject_source", code);
     }
 

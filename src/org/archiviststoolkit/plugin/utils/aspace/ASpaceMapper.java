@@ -1337,6 +1337,8 @@ public class ASpaceMapper {
         String title = record.getObjectLabel();
         json.put("title", fixEmptyString(title));
 
+        json.put("publish", publishHashMap.get("digitalObjects"));
+
         addLanguageCode(json, record.getLanguageCode());
 
         /* add fields required for digital object component*/
@@ -1783,6 +1785,9 @@ public class ASpaceMapper {
         nameJSON.put("name_order", enumUtil.getASpaceNameOrder(null)[0]);
         namesJA.put(nameJSON);
         json.put("names", namesJA);
+
+        json.put("publish", false);
+        json.put("agent_type", "agent_person");
 
         //save the agent to ASpace
         String endpoint = "/agents/people";
