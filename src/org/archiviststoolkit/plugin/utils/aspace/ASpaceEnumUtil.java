@@ -28,14 +28,14 @@ public class ASpaceEnumUtil {
     private static HashMap<String, JSONObject> dynamicEnums;
 
     // Hash map that maps AT values to AT codes
-    private HashMap<String, String> lookupListValuesToCodes = new HashMap<String, String>();
+    private static HashMap<String, String> lookupListValuesToCodes = new HashMap<String, String>();
 
-    public HashMap<String, String> getLookupListValuesToCodes() {
+    public static HashMap<String, String> getLookupListValuesToCodes() {
         return lookupListValuesToCodes;
     }
 
-    public void setLookupListValuesToCodes(HashMap<String, String> lookupListValuesToCodes) {
-        this.lookupListValuesToCodes = lookupListValuesToCodes;
+    public static void setLookupListValuesToCodes(HashMap<String, String> lookupListValuesToCodes) {
+        ASpaceEnumUtil.lookupListValuesToCodes = lookupListValuesToCodes;
     }
 
     // Array list that hold values that are currently in the ASpace backend
@@ -83,6 +83,10 @@ public class ASpaceEnumUtil {
 
         String code;
 
+        code = lookupListValuesToCodes.get(atValue);
+        System.out.println(atValue);
+        System.out.println(code);
+
         atValue = atValue.toLowerCase();
 
         if(atValue.contains("art & architecture thesaurus")) {
@@ -93,16 +97,18 @@ public class ASpaceEnumUtil {
             code = "tgn";
         } else if (atValue.contains("library of congress subject headings")) {
             code = "lcsh";
-        } else if (atValue.contains("local")) {
+        } else if (atValue.equals("local")) {
             code = "local";
         } else if (atValue.contains("medical subject headings")) {
             code = "mesh";
         } else if (atValue.contains("thesaurus for graphic materials")) {
             code =  "gmgpc";
         } else {
-            code = lookupListValuesToCodes.get(atValue);
             if (code == null || code.isEmpty()) code = "local";
+            else code = code.replace(".", "");
         }
+        System.out.println(code);
+        System.out.println(getASpaceEnumValue("subject_source", code)[0] + "\n");
         return getASpaceEnumValue("subject_source", code);
     }
 

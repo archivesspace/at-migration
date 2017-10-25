@@ -281,6 +281,7 @@ public class ASpaceCopyUtil {
 
         enumUtil.setLanguageCodes(languageCodes);
         enumUtil.setNameLinkCreatorCodes(nameLinkCreatorCodes);
+        ASpaceEnumUtil.setLookupListValuesToCodes(new HashMap<String, String>());
 
         // map used when copying lookup list items to the archive space backend
         lookupListMap.put("subject term source", ASpaceClient.VOCABULARY_ENDPOINT);
@@ -1029,10 +1030,6 @@ public class ASpaceCopyUtil {
 
         ArrayList<Assessments> records = sourceRCD.getAssessments();
 
-//        if (recordsToCopy.peek().equals("Assessments")) {
-//            records = new ArrayList<Assessments>(records.subList(numAttempted, records.size()));
-//        }
-
         // these are used to update the progress bar
         int total = records.size();
         int count = numAttempted;
@@ -1235,15 +1232,20 @@ public class ASpaceCopyUtil {
             }
 
             String jsonText;
-            String otherURIMapKey = subject.getSubjectTerm() + " " + subject.getSubjectSource();
+            String otherURIMapKey = subject.getSubjectTerm() + " " + enumUtil.getASpaceSubjectSource(subject.getSubjectSource())[0];
             String uri;
             boolean alreadyExists = otherSubjectURIMap.containsKey(otherURIMapKey);
 
             if (alreadyExists) {
                 uri = otherSubjectURIMap.get(otherURIMapKey);
-                JSONObject json = getRecord(uri);
-                json = mapper.addSubjectTerm(subject, json);
-                jsonText = json.toString();
+                try {
+                    JSONObject json = getRecord(uri);
+                    json = mapper.addSubjectTerm(subject, json);
+                    jsonText = json.toString();
+                } catch (NullPointerException e) {
+                    jsonText = (String) mapper.convert(subject);
+                    uri = ASpaceClient.SUBJECT_ENDPOINT;
+                }
             } else {
                 jsonText = (String) mapper.convert(subject);
                 uri = ASpaceClient.SUBJECT_ENDPOINT;
