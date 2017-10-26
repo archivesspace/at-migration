@@ -31,12 +31,11 @@ class Testing {
      * @param args
      */
     public static void main(String[] args) throws Exception {
-        TestUtils.resetDatabase();
-        dbCopyFrame.main(TestUtils.empty);
+//        TestUtils.resetDatabase();
         //Call constructors for any tests you want to run here
-//        new dbCopyCLITest();
-//        new ASpaceMapperTest();
-//        new ASpaceEnumUtilTest();
-//        org.junit.runner.JUnitCore.main(testsToRun.toArray(new String[0]));
+        new dbCopyCLITest();
+        new ASpaceMapperTest();
+        new ASpaceEnumUtilTest();
+        org.junit.runner.JUnitCore.main(testsToRun.toArray(new String[0]));
     }
 }

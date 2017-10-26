@@ -8,6 +8,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.Serializable;
 import java.util.*;
 
 /**
@@ -18,58 +19,35 @@ import java.util.*;
  */
 public class TopContainerMapper {
 
-    public TopContainerMapper(JSONObject containerJS) throws Exception {
-        parentRepoURI = containerJS.getJSONObject("repository").get("ref") + "/";
-        indicator = containerJS.get("indicator").toString();
-        try {
-            barcode = containerJS.get("barcode").toString();
-        } catch (JSONException e) {
-            barcode = null;
-        }
-        type = containerJS.get("type").toString();
-        addToExisting(containerJS.get("uri").toString());
-        JSONArray locations = containerJS.getJSONArray("container_locations");
-        for (int i = 0; i < locations.length(); i++) {
-            JSONObject location = locations.getJSONObject(i);
-            addLocationURI(location.get("ref").toString());
-        }
-    }
+    //keys are containers that have been added to ASpace and values are objects that store that container's information
+    private static HashMap<MiniContainer, Info> alreadyAdded = new HashMap<MiniContainer, Info>();
 
-    public DomainObject getInstance() {
-        return instance;
-    }
-
-    private class Info {
-        public String uri;
-        private Set<LocationJSONObject> locationURIs = new HashSet<LocationJSONObject>();
-
-        public Info(String uri) {
-            this.uri = uri;
-        }
-    }
-
-    public static Map<TopContainerMapper, Info> getAlreadyAdded() {
-        return alreadyAdded;
-    }
-
-    private static Map<TopContainerMapper, Info> alreadyAdded = new HashMap<TopContainerMapper, Info>();
-
+    //used for making unique identifiers for containers without indicators
     private static int unknownCount = 1;
 
     private ASpaceEnumUtil enumUtil = new ASpaceEnumUtil();
     private static ASpaceCopyUtil aSpaceCopyUtil;
 
+    //analog instance or accession location the container was created for
+    private DomainObject instance;
+    private String atID;
+    private String parentRepoURI;
+    private String indicator;
+    private String type;
+    private String barcode;
+    private Accessions accession;
+
+    public DomainObject getInstance() {
+        return instance;
+    }
+
+    /**
+     * method to get the AT identifier
+     * @return
+     */
     public String getAtID() {
         return atID;
     }
-
-    private DomainObject instance;
-    private String atID;
-    private String parentRepoURI; //***
-    private String indicator; //***
-    private String type; //dynamic enum "container_type"
-    private String barcode;
-    private Accessions accession;
 
     /**
      * initializes a top container for an analog instance
@@ -87,7 +65,7 @@ public class TopContainerMapper {
     }
 
     /**
-     * initializes a top container for an accession instance
+     * initializes a top container for an accession location instance
      * @param parentRepoURI
      * @throws JSONException
      */
@@ -95,12 +73,37 @@ public class TopContainerMapper {
         this.accession = accessionLocation.getAccession();
         if (this.accession == null) {this.accession = accession;}
         instance = accessionLocation;
-        type = "item";
 
         //pull barcode from the accessionLocation the accession instance housed here was created for
         barcode = accessionLocation.getLocation().getBarcode();
         this.parentRepoURI = parentRepoURI;
         initContainer();
+    }
+
+    /**
+     * constructor for a top container created from one previously in ASpace for comparison purposes
+     * @param containerJS
+     * @throws Exception
+     */
+    public TopContainerMapper(JSONObject containerJS) throws Exception {
+        parentRepoURI = containerJS.getJSONObject("repository").get("ref") + "/";
+        indicator = containerJS.get("indicator").toString();
+        try {
+            barcode = containerJS.get("barcode").toString();
+        } catch (JSONException e) {
+            barcode = null;
+        }
+        try {
+            type = containerJS.get("type").toString();
+        } catch (JSONException e) {
+            type = null;
+        }
+        addToExisting(containerJS.get("uri").toString());
+        JSONArray locations = containerJS.getJSONArray("container_locations");
+        for (int i = 0; i < locations.length(); i++) {
+            JSONObject location = locations.getJSONObject(i);
+            addLocationURI(location.get("ref").toString());
+        }
     }
 
     public static void setaSpaceCopyUtil(ASpaceCopyUtil copyUtil) {
@@ -124,7 +127,7 @@ public class TopContainerMapper {
                 else indicator += analogInstances.getResourceComponent().getTitle();
             }
         }
-        if (! alreadyAdded.keySet().contains(this)) {
+        if (! alreadyAdded.keySet().contains(new MiniContainer(this))) {
             String uri;
             uri = this.addTopContainer();
             this.addToExisting(uri);
@@ -133,9 +136,8 @@ public class TopContainerMapper {
 
     /**
      * adds a top container to the ASpace database
-     * TODO add the foreign key
      * @return the uri of the top container
-     * @throws JSONException
+     * @throws Exception
      */
     private String addTopContainer() throws Exception {
         JSONObject jsonObject = new JSONObject();
@@ -144,6 +146,7 @@ public class TopContainerMapper {
         jsonObject.put("indicator", indicator);
         jsonObject.put("type", type);
         jsonObject.put("barcode", barcode);
+        jsonObject.put("container_locations", new JSONArray());
         String id = aSpaceCopyUtil.saveRecord(parentRepoURI + "top_containers", jsonObject.toString(),
                 instance.getClass().getSimpleName() + "->" + atID);
         if (!(id.equalsIgnoreCase("no id assigned"))) {
@@ -154,90 +157,92 @@ public class TopContainerMapper {
         return parentRepoURI + "top_containers/" + id;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || !(o instanceof TopContainerMapper)) return false;
-        TopContainerMapper other = (TopContainerMapper) o;
-        if (!(this.parentRepoURI.equals(other.parentRepoURI))) return false;
-        if (!(this.barcode == null || this.barcode.isEmpty() || other.barcode == null || other.barcode.isEmpty())) {
-            if (this.barcode.trim().equalsIgnoreCase(other.barcode.trim())) return true;
-        }
-        Boolean sameType = true;
-        if (!(this.type == null || this.type.isEmpty() || other.type == null || other.type.isEmpty())) {
-            sameType = this.type.equals(other.type);
-        }
-        return (this.indicator.equalsIgnoreCase(other.indicator) && sameType);
-    }
-
-    @Override
-    public int hashCode() {
-        return parentRepoURI.hashCode();
+    /**
+     * method that adds a location to a previously saved top container record
+     * @param uri of the container
+     * @param location json object for the container location to be added
+     * @throws Exception
+     */
+    private void saveTopContainerLocation(String uri, JSONObject location) throws Exception {
+        JSONObject json = aSpaceCopyUtil.getRecord(uri);
+        JSONArray locationsJA = (JSONArray) json.get("container_locations");
+        locationsJA.put(location);
+        json.put("container_locations", locationsJA);
+        String instanceClassName;
+            try {
+                instanceClassName = getInstance().getClass().getName();
+            } catch (NullPointerException e) {
+                instanceClassName = "ArchivesSpace Container";
+            }
+        aSpaceCopyUtil.saveRecord(uri, json.toString(),instanceClassName + "->" + getAtID());
     }
 
     /**
-     * add a top container to the list of containers that have already been added so that it won't be duplicated
+     * add a top container to the list of containers that have already been added so that it won't be duplicated     *
+     * @param uri of the top container
      */
     public void addToExisting(String uri) {
         if (uri.contains("10000001") || uri.contains("no id assigned")) return;
-        alreadyAdded.put(this, new Info(uri));
+        alreadyAdded.put(new MiniContainer(this), new Info(uri));
     }
 
     /**
-     * gets the reference to the matching top container
+     * gets the uri reference to the matching top container
      * @return uri for top container
      */
     public String getRef() {
-        if (!alreadyAdded.containsKey(this)) return null;
-        return alreadyAdded.get(this).uri;
+        if (!alreadyAdded.containsKey(new MiniContainer(this))) return null;
+        return alreadyAdded.get(new MiniContainer(this)).uri;
     }
 
+    /**
+     * adds a location for a container if it is not already associated with said container
+     * @param uri of the location
+     * @param note for accession containers the note from accession location record
+     * @throws Exception
+     */
     public void addLocationURI(String uri, String note) throws Exception {
         if (uri == null || uri.isEmpty()) {
             return;
         }
-        LocationJSONObject json = new LocationJSONObject(uri, note);
+        JSONObject json = getLocationJSON(uri, note);
 
-        alreadyAdded.get(this).locationURIs.add(json);
+        Info info = alreadyAdded.get(new MiniContainer(this));
+        if (info != null) {
+            if (info.locationURIs.add(uri)) saveTopContainerLocation(info.uri, json);
+        }
     }
 
     public void addLocationURI(String uri) throws Exception {addLocationURI(uri, "");}
 
-    private class LocationJSONObject extends JSONObject {
+    /**
+     * method to get a json object for a containers location
+     * @param uri the location's uri
+     * @param note for accession containers the note for the accession location, otherwise null
+     * @return a json object for the container location
+     * @throws JSONException
+     */
+    private JSONObject getLocationJSON(String uri, String note) throws JSONException {
+        JSONObject json = new JSONObject();
+        json.put("ref", uri);
+        json.put("status", "current");
+        json.put("note", note);
 
-        String uri;
-
-        public LocationJSONObject(String uri, String note) throws JSONException {
-            this.uri = uri;
-            put("ref", uri);
-            put("status", "current");
-            put("note", note);
-            //TODO find out if this info is stored in AT
-            put("start_date", ASpaceMapper.DEFAULT_DATE.toString());
+        //set start date for location to date record was created
+        Date startDate = null;
+        try {
+            if (instance instanceof AccessionsLocations) {
+                startDate = accession.getCreated();
+            } else if (instance instanceof ArchDescriptionAnalogInstances) {
+                ArchDescriptionAnalogInstances aIn = (ArchDescriptionAnalogInstances) instance;
+                if (aIn.getResource() != null) startDate = aIn.getResource().getCreated();
+                if (aIn.getResourceComponent() != null) startDate = aIn.getResourceComponent().getCreated();
+            }
+        } finally {
+            if (startDate == null) startDate = ASpaceMapper.DEFAULT_DATE;
         }
-
-        @Override
-        public boolean equals(Object other) {
-            if (this == other) return true;
-            if (other == null || !(other instanceof LocationJSONObject)) return false;
-            return this.uri.equals(((LocationJSONObject) other).uri);
-        }
-
-        @Override
-        public int hashCode() {
-            return uri.hashCode();
-        }
-    }
-
-    public JSONArray getContainerLocations() throws Exception {
-        Set<LocationJSONObject> containerLocs = alreadyAdded.get(this).locationURIs;
-        if (containerLocs.size() == 0) {
-            aSpaceCopyUtil.addErrorMessage("No locations exist for top container " + this + "\n");
-            aSpaceCopyUtil.print("No locations exist for " + this + ". Skipping.\n");
-            return null;
-        } else {
-            return new JSONArray(containerLocs);
-        }
+        json.put("start_date", startDate.toString());
+        return json;
     }
 
     @Override
@@ -245,9 +250,122 @@ public class TopContainerMapper {
         return type + " " + indicator + " -- " + printableInstance();
     }
 
-    public String printableInstance() {
+    /**
+     * gives information about what AT record the top container was created from
+     * @return class and id of item the container was created from
+     */
+    private String printableInstance() {
         if (instance == null) return "ArchivesSpace Container";
         return instance.getClass().getSimpleName() + " " + atID;
     }
 
+    /**
+     * holds only the data needed to determine if containers are equivalent
+     * used in the already added map in place of the top container object to minimize memory usage
+     */
+    private static class MiniContainer {
+
+        private String parentRepoURI;
+        private String indicator;
+        private String type;
+        private String barcode;
+
+        MiniContainer(TopContainerMapper container) {
+            this.parentRepoURI = container.parentRepoURI;
+            this.indicator = container.indicator;
+            this.type = container.type;
+            this.barcode = container.barcode;
+        }
+
+        MiniContainer(String ... args) {
+            this.parentRepoURI = args[0];
+            this.indicator = args[1];
+            if (args.length > 2) {
+                if (args[2].contains("type: ")) {
+                    this.type = args[2].substring(6);
+                    if (args.length > 3) this.barcode = args[3];
+                }
+                else this.barcode = args[2];
+            }
+        }
+
+        @Override
+        public String toString() {
+            return parentRepoURI + SEPARATOR + indicator + SEPARATOR + "type: " + type + SEPARATOR + barcode;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || !(o instanceof MiniContainer)) return false;
+            MiniContainer other = (MiniContainer) o;
+            if (!(this.parentRepoURI.equals(other.parentRepoURI))) return false;
+            if (!(this.barcode == null || this.barcode.isEmpty() || other.barcode == null || other.barcode.isEmpty())) {
+                if (this.barcode.trim().equalsIgnoreCase(other.barcode.trim())) return true;
+            }
+            Boolean sameType = true;
+            if (!(this.type == null || this.type.isEmpty() || other.type == null || other.type.isEmpty())) {
+                sameType = this.type.equals(other.type);
+            }
+            return (this.indicator.equalsIgnoreCase(other.indicator) && sameType);
+        }
+
+        @Override
+        public int hashCode() {
+            return parentRepoURI.hashCode();
+        }
+    }
+
+    /**
+     * stores the information for a top container as it was added to ASpace
+     */
+    private static class Info {
+        public String uri;
+        private Set<String> locationURIs = new HashSet<String>();
+
+        public Info(String uri) {
+            this.uri = uri;
+        }
+
+        public Info(String ... args) {
+            this.uri = args[0];
+            for (int i = 1; i < args.length; i++) locationURIs.add(args[i]);
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder value = new StringBuilder(uri);
+            for (String uri: locationURIs) {
+                value.append(SEPARATOR);
+                value.append(uri);
+            }
+            return value.toString();
+        }
+    }
+
+    private static String[] fromString(String stringForm) {
+        return stringForm.split(SEPARATOR);
+    }
+
+    private static final String SEPARATOR = "! . . . !";
+
+    public static HashMap<String, String> getAlreadyAddedStringForm() {
+        HashMap<String, String> alreadyAddedStringForm = new HashMap<String, String>();
+        for (MiniContainer container : alreadyAdded.keySet()) {
+            alreadyAddedStringForm.put(container.toString(), alreadyAdded.get(container).toString());
+        }
+        return alreadyAddedStringForm;
+    }
+
+    public static void setAlreadyAdded(HashMap<String, String> topContainerURIMap) {
+        for (String key: topContainerURIMap.keySet()) {
+            MiniContainer miniContainer = new MiniContainer(fromString(key));
+            Info info = new Info(fromString(topContainerURIMap.get(key)));
+            alreadyAdded.put(miniContainer, info);
+        }
+    }
+
+    public static void clearAlreadyAdded() {
+        alreadyAdded = new HashMap<MiniContainer, Info>();
+    }
 }

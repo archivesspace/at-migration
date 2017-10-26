@@ -9,12 +9,14 @@ import com.jgoodies.forms.factories.FormFactory;
 import com.jgoodies.forms.layout.*;
 import org.archiviststoolkit.ApplicationFrame;
 import org.archiviststoolkit.importer.ImportExportLogDialog;
+import org.archiviststoolkit.model.LookupList;
 import org.archiviststoolkit.plugin.beanshell.ScriptViewerDialog;
 import org.archiviststoolkit.plugin.dbdialog.RemoteDBConnectDialogLight;
 import org.archiviststoolkit.plugin.utils.CodeViewerDialog;
 import org.archiviststoolkit.plugin.utils.ScriptsDAO;
 import org.archiviststoolkit.plugin.utils.aspace.ASpaceClient;
 import org.archiviststoolkit.plugin.utils.aspace.ASpaceCopyUtil;
+import org.archiviststoolkit.plugin.utils.aspace.IntentionalExitException;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.hibernate.Session;
 
@@ -121,10 +123,10 @@ public class dbCopyFrame extends JFrame {
         //ignoreUnlinkedSubjectsCheckBox.setVisible(false);
         //publishPanel.setVisible(false);
         batchImportCheckBox.setVisible(false);
-        deleteResourcesCheckBox.setVisible(false);
+//        deleteResourcesCheckBox.setVisible(false);
         numResourceToCopyLabel.setVisible(false);
         numResourceToCopyTextField.setVisible(false);
-        deleteResourcesCheckBox.setVisible(false);
+//        deleteResourcesCheckBox.setVisible(false);
         //resourcesToCopyTextField.setVisible(false);
         recordURIComboBox.setVisible(false);
         paramsLabel.setVisible(false);
@@ -268,7 +270,7 @@ public class dbCopyFrame extends JFrame {
                     boolean ignoreUnlinkedSubjects = ignoreUnlinkedSubjectsCheckBox.isSelected();
 
                     // create the hash map use to see if a certain record should be exported automatically
-                    HashMap <String, Boolean> publishMap = new HashMap<String, Boolean>();
+                    HashMap<String, Boolean> publishMap = new HashMap<String, Boolean>();
                     publishMap.put("names", publishNamesCheckBox.isSelected());
                     publishMap.put("subjects", publishSubjectsCheckBox.isSelected());
                     publishMap.put("accessions", publishAccessionsCheckBox.isSelected());
@@ -299,7 +301,7 @@ public class dbCopyFrame extends JFrame {
                     ascopy.setCopying(true);
 
                     // try getting the session and only continue if a valid session is return;
-                    if(!ascopy.getSession()) {
+                    if (!ascopy.getSession()) {
                         consoleTextArea.append("No session, nothing to do ...\n");
                         reEnableCopyButtons();
                         return;
@@ -308,14 +310,14 @@ public class dbCopyFrame extends JFrame {
                     }
 
                     // check the current aspace version to make sure
-                    //will need to modify this
                     String aspaceVersion = ascopy.getASpaceVersion();
 
                     //Check if working
                     System.out.println("Version: " + aspaceVersion);
 
-                    if(!aspaceVersion.isEmpty() && !ASpaceCopyUtil.SUPPORTED_ASPACE_VERSION.contains(aspaceVersion)) {
-                        String message =  "Unsupported Archivesspace Version\nSupport Versions: " +
+                    if (aspaceVersion.isEmpty()) ascopy.setCopyAssessments();
+                    if (!aspaceVersion.isEmpty() && !ASpaceCopyUtil.SUPPORTED_ASPACE_VERSION.contains(aspaceVersion)) {
+                        String message = "Unsupported Archivesspace Version\nSupport Versions: " +
                                 ASpaceCopyUtil.SUPPORTED_ASPACE_VERSION + " ...\n";
 
                         consoleTextArea.append(message);
@@ -341,29 +343,28 @@ public class dbCopyFrame extends JFrame {
                         }
                     }
 
-                    // first load the notes etc types and resource from the destination database
-                    if(!copyStopped) ascopy.loadRepositories();
+
+
+                    if (useSaveURIMapsCheckBox.isSelected() && ascopy.uriMapFileExist()) {
+                        ascopy.loadURIMaps();
+                    } else {
+                        // first load the notes etc types and resource from the destination database if not using saved ones
+                        if (!copyStopped) ascopy.loadRepositories();
+                    }
 
                     // set the progress bar from doing it's thing since the ascopy class is going to take over
                     copyProgressBar.setIndeterminate(false);
 
-                    if(useSaveURIMapsCheckBox.isSelected() && ascopy.uriMapFileExist()) {
-                        ascopy.loadURIMaps();
-                    } else {
-                        if(!copyStopped) ascopy.copyLookupList();
-                        if(!copyStopped) ascopy.copyRepositoryRecords();
-                        if(!copyStopped) ascopy.mapRepositoryGroups();
-                        if(!copyStopped) ascopy.copyLocationRecords();
-                        if(!copyStopped) ascopy.addAdminUser(admin, "Administrator User", adminPassword);
-                        if(!copyStopped) ascopy.copyUserRecords();
-                        if(!copyStopped) ascopy.copySubjectRecords();
-                        if(!copyStopped) ascopy.copyNameRecords();
-                        if(!copyStopped) ascopy.copyAccessionRecords();
-                        if(!copyStopped) ascopy.copyDigitalObjectRecords();
-
-                        // save the record maps for possible future use
-                        ascopy.saveURIMaps();
-                    }
+                    if (!copyStopped) ascopy.copyLookupList();
+                    if (!copyStopped) ascopy.copyRepositoryRecords();
+                    if (!copyStopped) ascopy.mapRepositoryGroups();
+                    if (!copyStopped) ascopy.copyLocationRecords();
+                    if (!copyStopped) ascopy.addAdminUser(admin, "Administrator User", adminPassword);
+                    if (!copyStopped) ascopy.copyUserRecords();
+                    if (!copyStopped) ascopy.copySubjectRecords();
+                    if (!copyStopped) ascopy.copyNameRecords();
+                    if (!copyStopped) ascopy.copyAccessionRecords();
+                    if (!copyStopped) ascopy.copyDigitalObjectRecords();
 
                     // get the number of resources to copy here to allow it to be reset while the migration
                     // has been started, but migration of resources has not yet started
@@ -372,30 +373,30 @@ public class dbCopyFrame extends JFrame {
 
                     try {
                         boolean useBatchImport = batchImportCheckBox.isSelected();
-                        boolean deleteSavedResources = deleteResourcesCheckBox.isSelected();
+//                        boolean deleteSavedResources = deleteResourcesCheckBox.isSelected();
                         ascopy.setUseBatchImport(useBatchImport);
-                        ascopy.setDeleteSavedResources(deleteSavedResources);
+//                        ascopy.setDeleteSavedResources(deleteSavedResources);
 
                         // get the number of threads to run the copy process in
                         threads = Integer.parseInt(threadsTextField.getText());
 
                         // get the number of resource to copy
-                        if(resourcesIDsList.isEmpty()) {
+                        if (resourcesIDsList.isEmpty()) {
                             resourcesToCopy = Integer.parseInt(numResourceToCopyTextField.getText());
                         } else {
                             resourcesToCopy = resourcesIDsList.size();
                         }
-                    } catch (NumberFormatException nfe) { }
+                    } catch (NumberFormatException nfe) {}
 
                     // check to make sure we didn't stop the copy process or resource to copy is
                     // not set to zero. Setting resources to copy to zero is a convenient way
                     // to generate a URI map which contains no resource records for testing purposes
-                    if(!copyStopped && resourcesToCopy != 0) {
+                    if (!copyStopped && resourcesToCopy != 0) {
                         ascopy.setResourcesToCopyList(resourcesIDsList);
                         ascopy.copyResourceRecords(resourcesToCopy, threads);
                     }
 
-                    if (!copyStopped) ascopy.addContainerData();
+                    if (!copyStopped) ascopy.addAssessments();
 
                     ascopy.cleanUp();
 
@@ -403,11 +404,19 @@ public class dbCopyFrame extends JFrame {
                     String errorCount = "" + ascopy.getASpaceErrorCount();
                     errorCountLabel.setText(errorCount);
                     migrationErrors = ascopy.getSaveErrorMessages() + "\n\nTotal errors/warnings: " + errorCount;
+                } catch (IntentionalExitException e) {
+                    consoleTextArea.setText(e.getMessage());
+                    consoleTextArea.append("\nWill attempt to save URI maps ...");
+                    if (ascopy != null) ascopy.saveURIMaps();
+                    else consoleTextArea.append("\nCould not save URI maps ...\nMigration will need to be restarted ...");
                 } catch (Exception e) {
                     consoleTextArea.setText("Unrecoverable exception, migration stopped ...\n\n");
 
                     if(ascopy != null) {
+                        ascopy.saveURIMaps();
                         consoleTextArea.append(ascopy.getCurrentRecordInfo() + "\n\n");
+                    } else {
+                        consoleTextArea.append("Could not save URI maps ...\nMigration will need to be restarted ...");
                     }
 
                     consoleTextArea.append(getStackTrace(e));
@@ -547,6 +556,7 @@ public class dbCopyFrame extends JFrame {
         copyProgressBar.setValue(0);
 
         if (copyStopped) {
+            if (ascopy != null) ascopy.saveURIMaps();
             copyStopped = false;
             copyProgressBar.setString("Cancelled Copy Process ...");
         } else {
@@ -784,7 +794,7 @@ public class dbCopyFrame extends JFrame {
         batchImportCheckBox = new JCheckBox();
         numResourceToCopyLabel = new JLabel();
         numResourceToCopyTextField = new JTextField();
-        deleteResourcesCheckBox = new JCheckBox();
+//        deleteResourcesCheckBox = new JCheckBox();
         resourcesToCopyTextField = new JTextField();
         outputConsoleLabel = new JLabel();
         copyProgressBar = new JProgressBar();
@@ -974,7 +984,7 @@ public class dbCopyFrame extends JFrame {
                 contentPanel.add(adminPasswordTextField, cc.xy(13, 7));
 
                 //---- useSaveURIMapsCheckBox ----
-                useSaveURIMapsCheckBox.setText("Continue From Resource Records");
+                useSaveURIMapsCheckBox.setText("Continue Previous Migration");
                 contentPanel.add(useSaveURIMapsCheckBox, cc.xy(1, 9));
 
                 //---- resetPassswordLabel ----
@@ -1094,9 +1104,9 @@ public class dbCopyFrame extends JFrame {
                 numResourceToCopyTextField.setText("100000");
                 contentPanel.add(numResourceToCopyTextField, cc.xywh(9, 19, 5, 1));
 
-                //---- deleteResourcesCheckBox ----
-                deleteResourcesCheckBox.setText("Delete Previously Saved Resources");
-                contentPanel.add(deleteResourcesCheckBox, cc.xy(1, 21));
+//                //---- deleteResourcesCheckBox ----
+//                deleteResourcesCheckBox.setText("Delete Previously Saved Resources");
+//                contentPanel.add(deleteResourcesCheckBox, cc.xy(1, 21));
 
                 //---- resourcesToCopyTextField ----
                 resourcesToCopyTextField.setText("-refid_unique, -term_default");
@@ -1294,7 +1304,7 @@ public class dbCopyFrame extends JFrame {
     private JCheckBox batchImportCheckBox;
     private JLabel numResourceToCopyLabel;
     private JTextField numResourceToCopyTextField;
-    private JCheckBox deleteResourcesCheckBox;
+//    private JCheckBox deleteResourcesCheckBox;
     private JTextField resourcesToCopyTextField;
     private JLabel outputConsoleLabel;
     private JProgressBar copyProgressBar;

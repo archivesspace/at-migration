@@ -27,10 +27,8 @@ class TestUtils {
     private static final boolean testMode = true;
 
     public static final String[] empty = new String[0];
-    public static boolean trimData = false;
-    public static int startNum = 0;
-    public static int numToCopy = 50;
     static HashMap<String, JSONObject> dynamicEnums = new HashMap<String, JSONObject>();
+
     private static JSONObject json;
     static {
         try {
@@ -45,24 +43,17 @@ class TestUtils {
             e.printStackTrace();
         }
     }
-    private static String propertiesUrl = "C:/Users/morrissey/Desktop/at-mig-6/dbcopy.properties";
+
+    private static String propertiesUrl = System.getProperty("user.dir") + "/dbcopy.properties";
     private static String atURL;
     private static String at_username;
     private static String at_password;
     private static String asURL = "jdbc:mysql://localhost:3306/";
     private static String as_username = "root";
-    private static String as_password = "cinnamon";
-    private static String schemaSetup = "C:/Users/morrissey/Documents/dumps/as_21_empty.sql";
-    private static String asDirectory = "C:/Users/morrissey/Desktop/archivesspace";
+    private static String as_password = "";
+    //create a dump of your empty AS database and set this as the schemaSetup url
+    private static String schemaSetup = System.getProperty("user.dir") + "/src/test/as_22_empty.sql";
     private static String host;
-    public static boolean manualConnect = true;
-
-    static {
-        if (!testMode) {
-            manualConnect = false;
-            trimData = false;
-        }
-    }
 
     public static Properties getProperties() {
         return properties;
@@ -173,13 +164,7 @@ class TestUtils {
 
     public static Statement dbConnect() throws SQLException {
         Connection conn = DriverManager.getConnection(asURL, as_username, as_password);
-        Statement st = conn.createStatement();
-        return st;
-    }
-
-    public static void printStackTrace() {
-       System.out.println("Stack Trace:\n");
-       for (StackTraceElement e : Thread.currentThread().getStackTrace()) System.out.println(e);
+        return conn.createStatement();
     }
 
     public static void print(Object o) {System.out.println(o);}

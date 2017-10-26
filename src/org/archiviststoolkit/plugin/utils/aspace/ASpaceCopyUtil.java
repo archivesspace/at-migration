@@ -3,6 +3,7 @@ package org.archiviststoolkit.plugin.utils.aspace;
 import org.apache.commons.httpclient.NameValuePair;
 import org.archiviststoolkit.ApplicationFrame;
 import org.archiviststoolkit.model.*;
+import org.archiviststoolkit.mydomain.DomainObject;
 import org.archiviststoolkit.plugin.dbCopyFrame;
 import org.archiviststoolkit.plugin.dbdialog.RemoteDBConnectDialogLight;
 import org.archiviststoolkit.plugin.utils.ScriptDataUtils;
@@ -12,10 +13,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import javax.swing.*;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Set;
+import java.io.*;
+import java.util.*;
 
 /**
  * Created by IntelliJ IDEA.
@@ -26,7 +25,7 @@ import java.util.Set;
  */
 public class ASpaceCopyUtil {
 
-    public static final String SUPPORTED_ASPACE_VERSION = "v2.1";
+    public static final String SUPPORTED_ASPACE_VERSION = "v2.1 & v2.2";
 
     // used to get session from the source and destination databases
     private RemoteDBConnectDialogLight sourceRCD;
@@ -71,6 +70,8 @@ public class ASpaceCopyUtil {
     // hashmap that maps subjects from old database with copy in new database
     private HashMap<Long, String> subjectURIMap = new HashMap<Long, String>();
 
+    private HashMap<String, String> otherSubjectURIMap = new HashMap<String, String>();
+
     // hashmap that maps names from old database with copy in new database
     private HashMap<Long, String> nameURIMap = new HashMap<Long, String>();
 
@@ -82,6 +83,41 @@ public class ASpaceCopyUtil {
 
     // hashmap that maps resource from old database with copy in new database
     private HashMap<Long, String> resourceURIMap = new HashMap<Long, String>();
+
+    // maps AT assessment identifier with uri of copy in AS database
+    private HashMap<Long, String> assessmentURIMap = new HashMap<Long, String>();
+
+    // hashmap that maps a repo with its term definitions which are in turn mapped with their IDs
+    private HashMap<String, HashMap<String, Integer>> assessmentAttributeDefinitions =
+            new HashMap<String, HashMap<String, Integer>>();
+
+    // used to determine whether to attempt to copy assessments when ASpace version can not be determined
+    private Boolean copyAssessments;
+
+    // returns the uri of a record in ASpace - works with most record types
+    public String getURIMapping(DomainObject record) {
+
+        Long recordIdentifier = record.getIdentifier();
+        Class recordClass = record.getClass();
+
+        if (recordClass.toString().contains("Locations")) {
+            return locationURIMap.get(recordIdentifier);
+        } else if (recordClass.toString().contains("Subjects")) {
+            return subjectURIMap.get(recordIdentifier);
+        } else if (recordClass.toString().contains("Names")) {
+            return nameURIMap.get(recordIdentifier);
+        } else if (recordClass.toString().contains("Accessions")) {
+            return accessionURIMap.get(recordIdentifier);
+        } else if (recordClass.toString().contains("DigitalObjects")) {
+            return digitalObjectURIMap.get(recordIdentifier);
+        } else if (recordClass.toString().contains("Resources")) {
+            return resourceURIMap.get(recordIdentifier);
+        } else if (recordClass.toString().contains("Assessments")) {
+            return assessmentURIMap.get(recordIdentifier);
+        } else {
+            return null;
+        }
+    }
 
     // stop watch object for keeping tract of time
     private StopWatch stopWatch = null;
@@ -141,24 +177,34 @@ public class ASpaceCopyUtil {
     private final String LOCATION_KEY = "locationURIMap";
     private final String USER_KEY = "userURIMap";
     private final String SUBJECT_KEY = "subjectURIMap";
+    private final String OTHER_SUBJECT_KEY = "otherSubjectURIMap";
     private final String NAME_KEY = "nameURIMap";
     private final String ACCESSION_KEY = "accessionURIMap";
     private final String DIGITAL_OBJECT_KEY = "digitalObjectURIMap";
     private final String RESOURCE_KEY = "resourceURIMap";
+    private final String ASSESSMENT_KEY = "assessmentURIMap";
+    private final String TOP_CONTAINER_KEY = "topContainerURIMap";
     private final String REPOSITORY_MISMATCH_KEY = "repositoryMismatchMap";
+    private final String REPOSITORY_AGENT_KEY = "repositoryAgentMap";
+    private final String REPOSITORY_GROUP_KEY = "repositoryGroupMap";
     private final String RECORD_TOTAL_KEY = "copyProgress";
+    private final String RECORD_ATTEMPTED_KEY = "progressBookmark";
+    private final String LOOKUP_LIST_VALUES_TO_CODES_KEY = "lookupListValuesToCodes";
 
     // An Array List for storing the total number of main records transferred
     ArrayList<String> recordTotals = new ArrayList<String>();
+
+    // these are used to keep track of where the migration is so it can be resumed
+    private LinkedList<String> recordsToCopy = new LinkedList<String>();
+    private int numAttempted = 0;
+    private int numSuccessful = 0;
+    private int numUnlinked = 0;
 
     // Specifies whether or not to simulate the REST calls
     private boolean simulateRESTCalls = false;
 
     // Specifies whether to use the batch import functionality of aspace
     private boolean useBatchImport = false;
-
-    // Specifies whether to delete the previously saved resource records. Useful for testing purposes
-    private boolean deleteSavedResources = false;
 
     // this list is used to copy a specific resource
     private ArrayList<String> resourcesIDsList;
@@ -202,68 +248,12 @@ public class ASpaceCopyUtil {
      *
      * @param sourceRCD
      */
-    public ASpaceCopyUtil(ApplicationFrame mainFrame, RemoteDBConnectDialogLight sourceRCD, String host, String admin, String adminPassword) {
+    public ASpaceCopyUtil(ApplicationFrame mainFrame, RemoteDBConnectDialogLight sourceRCD, String host, String admin,
+                          String adminPassword) {
         this.mainFrame = mainFrame;
         this.sourceRCD = sourceRCD;
         this.aspaceClient = new ASpaceClient(host, admin, adminPassword);
         init();
-    }
-
-    public void addContainerData() throws Exception {
-        print("Adding data for top containers ...");
-
-        Set<TopContainerMapper> records = TopContainerMapper.getAlreadyAdded().keySet();
-
-        // these are used to update the progress bar
-        int total = records.size();
-        int count = 0;
-        int success = 0;
-        
-        for (TopContainerMapper topContainer: records) {
-
-            if (stopCopy) return;
-
-            JSONArray locations = topContainer.getContainerLocations();
-            if (locations == null) {
-                count++;
-                success++;
-                updateProgress("Top Containers", total, count);
-                continue;
-            }
-
-            String containerURI = topContainer.getRef();
-            JSONObject json = getRecord(containerURI);
-            if (json == null) {
-                print("Record was not saved -- " + topContainer + "\nCan't add its locations\n");
-                continue;
-            }
-
-            print("Saving locations for top container -- " + topContainer);
-            json.put("container_locations", locations);
-
-            String instanceClassName;
-            try {
-                instanceClassName = topContainer.getInstance().getClass().getName();
-            } catch (NullPointerException e) {
-                instanceClassName = "ArchivesSpace Container";
-            }
-            String id = saveRecord(containerURI, json.toString(),
-                     instanceClassName + "->" + topContainer.getAtID());
-            if(!id.equalsIgnoreCase(NO_ID)) {
-                print("Copied Top Container " + topContainer);
-                success++;
-            } else {
-                print("Fail -- Top Container: " + topContainer);
-            }
-
-            count++;
-            updateProgress("Top Containers", total, count);
-        }
-
-        updateRecordTotals("Top Containers", total, success);
-
-        // refresh the database connection to prevent heap space error
-        freeMemory();
     }
 
     /**
@@ -291,9 +281,29 @@ public class ASpaceCopyUtil {
 
         enumUtil.setLanguageCodes(languageCodes);
         enumUtil.setNameLinkCreatorCodes(nameLinkCreatorCodes);
+        ASpaceEnumUtil.setLookupListValuesToCodes(new HashMap<String, String>());
 
         // map used when copying lookup list items to the archive space backend
         lookupListMap.put("subject term source", ASpaceClient.VOCABULARY_ENDPOINT);
+
+        //set static variables in TopContainerMapper
+        TopContainerMapper.setaSpaceCopyUtil(this);
+        TopContainerMapper.clearAlreadyAdded();
+
+        //initialize the default records to copy list with all records
+        recordsToCopy = new LinkedList<String>();
+        recordsToCopy.add("Lookup List");
+        recordsToCopy.add("Repositories");
+        recordsToCopy.add("RepositoryGroups");
+        recordsToCopy.add("Locations");
+        recordsToCopy.add("Admin User");
+        recordsToCopy.add("Users");
+        recordsToCopy.add("Subjects");
+        recordsToCopy.add("Names");
+        recordsToCopy.add("Accessions");
+        recordsToCopy.add("Digital Objects");
+        recordsToCopy.add("Resource Records");
+        recordsToCopy.add("Assessments");
 
         // start the stop watch object so we can see how long this data transfer takes
         startWatch();
@@ -403,7 +413,7 @@ public class ASpaceCopyUtil {
      *
      * @return
      */
-    public boolean getSession() {
+    public boolean getSession() throws IntentionalExitException {
         if(simulateRESTCalls) return true;
 
         boolean connected = aspaceClient.getSession();
@@ -427,6 +437,25 @@ public class ASpaceCopyUtil {
             int end = version.lastIndexOf(".");
             aspaceVersion = version.substring(0, end);
         } catch (Exception e) { }
+    }
+
+    /**
+     * prompts the user to select if they want to copy assessments or not for the case when AS version is unknown
+     */
+    public void setCopyAssessments() {
+         if (aspaceVersion.isEmpty()) {
+             String message = "Cannot determine your version of ArchivesSpace. Do you want to attempt to\n" +
+                     "copy assessments to ArchivesSpace? (This will only work with version 2.2.)";
+             while (copyAssessments == null) {
+                 int result = JOptionPane.showConfirmDialog(null, message, "Copy assessments?",
+                         JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                 if (result == JOptionPane.NO_OPTION) {
+                     copyAssessments = false;
+                 } else if (result == JOptionPane.YES_OPTION) {
+                     copyAssessments = true;
+                 }
+             }
+         }
     }
 
     /**
@@ -454,6 +483,8 @@ public class ASpaceCopyUtil {
             return;
         }
 
+        if (!recordsToCopy.contains("Lookup List")) return;
+
         ArrayList<LookupList> records = sourceRCD.getLookupLists();
 
         /* add a dummy lookup list to hold new event fields */
@@ -464,10 +495,19 @@ public class ASpaceCopyUtil {
         eventList.addListItem("rights_transferred");
         records.add(eventList);
 
+        LookupList rightsBasisList = new LookupList();
+        rightsBasisList.setListName("Rights Basis");
+        rightsBasisList.addListItem("archivists_toolkit");
+        records.add(rightsBasisList);
+
         // these are used to update the progress bar
         int total = records.size();
-        int count = 0;
-        int success = 0;
+        int count = numAttempted;
+        int success = numSuccessful;
+
+//        if (recordsToCopy.peek().equals("Lookup List")) {
+        records = new ArrayList<LookupList>(records.subList(numAttempted, total));
+//        }
 
         for (LookupList lookupList: records) {
             String listName = lookupList.getListName();
@@ -482,7 +522,7 @@ public class ASpaceCopyUtil {
                 lookupList.addListItem("ingest");
                 lookupList.addListItem("local");
             } else if(listName.equals("Container types")) {
-                lookupList.addListItem("item");
+                lookupList.addListItem("unknown_item");
             } else if(listName.equals("Resource type")) {
                 lookupList.addListItem("collection");
             } else if(listName.equals("Date type")) {
@@ -499,12 +539,19 @@ public class ASpaceCopyUtil {
                 if (!id.equalsIgnoreCase(NO_ID)) {
                     print("Copied Lookup List Values: " + lookupList.getListName() + " :: " + id);
                     success++;
+                    numSuccessful++;
                 }
             }
 
             count++;
+            numAttempted++;
             updateProgress("Lookup List", total, count);
         }
+
+        recordsToCopy.remove();
+        numAttempted = 0;
+        numSuccessful = 0;
+        saveURIMaps();
 
         // set this to be 100 percent since not all lookup will need to be migrated
         updateRecordTotals("Lookup List", total, total);
@@ -514,7 +561,7 @@ public class ASpaceCopyUtil {
     }
 
     /**
-     * Method to load the vocabularies from ASpace backend
+     * Method to load the repositories from ASpace backend
      *
      * @return
      */
@@ -534,15 +581,19 @@ public class ASpaceCopyUtil {
      * @throws Exception
      */
     public void copyRepositoryRecords() throws Exception {
+
+        if (!recordsToCopy.contains("Repositories")) return;
+
         print("Copying repository records ...");
 
         ArrayList<Repositories> records = sourceRCD.getRepositories();
 
-
         // these are used to update the progress bar
         int total = records.size();
-        int count = 0;
-        int success = 0;
+        int count = numAttempted;//0;
+        int success = numSuccessful;
+
+        records = new ArrayList<Repositories>(records.subList(numAttempted, total));
 
         for (Repositories repository : records) {
             if(stopCopy) return;
@@ -571,18 +622,28 @@ public class ASpaceCopyUtil {
                     repositoryAgentURIMap.put(uri, agentURI);
 
                     print("Copied Repository: " + repository.getShortName() + " :: " + id);
+//                    print("Mapping repository user group records for " + repository.getShortName() + "...");
+//                    mapRepositoryGroups(uri);
                     success++;
+                    numSuccessful++;
                 } else {
                     print("Fail -- Repository: " + repository.getShortName());
                 }
             } else {
                 print("Repository already in database " + shortName);
                 success++;
+                numSuccessful++;
             }
 
             count++;
+            numAttempted++;
             updateProgress("Repositories", total, count);
         }
+
+        recordsToCopy.remove();
+        numAttempted = 0;
+        numSuccessful = 0;
+        saveURIMaps();
 
         updateRecordTotals("Repositories", total, success);
     }
@@ -593,6 +654,8 @@ public class ASpaceCopyUtil {
      */
     public void mapRepositoryGroups() {
         if(simulateRESTCalls) return;
+
+        if (!recordsToCopy.contains("RepositoryGroups")) return;
 
         print("Mapping repository user group records ...");
 
@@ -626,6 +689,9 @@ public class ASpaceCopyUtil {
             }
         }
 
+        recordsToCopy.remove();
+        saveURIMaps();
+
         if(debug) {
             print("Number of groups mapped: " + repositoryGroupURIMap.size());
         }
@@ -635,14 +701,19 @@ public class ASpaceCopyUtil {
      * Method to copy the location records
      */
     public void copyLocationRecords() throws Exception {
-        print("Copying locations records ...");
-        ArrayList<Locations> records = sourceRCD.getLocations();
 
+        if (!recordsToCopy.contains("Locations")) return;
+
+        print("Copying locations records ...");
+
+        ArrayList<Locations> records = sourceRCD.getLocations();
 
         // these are used to update the progress bar and import log
         int total = records.size();
-        int count = 0;
-        int success = 0;
+        int count = numAttempted;
+        int success = numSuccessful;
+
+        records = new ArrayList<Locations>(records.subList(numAttempted, total));
 
         for (Locations location : records) {
             if(stopCopy) return;
@@ -663,6 +734,7 @@ public class ASpaceCopyUtil {
                     locationURIMap.put(location.getIdentifier(), uri);
                     print("Copied Location: " + location.getSortString() + " :: " + id);
                     success++;
+                    numSuccessful++;
                 } else {
                     print("Fail -- Location: " + location.getSortString());
                 }
@@ -671,8 +743,14 @@ public class ASpaceCopyUtil {
             }
 
             count++;
+            numAttempted++;
             updateProgress("Locations", total, count);
         }
+
+        recordsToCopy.remove();
+        numAttempted = 0;
+        numSuccessful = 0;
+        saveURIMaps();
 
         updateRecordTotals("Locations", total, success);
 
@@ -686,15 +764,23 @@ public class ASpaceCopyUtil {
      * @throws Exception
      */
     public void copyUserRecords() throws Exception {
+
+        if (!recordsToCopy.contains("Users")) return;
+
         print("Copying User records ...");
 
         ArrayList<Users> records = sourceRCD.getUsers();
 
+//        if (recordsToCopy.peek().equals("Users")) {
+//            records = new ArrayList<Users>(records.subList(numAttempted, records.size()));
+//        }
 
         // these are used to update the progress bar
         int total = records.size();
-        int count = 0;
-        int success = 0;
+        int count = numAttempted;
+        int success = numSuccessful;
+
+        records = new ArrayList<Users>(records.subList(numAttempted, total));
 
         for (Users user : records) {
             if(stopCopy) return;
@@ -721,13 +807,20 @@ public class ASpaceCopyUtil {
             if (!id.equalsIgnoreCase(NO_ID)) {
                 print("Copied User: " + user.toString() + " :: " + id);
                 success++;
+                numSuccessful++;
             } else {
                 print("Fail -- User: " + user.toString());
             }
 
             count++;
+            numAttempted++;
             updateProgress("Users", total, count);
         }
+
+        recordsToCopy.remove();
+        numAttempted = 0;
+        numSuccessful = 0;
+        saveURIMaps();
 
         updateRecordTotals("Users", total, success);
 
@@ -743,6 +836,11 @@ public class ASpaceCopyUtil {
      * @param password
      */
     public void addAdminUser(String username, String name, String password) throws Exception {
+
+        if (username == null) recordsToCopy.remove();
+
+        if (!recordsToCopy.contains("Admin User")) return;
+
         // get the administrator group uri
         String groupURI = "";
 
@@ -766,6 +864,9 @@ public class ASpaceCopyUtil {
         String id = saveRecord(ASpaceClient.USER_ENDPOINT, jsonText, params, "N/A");
 
         print("Added Admin User: " + username + " :: " + id);
+
+        recordsToCopy.remove();
+        saveURIMaps();
     }
 
     /**
@@ -810,16 +911,24 @@ public class ASpaceCopyUtil {
      * @throws Exception
      */
     public void copyNameRecords() throws Exception {
+
+        if (!recordsToCopy.contains("Names")) return;
+
         print("Copying Name records ...");
 
         ArrayList<Names> records = sourceRCD.getNames();
 
+//        if (recordsToCopy.peek().equals("Names")) {
+//            records = new ArrayList<Names>(records.subList(numAttempted, records.size()));
+//        }
 
         // these are used to update the progress bar
         int total = records.size();
-        int count = 0;
-        int success = 0;
-        int unlinkedCount = 0;
+        int count = numAttempted;
+        int success = numSuccessful;
+        int unlinkedCount = numUnlinked;
+
+        records = new ArrayList<Names>(records.subList(numAttempted, total));
 
         for (Names name : records) {
             if(stopCopy) return;
@@ -827,6 +936,9 @@ public class ASpaceCopyUtil {
             // check to see if to ignore this record if it has no links
             if(ignoreNames && name.getArchDescriptionNames().size() == 0) {
                 unlinkedCount++;
+                numUnlinked++;
+                count++;
+                numAttempted++;
                 print("Not Copying Unlinked Name: " + name);
                 continue;
             }
@@ -859,6 +971,7 @@ public class ASpaceCopyUtil {
                     nameURIMap.put(name.getIdentifier(), uri);
                     print("Copied Name: " + name + " :: " + id);
                     success++;
+                    numSuccessful++;
                 } else {
                     print("Failed -- Name: " + name);
                 }
@@ -867,10 +980,15 @@ public class ASpaceCopyUtil {
             }
 
             count++;
+            numAttempted++;
             updateProgress("Names", total, count);
         }
 
-        updateRecordTotals("Names", total, success);
+        recordsToCopy.remove();
+        numAttempted = 0;
+        numSuccessful = 0;
+
+        updateRecordTotals("Names", total, success, unlinkedCount);
 
         // add error message indicating any records that were not copied because they
         // were not linked to any other records
@@ -878,9 +996,195 @@ public class ASpaceCopyUtil {
             String unlinkMessage = "Did Not Copy " + unlinkedCount + " Unlinked Name Record(s)\n";
             addErrorMessage(unlinkMessage);
         }
+        numUnlinked = 0;
+        saveURIMaps();
 
         // refresh the database connection to prevent heap space error
         freeMemory();
+    }
+
+    public void addAssessments() throws Exception {
+
+        if (!recordsToCopy.contains("Assessments")) return;
+
+        if (aspaceVersion.contains("2.2")) {
+            System.out.println("Copying assessments ...");
+        } else if (aspaceVersion.isEmpty()) {
+            if (copyAssessments == null) setCopyAssessments();
+            if (!copyAssessments) {
+                recordsToCopy.remove();
+                return;
+            }
+            System.out.println("Unknown version of ASpace.\nAttempting to copy assessments ...");
+            print("Unknown version of ASpace ...");
+            print("Attempting to copy assessments ...");
+        } else {
+            System.out.println("ASpace version does not support assessments. Can not copy.");
+            print("ASpace version " + aspaceVersion + " does not support assessments.\nSkipping copy assessments.");
+            addErrorMessage("Can not copy assessments. ASpace version " + aspaceVersion + " does not support.");
+            recordsToCopy.remove();
+            return;
+        }
+
+        loadAssessmentAtributeDefinitions();
+
+        ArrayList<Assessments> records = sourceRCD.getAssessments();
+
+        // these are used to update the progress bar
+        int total = records.size();
+        int count = numAttempted;
+        int success = numSuccessful;
+
+        records = new ArrayList<Assessments>(records.subList(numAttempted, total));
+
+        for (Assessments assessment : records) {
+            if (stopCopy) return;
+
+            String jsonText = (String) mapper.convert(assessment);
+
+            boolean successful = true;
+
+            HashSet<Repositories> linkedRepos = new HashSet<Repositories>();
+
+            for (AssessmentsDigitalObjects digitalObject : assessment.getDigitalObjects()) {
+                linkedRepos.add(digitalObject.getDigitalObject().getRepository());
+            }
+            for (AssessmentsResources resource : assessment.getResources()) {
+                linkedRepos.add(resource.getResource().getRepository());
+            }
+            for (AssessmentsAccessions accession : assessment.getAccessions()) {
+                linkedRepos.add(accession.getAccession().getRepository());
+            }
+
+            /*
+            since the repositories of all records attached to an assessment must be the same as the assessment's
+            repository it is necessary to add a separate assessment for each linked repository
+             */
+            for (Repositories repo: linkedRepos) {
+
+                assessment.setRepository(repo);
+
+                String repoURI = getRemappedRepositoryURI("assessment", assessment.getIdentifier(), assessment.getRepository());
+                String uri = repoURI + ASpaceClient.ASSESSMENT_ENDPOINT;
+
+                String repoJSON = mapper.addAssessmentsRecords(jsonText, assessment);
+//                String jsonText = (String) mapper.convert(assessment);
+                if (jsonText != null) {
+                    String id = saveRecord(uri, repoJSON, "Assessment->" + assessment.getAssessmentId());
+
+                    if(!id.equalsIgnoreCase(NO_ID)) {
+                        uri = uri + "/" + id;
+                        assessmentURIMap.put(assessment.getIdentifier(), uri);
+                        print("Copied Assessment: " + assessment + " :: " + id);
+//                        success++;
+//                        numSuccessful++;
+                    } else {
+                        print("Fail -- Assessment: " + assessment);
+                        successful = false;
+                    }
+                } else {
+                    print("Fail -- Assessment to JSON: " + assessment);
+                    successful = false;
+                }
+            }
+
+            if (successful) {
+                success++;
+                numSuccessful++;
+            }
+
+            count++;
+            numAttempted++;
+            updateProgress("Assessments", total, count);
+        }
+
+        recordsToCopy.remove();
+        numAttempted = 0;
+        numSuccessful = 0;
+        saveURIMaps();
+
+        updateRecordTotals("Assessments", total, success);
+
+        // refresh the database connection to prevent heap space error
+        freeMemory();
+    }
+
+    // when an assessment attribute definition is added this is how to know what id it was assigned
+    private int nextAssesAttrDefnID = 1;
+
+    /**
+     * loads the default assessment attribute definitions from ASpace (as well as any other existing to be safe)
+     * @throws Exception
+     */
+    private void loadAssessmentAtributeDefinitions() throws Exception {
+        boolean globalSet = false;
+
+        //first add all the repo URIs to an array list so that the admin repo is first in the loop
+        ArrayList<String> repos = new ArrayList<String>();
+        repos.add(ASpaceClient.ADMIN_REPOSITORY_ENDPOINT);
+        repos.addAll(repositoryURIMap.values());
+
+        for (String repoURI: repos) {
+
+            //admin repo will be in repos twice so skip it the second time
+            if (repoURI.equals(ASpaceClient.ADMIN_REPOSITORY_ENDPOINT)) {
+                if (globalSet) continue;
+                globalSet = true;
+            }
+
+            //add the repository and have it map to an empty hash map that will store its definitions
+            assessmentAttributeDefinitions.put(repoURI, new HashMap<String, Integer>());
+
+            //get the definitions from ASpace and add each one to that repo's hashmap (label and type map to id)
+            JSONObject result = new JSONObject(aspaceClient.get(repoURI + ASpaceClient.ASSESSMENT_ATTR_DEFNS_ENDPOINT, null));
+            JSONArray definitionsJA = (JSONArray) result.get("definitions");
+            for (int i = 0; i < definitionsJA.length(); i++) {
+                JSONObject definitionJS = (JSONObject) definitionsJA.get(i);
+                String key = definitionJS.get("label").toString() + " - " + definitionJS.get("type").toString();
+                //don't need to add it if its already in the global map
+                if (!assessmentAttributeDefinitions.get(ASpaceClient.ADMIN_REPOSITORY_ENDPOINT).containsKey(key)) {
+                    assessmentAttributeDefinitions.get(repoURI).put(key, (Integer) definitionJS.get("id"));
+                    nextAssesAttrDefnID++;
+                }
+            }
+        }
+    }
+
+    /**
+     * gets the mapping for a assessment attribute definition if it already exists. Otherwise adds the definition
+     * @param repo
+     * @param label
+     * @param type
+     * @return
+     */
+    public Integer getAssessmentAttributeID(Repositories repo, String label, String type) throws Exception {
+        Integer id;
+        String key = label + " - " + type;
+
+        //first see if it is in the global assessment attributes list
+        id = assessmentAttributeDefinitions.get(aspaceClient.ADMIN_REPOSITORY_ENDPOINT).get(key);
+        if (id != null) return id;
+
+        //next see if it is in the repository specific assessment attributes list
+        String repoURI = repositoryURIMap.get(repo.getShortName());
+        id = assessmentAttributeDefinitions.get(repoURI).get(key);
+        if (id != null) return id;
+
+        //otherwise add it to the repository assessment attributes list
+        JSONObject defn = new JSONObject();
+        defn.put("label", label);
+        defn.put("type", type);
+        JSONObject previous = new JSONObject(aspaceClient.get(repoURI + aspaceClient.ASSESSMENT_ATTR_DEFNS_ENDPOINT,
+                null));
+        JSONArray previousJA = (JSONArray) previous.get("definitions");
+        id = nextAssesAttrDefnID++;
+        previousJA.put(defn);
+        JSONObject json = new JSONObject();
+        json.put("definitions", previousJA);
+        saveRecord(repoURI + aspaceClient.ASSESSMENT_ATTR_DEFNS_ENDPOINT, json.toString(),
+                "Assessment Attributes->" + type);
+        assessmentAttributeDefinitions.get(repoURI).put(key, id);
+        return id;
     }
 
     /**
@@ -889,15 +1193,24 @@ public class ASpaceCopyUtil {
      * @throws Exception
      */
     public void copySubjectRecords() throws Exception {
+
+        if (!recordsToCopy.contains("Subjects")) return;
+
         print("Copying Subject records ...");
 
         ArrayList<Subjects> records = sourceRCD.getSubjects();
 
+//        if (recordsToCopy.peek().equals("Subjects")) {
+//            records = new ArrayList<Subjects>(records.subList(numAttempted, records.size()));
+//        }
+
         // these are used to update the progress bar
         int total = records.size();
-        int count = 0;
-        int success = 0;
-        int unlinkedCount = 0;
+        int count = numAttempted;
+        int success = numSuccessful;
+        int unlinkedCount = numUnlinked;
+
+        records = new ArrayList<Subjects>(records.subList(numAttempted, total));
 
         for (Subjects subject : records) {
             if(stopCopy) return;
@@ -905,6 +1218,9 @@ public class ASpaceCopyUtil {
             // check to see if to ignore this record if it has no links
             if(ignoreSubjects && subject.getArchDescriptionSubjects().size() == 0) {
                 unlinkedCount++;
+                numUnlinked++;
+                count++;
+                numAttempted++;
                 print("Not Copying Unlinked Subject: " + subject);
                 continue;
             }
@@ -915,27 +1231,54 @@ public class ASpaceCopyUtil {
                 continue;
             }
 
-            String jsonText = (String) mapper.convert(subject);
+            String jsonText;
+            String otherURIMapKey = subject.getSubjectTerm() + " " + enumUtil.getASpaceSubjectSource(subject.getSubjectSource())[0];
+            String uri;
+            boolean alreadyExists = otherSubjectURIMap.containsKey(otherURIMapKey);
+
+            if (alreadyExists) {
+                uri = otherSubjectURIMap.get(otherURIMapKey);
+                try {
+                    JSONObject json = getRecord(uri);
+                    json = mapper.addSubjectTerm(subject, json);
+                    jsonText = json.toString();
+                } catch (NullPointerException e) {
+                    jsonText = (String) mapper.convert(subject);
+                    uri = ASpaceClient.SUBJECT_ENDPOINT;
+                }
+            } else {
+                jsonText = (String) mapper.convert(subject);
+                uri = ASpaceClient.SUBJECT_ENDPOINT;
+            }
+
             if (jsonText != null) {
-                String id = saveRecord(ASpaceClient.SUBJECT_ENDPOINT, jsonText, "Subject->" + subject.getSubjectTerm());
+                String id = saveRecord(uri, jsonText, "Subject->" + subject.getSubjectTerm());
 
                 if(!id.equalsIgnoreCase(NO_ID)) {
-                    String uri = ASpaceClient.SUBJECT_ENDPOINT + "/" + id;
+                    if (!alreadyExists) uri = ASpaceClient.SUBJECT_ENDPOINT + "/" + id;
                     subjectURIMap.put(subject.getIdentifier(), uri);
+                    if (!alreadyExists) otherSubjectURIMap.put(otherURIMapKey, uri);
                     print("Copied Subject: " + subject + " :: " + id);
                     success++;
+                    numSuccessful++;
                 } else {
                     print("Fail -- Subject: " + subject);
                 }
             } else {
+
                 print("Fail -- Subject to JSON: " + subject);
             }
 
             count++;
+            numAttempted++;
             updateProgress("Subjects", total, count);
         }
 
-        updateRecordTotals("Subjects", total, success);
+        recordsToCopy.remove();
+        numAttempted = 0;
+        numSuccessful = 0;
+
+        updateRecordTotals("Subjects", total, success, unlinkedCount);
 
         // add error message indicating any records that were not copied because they
         // were not linked to any other records
@@ -943,6 +1286,8 @@ public class ASpaceCopyUtil {
             String unlinkMessage = "Did Not Copy " + unlinkedCount + " Unlinked Subject Record(s)\n";
             addErrorMessage(unlinkMessage);
         }
+        numUnlinked = 0;
+        saveURIMaps();
 
         // refresh the database connection to prevent heap space error
         freeMemory();
@@ -954,14 +1299,25 @@ public class ASpaceCopyUtil {
      * @throws Exception
      */
     public void copyAccessionRecords() throws Exception {
+
+        if (!recordsToCopy.contains("Accessions")) return;
+
         print("Copying Accession records ...");
 
         ArrayList<Accessions> records = sourceRCD.getAccessions();
 
+//        if (recordsToCopy.peek().equals("Accessions")) {
+//            records = new ArrayList<Accessions>(records.subList(numAttempted, records.size()));
+//        }
+
         // these are used to update the progress bar
         int total = records.size();
-        int count = 0;
-        int success = 0;
+        int count = numAttempted;
+        int success = numSuccessful;
+
+        records = new ArrayList<Accessions>(records.subList(numAttempted, total));
+
+//        updateProgress("Accessions", total, count);
 
         for (Accessions accession : records) {
             if(stopCopy) return;
@@ -998,6 +1354,7 @@ public class ASpaceCopyUtil {
                     accessionURIMap.put(accession.getIdentifier(), uri);
                     print("Copied Accession: " + accession.getTitle() + " :: " + id);
                     success++;
+                    numSuccessful++;
                 } else {
                     print("Fail -- Accession: " + accession.getTitle());
                 }
@@ -1006,8 +1363,14 @@ public class ASpaceCopyUtil {
             }
 
             count++;
+            numAttempted++;
             updateProgress("Accessions", total, count);
         }
+
+        recordsToCopy.remove();
+        numAttempted = 0;
+        numSuccessful = 0;
+        saveURIMaps();
 
         updateRecordTotals("Accessions", total, success);
 
@@ -1070,14 +1433,23 @@ public class ASpaceCopyUtil {
      * @throws Exception
      */
     public void copyDigitalObjectRecords() throws Exception {
+
+        if (!recordsToCopy.contains("Digital Objects")) return;
+
         print("Copying Digital Object records ...");
 
         ArrayList<DigitalObjects> records = sourceRCD.getDigitalObjects();
 
+//        if (recordsToCopy.peek().equals("Digital Objects")) {
+//            records = new ArrayList<DigitalObjects>(records.subList(numAttempted, records.size()));
+//        }
+
         // these are used to update the progress bar
         int total = records.size();
-        int count = 0;
-        int success = 0;
+        int count = numAttempted;
+        int success = numSuccessful;
+
+        records = new ArrayList<DigitalObjects>(records.subList(numAttempted, total));
 
         for (DigitalObjects digitalObject : records) {
             if(stopCopy) return;
@@ -1150,6 +1522,7 @@ public class ASpaceCopyUtil {
 
                     print("Copied Digital Object: " + digitalObject.getTitle() + " :: " + id);
                     success++;
+                    numSuccessful++;
                 } else {
                     print("Fail -- Digital Object: " + digitalObject.getTitle());
                 }
@@ -1158,8 +1531,14 @@ public class ASpaceCopyUtil {
             }
 
             count++;
+            numAttempted++;
             updateProgress("Digital Objects", total, count);
         }
+
+        recordsToCopy.remove();
+        numAttempted = 0;
+        numSuccessful = 0;
+        saveURIMaps();
 
         updateRecordTotals("Digital Objects", total, success);
 
@@ -1226,26 +1605,36 @@ public class ASpaceCopyUtil {
      * @param threads
      */
     public void copyResourceRecords(int max, int threads) throws Exception {
+
         if (!enumsSet) mapper.setASpaceDynamicEnums(aspaceClient.loadDynamicEnums());
         enumsSet = true;
 
         currentRecordType = "Resource Record";
 
         // first delete previously saved resource records if that option was selected by user
-        if(deleteSavedResources) {
-            deleteSavedResources();
-        }
+//        if(deleteSavedResources) {
+//            deleteSavedResources();
+//        }
+
+        if (!recordsToCopy.contains("Resource Records")) return;
 
         ArrayList<Resources> records = sourceRCD.getResources();
 
+//        if (recordsToCopy.peek().equals("Resource Records")) {
+//            records = new ArrayList<Resources>(records.subList(numAttempted, records.size()));
+//        }
 
-        print("Copying " + records.size() + " Resource records ...");
+//        print("Copying " + records.size() + " Resource records ...");
 
-        copyCount = 0; // keep track of the number of resource records copied
+        copyCount = 0;//numSuccessful; // keep track of the number of resource records copied
 
         // these are used to update the progress bar
         int total = records.size();
-        int count = 0;
+        int count = 0;//numAttempted;
+
+//        records = new ArrayList<Resources>(records.subList(numAttempted, total));
+
+        print("Copying " + records.size() + " Resource records ...");
 
         // if we in debug mode, then set total to max
         if(debug && max < total) total = max;
@@ -1400,10 +1789,11 @@ public class ASpaceCopyUtil {
                         if(threads == 1) {
                             String bids = saveRecord(batchEndpoint, batchJA.toString(2), atId);
 
-                            if(!bids.equals(NO_ID)) {
+                            if(!bids.equals(NO_ID) && bids.length() != 0) {
                                 if(!simulateRESTCalls) {
                                     JSONObject bidsJS = new JSONObject(bids);
                                     resourceURI = (new JSONArray(bidsJS.getString(resourceURI))).getString(0);
+
                                 }
 
                                 print("Batch Copied Resource: " + resourceTitle + " :: " + resourceURI);
@@ -1440,7 +1830,14 @@ public class ASpaceCopyUtil {
             if(!useBatchImport) {
                 freeMemory();
             }
+
+            if (!simulateRESTCalls) numAttempted++;
         }
+
+        if (!simulateRESTCalls) recordsToCopy.remove();
+        numAttempted = 0;
+        numSuccessful = 0;
+        if (!simulateRESTCalls) saveURIMaps();
 
         // wait for any threads to finish before returning if we running more than one
         // thread to copy
@@ -1894,44 +2291,7 @@ public class ASpaceCopyUtil {
      */
     private synchronized void incrementCopyCount() {
         copyCount++;
-    }
-
-    /**
-     * Method to delete any previously saved resource records on the ASpace backend.
-     * Useful for testing purposes, but not much else
-     */
-    private void deleteSavedResources() {
-        print("\nNumber of Resources to Delete: " + resourceURIMap.size());
-        ArrayList<Long> deletedKeys = new ArrayList<Long>();
-
-        // initialize the progress bar
-        updateProgress("Resource", resourceURIMap.size(), -1);
-
-        int count = 1;
-        for(Long key: resourceURIMap.keySet()) {
-            try {
-                String uri = resourceURIMap.get(key);
-                print("Deleting Resource: " + uri);
-
-                String message = aspaceClient.deleteRecord(uri);
-                print(message + "\n");
-                deletedKeys.add(key);
-
-                // update the progress bar
-                updateProgress("Resource", 0, count);
-                count++;
-            } catch (Exception e) {
-                e.printStackTrace();
-                print("Error deleting ... \n" + e.getMessage());
-            }
-        }
-
-        // remove the deleted keys now, since we can't modify a
-        // hashmap while we still iterating over it
-        for(Long key: deletedKeys) {
-            resourceURIMap.remove(key);
-        }
-
+        if (!simulateRESTCalls) numSuccessful++;
     }
 
     /**
@@ -1986,7 +2346,7 @@ public class ASpaceCopyUtil {
      * @param endpoint to make post to
      * @param jsonText record
      */
-    public synchronized String saveRecord(String endpoint, String jsonText, String atId) {
+    public synchronized String saveRecord(String endpoint, String jsonText, String atId) throws IntentionalExitException {
         return saveRecord(endpoint, jsonText, null, atId);
     }
 
@@ -1998,25 +2358,27 @@ public class ASpaceCopyUtil {
      * @param jsonText record
      * @param params   parameters to pass to service
      */
-    public synchronized String saveRecord(String endpoint, String jsonText, NameValuePair[] params, String atId) {
+    public synchronized String saveRecord(String endpoint, String jsonText, NameValuePair[] params, String atId) throws IntentionalExitException {
 
         String id = NO_ID;
 
         try {
             // Make sure we don't try to print out a batch import record since they can
             // be thousands of lines long
-            if(endpoint.contains(ASpaceClient.BATCH_IMPORT_ENDPOINT)) {
+            if (endpoint.contains(ASpaceClient.BATCH_IMPORT_ENDPOINT)) {
                 print("Route: " + endpoint + "\nBatch Record Length: " + jsonText.length() + " bytes");
             } else {
                 print("Route: " + endpoint + "\n" + jsonText);
             }
 
-            if(simulateRESTCalls) {
+            if (simulateRESTCalls) {
                 id = "10000001";
                 Thread.sleep(2);
             } else {
                 id = aspaceClient.post(endpoint, jsonText, params, atId);
             }
+        } catch (IntentionalExitException e) {
+            throw e;
         } catch (Exception e) {
             if(endpoint.contains(ASpaceClient.BATCH_IMPORT_ENDPOINT)) {
                 print("Error saving batch import record ...");
@@ -2096,7 +2458,7 @@ public class ASpaceCopyUtil {
             progressBar.setMinimum(0);
             progressBar.setMaximum(1);
             progressBar.setString("Loading " + recordType);
-        } else if(count == 1) {
+        } else if(count >= 1) {
             progressBar.setMinimum(0);
             progressBar.setMaximum(total);
 
@@ -2117,20 +2479,21 @@ public class ASpaceCopyUtil {
      * @param total
      * @param success
      */
-    private synchronized void updateRecordTotals(String recordType, int total, int success) {
+    private synchronized void updateRecordTotals(String recordType, int total, int success, int unlinkedCount) {
         float percent = (new Float(success)/new Float(total))*100.0f;
-        String info = recordType + " : " + success + " / " + total + " (" + String.format("%.2f", percent) + "%)";
+        String unlinkedMessage = "";
+        if (unlinkedCount != 0) unlinkedMessage += " ---" + unlinkedCount + " unlinked--- ";
+        String info = recordType + " : " + success + " / " + total + unlinkedMessage + " (" + String.format("%.2f", percent) + "%)";
 
         if (recordType.equals("Resource Records") && recordTotals.size() > 8) {
             recordTotals.set(8, info);
         } else {
             recordTotals.add(info);
         }
-//        if(recordTotals.size() <= 8) {
-//            recordTotals.add(info);
-//        } else {
-//            recordTotals.set(8, info);
-//        }
+    }
+
+    private synchronized void updateRecordTotals(String recordType, int total, int success) {
+        updateRecordTotals(recordType, total, success, 0);
     }
 
     /**
@@ -2265,6 +2628,9 @@ public class ASpaceCopyUtil {
      * Method to do certain task after the copy has completed
      */
     public void cleanUp() {
+
+        saveURIMaps();
+
         copying = false;
 
         aspaceClient.startIndexer();
@@ -2346,23 +2712,51 @@ public class ASpaceCopyUtil {
      * Method to save the URI maps to a binary file
      */
     public void saveURIMaps() {
+
+        if (simulateRESTCalls) return;
+
         HashMap uriMap = new HashMap();
+
+        uriMap.put(REPOSITORY_KEY, repositoryURIMap);
+        uriMap.put(REPOSITORY_MISMATCH_KEY, repositoryMismatchMap);
+        uriMap.put(REPOSITORY_AGENT_KEY, repositoryAgentURIMap);
+
+        HashMap<String, String> repoGroups = new HashMap<String, String>();
+        for (String key: repositoryGroupURIMap.keySet()) {
+            repoGroups.put(key, repositoryGroupURIMap.get(key).toString());
+        }
+        uriMap.put(REPOSITORY_GROUP_KEY, repoGroups);
 
         // only save maps we are going to need,
         // or we not generating from ASpace backend data
         uriMap.put(LOCATION_KEY, locationURIMap);
         uriMap.put(SUBJECT_KEY, subjectURIMap);
+        uriMap.put(OTHER_SUBJECT_KEY, otherSubjectURIMap);
         uriMap.put(NAME_KEY, nameURIMap);
         uriMap.put(ACCESSION_KEY, accessionURIMap);
         uriMap.put(DIGITAL_OBJECT_KEY, digitalObjectURIMap);
         uriMap.put(RESOURCE_KEY, resourceURIMap);
+        uriMap.put(ASSESSMENT_KEY, assessmentURIMap);
+
+        uriMap.put(TOP_CONTAINER_KEY, TopContainerMapper.getAlreadyAddedStringForm());
 
         // store the record totals array list here also
         uriMap.put(RECORD_TOTAL_KEY, recordTotals);
 
+        HashMap<String, Serializable> progress = new HashMap<String, Serializable>();
+        progress.put("records_to_copy", recordsToCopy);
+        progress.put("number_attempted", numAttempted);
+        progress.put("number_successful", numSuccessful);
+        progress.put("number_unlinked", numUnlinked);
+        uriMap.put(RECORD_ATTEMPTED_KEY, progress);
+
         if(repositoryMismatchMap != null) {
             uriMap.put(REPOSITORY_MISMATCH_KEY, repositoryMismatchMap);
         }
+
+        uriMap.put("IDs", mapper.getIDs());
+
+        uriMap.put(LOOKUP_LIST_VALUES_TO_CODES_KEY, enumUtil.getLookupListValuesToCodes());
 
         // save to file system now
         print("\nSaving URI Maps ...");
@@ -2383,15 +2777,42 @@ public class ASpaceCopyUtil {
 
             locationURIMap = (HashMap<Long,String>)uriMap.get(LOCATION_KEY);
             subjectURIMap = (HashMap<Long,String>)uriMap.get(SUBJECT_KEY);
+            otherSubjectURIMap = (HashMap<String, String>)uriMap.get(OTHER_SUBJECT_KEY);
             nameURIMap = (HashMap<Long,String>)uriMap.get(NAME_KEY);
             accessionURIMap = (HashMap<Long,String>)uriMap.get(ACCESSION_KEY);
             digitalObjectURIMap = (HashMap<Long,String>)uriMap.get(DIGITAL_OBJECT_KEY);
             resourceURIMap = (HashMap<Long,String>)uriMap.get(RESOURCE_KEY);
+            assessmentURIMap = (HashMap<Long,String>)uriMap.get(ASSESSMENT_KEY);
+            repositoryURIMap = (HashMap<String, String>)uriMap.get(REPOSITORY_KEY);
+            repositoryAgentURIMap = (HashMap<String, String>)uriMap.get(REPOSITORY_AGENT_KEY);
+
+            HashMap<String, String> repoGroupMap = (HashMap<String, String>)uriMap.get(REPOSITORY_GROUP_KEY);
+            for (String key: repoGroupMap.keySet()) {
+                repositoryGroupURIMap.put(key, new JSONObject(repoGroupMap.get(key)));
+            }
+
+            TopContainerMapper.setAlreadyAdded((HashMap<String, String>) uriMap.get(TOP_CONTAINER_KEY));
+
+            HashMap<String, Serializable> progress = (HashMap<String, Serializable>)uriMap.get(RECORD_ATTEMPTED_KEY);
+            LinkedList<String> saved = (LinkedList<String>) progress.get("records_to_copy");
+            if (saved != null) recordsToCopy = saved;
+            Integer numAttemptedInteger = (Integer) progress.get("number_attempted");
+            if (numAttemptedInteger != null) numAttempted = numAttemptedInteger;
+            Integer numSuccessfulInteger = (Integer) progress.get("number_successful");
+            if (numSuccessfulInteger != null) numSuccessful = numSuccessfulInteger;
+            Integer numUnlinkedInteger = (Integer) progress.get("number_unlinked");
+            if (numUnlinkedInteger != null) numUnlinked = numUnlinkedInteger;
 
             // load the repository mismatch map if its not null
             if(uriMap.containsKey(REPOSITORY_MISMATCH_KEY)) {
                 repositoryMismatchMap = (HashMap<String,String>)uriMap.get(REPOSITORY_MISMATCH_KEY);
             }
+
+            HashMap<String, HashSet<String>> iDs = (HashMap<String, HashSet<String>>) uriMap.get("IDs");
+            mapper.setIDs(iDs);
+
+            HashMap<String, String> lookupListCodes = (HashMap<String, String>) uriMap.get(LOOKUP_LIST_VALUES_TO_CODES_KEY);
+            enumUtil.setLookupListValuesToCodes(lookupListCodes);
 
             // load the record totals so far
             if(uriMap.containsKey(RECORD_TOTAL_KEY)) {
@@ -2459,15 +2880,6 @@ public class ASpaceCopyUtil {
      */
     public void setUseBatchImport(boolean useBatchImport) {
         this.useBatchImport = useBatchImport;
-    }
-
-    /**
-     * Method to specify whether to delete the save resources.
-     *
-     * @param deleteSavedResources
-     */
-    public void setDeleteSavedResources(boolean deleteSavedResources) {
-        this.deleteSavedResources = deleteSavedResources;
     }
 
     /**

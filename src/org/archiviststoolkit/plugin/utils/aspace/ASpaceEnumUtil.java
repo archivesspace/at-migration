@@ -28,7 +28,15 @@ public class ASpaceEnumUtil {
     private static HashMap<String, JSONObject> dynamicEnums;
 
     // Hash map that maps AT values to AT codes
-    private HashMap<String, String> lookupListValuesToCodes = new HashMap<String, String>();
+    private static HashMap<String, String> lookupListValuesToCodes = new HashMap<String, String>();
+
+    public static HashMap<String, String> getLookupListValuesToCodes() {
+        return lookupListValuesToCodes;
+    }
+
+    public static void setLookupListValuesToCodes(HashMap<String, String> lookupListValuesToCodes) {
+        ASpaceEnumUtil.lookupListValuesToCodes = lookupListValuesToCodes;
+    }
 
     // Array list that hold values that are currently in the ASpace backend
     // They is needed, because for some reason, there are values in the AT records
@@ -38,8 +46,6 @@ public class ASpaceEnumUtil {
 
     // A trying that is used to bypass
     public final static String UNMAPPED = "other_unmapped";
-
-    public boolean returnATValue = true; // set this to return the AR value instead of UNMAPPED
 
     /**
      * Method to set the language code hash map
@@ -77,6 +83,8 @@ public class ASpaceEnumUtil {
 
         String code;
 
+        code = lookupListValuesToCodes.get(atValue);
+
         atValue = atValue.toLowerCase();
 
         if(atValue.contains("art & architecture thesaurus")) {
@@ -87,16 +95,17 @@ public class ASpaceEnumUtil {
             code = "tgn";
         } else if (atValue.contains("library of congress subject headings")) {
             code = "lcsh";
-        } else if (atValue.contains("local")) {
+        } else if (atValue.equals("local")) {
             code = "local";
         } else if (atValue.contains("medical subject headings")) {
             code = "mesh";
         } else if (atValue.contains("thesaurus for graphic materials")) {
             code =  "gmgpc";
         } else {
-            code = lookupListValuesToCodes.get(atValue);
-            if (code == null) code = "local";
+            if (code == null || code.isEmpty()) code = "local";
+            else code = code.replace(".", "");
         }
+
         return getASpaceEnumValue("subject_source", code);
     }
 
@@ -108,8 +117,8 @@ public class ASpaceEnumUtil {
      */
     public Object[] getASpaceNameSource(String atValue) {
 
-        atValue = atValue.toLowerCase();
         if (atValue == null || atValue.trim().isEmpty()) atValue = "local";
+        atValue = atValue.toLowerCase();
 
         if(atValue.contains("naco")) {
             atValue = "naf";
@@ -129,6 +138,7 @@ public class ASpaceEnumUtil {
      */
     public Object[] getASpaceNameOrder(Boolean directOrder) {
         String atValue;
+        if (directOrder == null) {directOrder = true;}
         if(directOrder) {
             atValue = "direct";
         } else {
@@ -219,19 +229,20 @@ public class ASpaceEnumUtil {
     }
 
     /**
-     * map the date uncertainty
+     * map the date certainty
      *
      * @param archDescriptionDate
      * @return
      */
     public Object[] getASpaceDateCertainty(ArchDescriptionDates archDescriptionDate) {
-        String atValue;
-        if(archDescriptionDate != null && archDescriptionDate.getCertainty() != null &&  archDescriptionDate.getCertainty()) {
-            atValue = "inferred";
-        } else {
-            atValue = "questionable";
+        String atValue = null;
+        if(archDescriptionDate != null && archDescriptionDate.getCertainty() != null &&  !archDescriptionDate.getCertainty()) {
+            atValue = "approximate";
         }
-        return getASpaceEnumValue("date_certainty", atValue, false, "questionable");
+//        } else {
+//            atValue = "questionable";
+//        }
+        return getASpaceEnumValue("date_certainty", atValue, false, null);
     }
 
     /**
@@ -461,7 +472,12 @@ public class ASpaceEnumUtil {
         } else if(atValue.contains("physical facet")) {
             atValue = "physfacet";
         }
-        return getASpaceEnumValue(enumName, atValue, false, defaultValue);
+        Object[] value = getASpaceEnumValue(enumName, atValue, false, defaultValue);
+        if (value[0].equals(defaultValue)) {
+            Object[] multiValue = getASpaceMultiPartNoteType(atValue);
+            if (!(multiValue[0] == null || multiValue[0].equals("odd"))) value = multiValue;
+        }
+        return value;
     }
 
     /**
@@ -568,21 +584,27 @@ public class ASpaceEnumUtil {
     /**
      * Method to return the equivalent ASpace instance container type
      *
-     * if statements with "&& returnATValue" should really be removed, but depending on if the
-     * enum is ASpace is expanded then this will save some work
-     *
      * @param atValue
      * @return
      */
     public Object[] getASpaceInstanceContainerType(String atValue) {
-        if(atValue == null || atValue.trim().isEmpty()) {
-            atValue = "item";
-        }
         return getASpaceEnumValue("container_type", atValue);
     }
 
     /**
-     * Method to get the ASpace type
+     * if it is a sub-container the type can not be empty - corrects these
+     * @param atValue
+     * @return
+     */
+    public Object[] getASpaceSubContainerType(String atValue) {
+        if(atValue == null || atValue.trim().isEmpty()) {
+            atValue = "unknown_item";
+        }
+        return getASpaceInstanceContainerType(atValue);
+    }
+
+    /**
+     * Method to get the ASpace accession_acquisition_type
      *
      * @param atValue
      * @return
@@ -592,7 +614,7 @@ public class ASpaceEnumUtil {
     }
 
     /**
-     * Method to return the AccessionResourceType
+     * Method to return the accession_resource_type
      *
      * @param atValue
      * @return
@@ -600,6 +622,11 @@ public class ASpaceEnumUtil {
     public Object[] getASpaceAccessionResourceType(String atValue) {
         if(atValue == null || atValue.isEmpty()) atValue = "collection";
         return getASpaceEnumValue("accession_resource_type", atValue);
+    }
+
+    public Object[] getASpaceRightsBasis(String atValue) {
+        if (atValue == null || atValue.isEmpty()) atValue = "archivists_toolkit";
+        return getASpaceEnumValue("rights_statement_other_rights_basis", atValue);
     }
 
     /**
@@ -676,12 +703,20 @@ public class ASpaceEnumUtil {
             return dynamicEnums.get("subject_source");
         } else if (listName.equalsIgnoreCase("File use attributes")) {
             return dynamicEnums.get("file_version_use_statement");
+        } else if (listName.equalsIgnoreCase("Rights Basis")) {
+            return dynamicEnums.get("rights_statement_other_rights_basis");
         } else {
             return null;
         }
     }
 
-    public Object[] getASpaceEnumValue(String enumListName, String atValue) {
+    /**
+     * for configurable enum lists
+     * @param enumListName
+     * @param atValue
+     * @return
+     */
+    private Object[] getASpaceEnumValue(String enumListName, String atValue) {
         return getASpaceEnumValue(enumListName, atValue, true, null);
     }
 
@@ -693,35 +728,43 @@ public class ASpaceEnumUtil {
      * @param defaultValue
      * @return
      */
-    public Object[] getASpaceEnumValue(String enumListName, String atValue, boolean returnATValue, String defaultValue) {
+    private Object[] getASpaceEnumValue(String enumListName, String atValue, boolean returnATValue, String defaultValue) {
+        //this really shouldn't occur but is here as a safety measure
         if (dynamicEnums == null) {
             return new Object[]{null, false};
             }
+
+        //if value is null go ahead and return it
         if (atValue == null) {
             return new Object[]{null, false};
         }
+
+        //convert AT value to typical ASpace enum format
         atValue = atValue.trim().toLowerCase();
-        if (atValue.contains(" ")) {
-            StringBuilder newAtValue = new StringBuilder();
-            for (int i = 0; i < atValue.length(); i++) {
-                char ch = atValue.charAt(i);
-                if (ch == ' ') {
-                    ch = '_';
-                }
-                newAtValue.append(ch);
-            }
-            atValue = newAtValue.toString();
-        }
+        atValue = atValue.replace(" ", "_");
+
         try {
+            //if there is a value in ASpace that matches return this and true
             JSONArray enumValues = dynamicEnums.get(enumListName).getJSONArray("values");
             for (int i = 0; i < enumValues.length(); i++) {
                 String value = enumValues.getString(i);
                 if (value.equalsIgnoreCase(atValue)) return new Object[]{value, true};
             }
+            if (!returnATValue) {
+                for (int i = 0; i < enumValues.length(); i++) {
+                    String value = enumValues.getString(i);
+                    if (atValue.contains(value) || value.contains(atValue)) return new Object[]{value, true};
+                }
+            }
+
+            //if there is no matching value in ASpace but the list is configurable return the value from AT and false
             if (returnATValue) {
                 return new Object[]{atValue, false};
             }
+
+            //otherwise try to return the defalt value
             return getASpaceEnumValue(enumListName, defaultValue, returnATValue, null);
+
         } catch (JSONException e) {
             e.printStackTrace();
             return new Object[]{null, false};
@@ -781,6 +824,8 @@ public class ASpaceEnumUtil {
             mappedValue = getASpaceSubjectSource(atValue);
         } else if(enumListName.equals("file_version_use_statement")) {
             mappedValue = getASpaceFileVersionUseStatement(atValue);
+        } else  if (enumListName.equals("rights_statement_other_rights_basis")) {
+            mappedValue = getASpaceRightsBasis(atValue);
         } else {
             mappedValue = new Object[]{null, false};
         }

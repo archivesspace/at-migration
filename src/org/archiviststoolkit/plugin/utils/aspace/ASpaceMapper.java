@@ -24,6 +24,7 @@ public class ASpaceMapper {
     // String used when mapping AT access class to groups
     public static final String ACCESS_CLASS_PREFIX = "_AccessClass_";
 
+    //default date for use when no other date is available
     public static final Date DEFAULT_DATE = new Date(0, 0, 1);
 
     // The utility class used to map to ASpace Enums
@@ -40,10 +41,34 @@ public class ASpaceMapper {
 
     // these store the ids of all accessions, resources, and digital objects loaded so we can
     // check for uniqueness before copying them to the ASpace backend
-    private ArrayList<String> digitalObjectIDs = new ArrayList<String>();
-    private ArrayList<String> accessionIDs = new ArrayList<String>();
-    private ArrayList<String> resourceIDs = new ArrayList<String>();
-    private ArrayList<String> eadIDs = new ArrayList<String>();
+    private HashSet<String> digitalObjectIDs = new HashSet<String>();
+    private HashSet<String> accessionIDs = new HashSet<String>();
+    private HashSet<String> resourceIDs = new HashSet<String>();
+    private HashSet<String> eadIDs = new HashSet<String>();
+
+    /**
+     * sets the IDs that are already in use
+     * @param iDs
+     */
+    public void setIDs(HashMap<String, HashSet<String>> iDs) {
+        digitalObjectIDs = iDs.get("digital object");
+        accessionIDs = iDs.get("accession");
+        resourceIDs = iDs.get("resource");
+        eadIDs = iDs.get("ead");
+    }
+
+    /**
+     * gets the IDs that are already in use
+     * @return a hash map where the keys are the types of IDs
+     */
+    public HashMap<String, HashSet<String>> getIDs() {
+        HashMap<String, HashSet<String>> iDs = new HashMap<String, HashSet<String>>();
+        iDs.put("digital object", digitalObjectIDs);
+        iDs.put("accession", accessionIDs);
+        iDs.put("resource", resourceIDs);
+        iDs.put("ead", eadIDs);
+        return iDs;
+    }
 
     // variable names in bean shell script that will indicate whether it can override
     // the default mapping operation with itself
@@ -99,6 +124,7 @@ public class ASpaceMapper {
     // string builder used for finding bad dates
     private ArrayList<String> datesList = null;
     private boolean checkISODates = false;
+    private JSONArray unknownName;
 
     /**
      *  Main constructor
@@ -201,6 +227,8 @@ public class ASpaceMapper {
             return convertResourceComponent((ResourcesComponents) record);
         } else if (record instanceof DigitalObjects) {
             return convertDigitalObject((DigitalObjects) record);
+        } else if (record instanceof Assessments) {
+            return convertAssessment((Assessments) record);
         } else {
             return null;
         }
@@ -255,6 +283,29 @@ public class ASpaceMapper {
 
         json.put("scope_note", record.getSubjectScopeNote());
 
+        json = addSubjectTerm(record, json);
+
+        json.put("vocabulary", vocabularyURI);
+
+        return json.toString();
+    }
+
+    /**
+     * adds subject terms to a json object
+     * @param record subject from AT
+     * @param json json object to add terms to
+     * @return
+     * @throws Exception
+     */
+    public JSONObject addSubjectTerm(Subjects record, JSONObject json) throws Exception {
+        JSONArray termsJA;
+        try {
+            //if there is already a list with some terms start with it
+            termsJA = (JSONArray) json.get("terms");
+        } catch (JSONException e) {
+            termsJA = new JSONArray();
+        }
+
         // see if to define term type as untyped
         boolean isDefault = aspaceCopyUtil.isTermTypeDefault();
 
@@ -274,7 +325,6 @@ public class ASpaceMapper {
         }
 
         String[] sa = terms.split("\\s*--\\s*");
-        JSONArray termsJA = new JSONArray();
 
         for(int i = 0; i < sa.length; i++) {
             // check to see if to mark term after the first one as untyped
@@ -292,9 +342,7 @@ public class ASpaceMapper {
         }
 
         json.put("terms", termsJA);
-        json.put("vocabulary", vocabularyURI);
-
-        return json.toString();
+        return json;
     }
 
     /**
@@ -579,7 +627,7 @@ public class ASpaceMapper {
     }
 
     /**
-     * Method to convert an AT subject record to
+     * Method to convert an AT repository record
      *
      * @param record
      * @return
@@ -604,6 +652,12 @@ public class ASpaceMapper {
         return json.toString();
     }
 
+    /**
+     * converts an AT location record
+     * @param record
+     * @return
+     * @throws Exception
+     */
     public String convertLocation(Locations record) throws Exception {
         // Main json object
         JSONObject json = new JSONObject();
@@ -639,7 +693,7 @@ public class ASpaceMapper {
     }
 
      /**
-     * Method to convert an AT subject record to
+     * Method to convert an AT subject record
      *
      * @param record
      * @return
@@ -833,19 +887,15 @@ public class ASpaceMapper {
 
         JSONArray rightsStatementJA = new JSONArray();
         JSONObject rightStatementJS = new JSONObject();
-        rightStatementJS.put("rights_type", "copyright");
-        rightStatementJS.put("status", "copyrighted");
-        rightStatementJS.put("jurisdiction", "US"); // TODO 8/12/2013 this is not suppose to be required
-//        JSONObject dateJS = new JSONObject();
-//        dateJS.put("type", "single");
-//        dateJS.put("label", "other");
-//        dateJS.put("expression", record.getRightsTransferredDate().toString());
+        rightStatementJS.put("rights_type", "other");
+        rightStatementJS.put("other_rights_basis", enumUtil.getASpaceRightsBasis(null)[0]);
+
+        //add the start date or default date if null
         Date startDate = record.getRightsTransferredDate();
-        if (startDate == null) {
-            rightStatementJS.put("start_date", DEFAULT_DATE.toString());
-        } else {
-            rightStatementJS.put("start_date", record.getRightsTransferredDate());//dateJS);
-        }
+        if (startDate == null) startDate = DEFAULT_DATE;
+        rightStatementJS.put("start_date", startDate.toString());
+
+        //add the note if there is one
         JSONArray notesJA = new JSONArray();
         String note = record.getRightsTransferredNote();
         if (note != null && !(note.isEmpty())) {
@@ -858,6 +908,7 @@ public class ASpaceMapper {
             notesJA.put(noteJS);
         }
         rightStatementJS.put("notes", notesJA);
+
         rightsStatementJA.put(rightStatementJS);
         json.put("rights_statements", rightsStatementJA);
     }
@@ -1040,7 +1091,7 @@ public class ASpaceMapper {
             JSONObject dateJS = new JSONObject();
             dateJS.put("date_type", enumUtil.getASpaceDateType(archDescriptionDate)[0]);
             dateJS.put("label", enumUtil.getASpaceDateEnum(archDescriptionDate.getDateType())[0]);
-            dateJS.put("uncertain", enumUtil.getASpaceDateCertainty(archDescriptionDate)[0]);
+            dateJS.put("certainty", enumUtil.getASpaceDateCertainty(archDescriptionDate)[0]);
 
             String dateExpression = archDescriptionDate.getDateExpression();
             dateJS.put("expression", dateExpression);
@@ -1286,6 +1337,8 @@ public class ASpaceMapper {
         String title = record.getObjectLabel();
         json.put("title", fixEmptyString(title));
 
+        json.put("publish", publishHashMap.get("digitalObjects"));
+
         addLanguageCode(json, record.getLanguageCode());
 
         /* add fields required for digital object component*/
@@ -1443,22 +1496,8 @@ public class ASpaceMapper {
         if(record.getRestrictionsApply() != null && record.getRestrictionsApply()) {
             json.put("restrictions", record.getRestrictionsApply());
         }
-        StringBuilder sb = new StringBuilder();
-        String note = record.getRepositoryProcessingNote();
-        if (note != null && !(note.isEmpty())) {
-            sb.append(note);
-            sb.append('\n');
-        }
-        for (ResourcesComponents component: record.getResourcesComponents()) {
-            addRepositoryProcessingNote(sb, component);
-        }
-        String repoProcessingNote;
-        if (sb.length() > 65000) {
-            repoProcessingNote = sb.substring(0, 64999);
-        } else {
-            repoProcessingNote = sb.toString();
-        }
-        json.put("repository_processing_note", repoProcessingNote);
+
+        json.put("repository_processing_note", record.getRepositoryProcessingNote());//repoProcessingNote);
         json.put("container_summary", record.getContainerSummary());
 
 
@@ -1508,18 +1547,6 @@ public class ASpaceMapper {
         return json;
     }
 
-    public void addRepositoryProcessingNote(StringBuilder sb, ResourcesComponents component) {
-        if (sb.length() >= 65000) return;
-        String note = component.getRepositoryProcessingNote();
-        if (note != null && !(note.isEmpty())) {
-            sb.append(component);
-            sb.append(": ");
-            sb.append(note);
-            sb.append('\n');
-        }
-        for (ResourcesComponents child: component.getResourcesComponents()) addRepositoryProcessingNote(sb, child);
-    }
-
     /**
      * Method to convert a resource record into an archival object
      *
@@ -1540,6 +1567,8 @@ public class ASpaceMapper {
         // check to make sure we have a title
         String title = record.getTitle();
         json.put("title", title);
+
+        json.put("repository_processing_note", record.getRepositoryProcessingNote());
 
         // add the language code
         addLanguageCode(json, record.getLanguageCode());
@@ -1631,6 +1660,240 @@ public class ASpaceMapper {
         }
 
         return json;
+    }
+
+    /**
+     * method to convert an AT assessment to an AS assessment
+     * @param record
+     * @return
+     * @throws Exception
+     */
+    private String convertAssessment(Assessments record) throws Exception {
+
+        JSONObject json = new JSONObject();
+
+        addExternalId(record, json, "assessment");
+
+        print("Adding agent record for who did survey ...");
+        json.put("surveyed_by", addAssessmentsAgent(record.getWhoDidSurvey(), record));
+
+        Date surveyBegin = record.getDateOfSurvey();
+        //use the date the assessment record was created if the date of survey is not specified
+        if (surveyBegin == null) surveyBegin = record.getCreated();
+        if (surveyBegin == null) surveyBegin = DEFAULT_DATE;
+        String surveyBeginStr = new SimpleDateFormat("yyyy-MM-dd").format(surveyBegin);
+        json.put("survey_begin", surveyBeginStr);
+
+        Double duration = record.getAmountOfTimeSurveyTook();
+        if (duration != null) json.put("surveyed_duration", duration + " hours");
+
+        Double extent = record.getTotalExtent();
+        if (extent != null) json.put("surveyed_extent", extent + " feet");
+
+        json.put("review_required", record.getReviewNeeded());
+
+        String reviewer = record.getWhoNeedsToReview();
+        if (reviewer != null && !(reviewer.isEmpty())) json.put("reviewer", addAssessmentsAgent(reviewer, record));
+
+        json.put("review_note", record.getReviewNote());
+
+        json.put("inactive", record.getInactive());
+
+        addAssessmentsAttributes(json, record);
+
+        json.put("general_assessment_note", record.getGeneralNote());
+        json.put("special_format_note", record.getSpecialFormatNote());
+        json.put("exhibition_value_note", record.getExhibitionValueNote());
+
+        Double monetaryValue = record.getMonetaryValue();
+        if (monetaryValue != null) json.put("monetary_value", monetaryValue.toString());
+        json.put("monetary_value_note", record.getMonetaryValueNote());
+
+        json.put("conservation_note", record.getConservationNote());
+
+        return json.toString();
+    }
+
+    /**
+     * method to add the linked records with matching repository to an assessment
+     * @param jsonText
+     * @param record
+     * @return
+     * @throws Exception
+     */
+    public String addAssessmentsRecords(String jsonText, Assessments record) throws Exception {
+
+        JSONObject json = new JSONObject(jsonText);
+
+        JSONArray recordsJA = new JSONArray();
+
+        String recordUri;
+        for (AssessmentsAccessions accession : record.getAccessions()) {
+            Accessions accessionRecord = accession.getAccession();
+            if (accessionRecord.getRepository().equals(record.getRepository())) {
+                recordUri = aspaceCopyUtil.getURIMapping(accessionRecord);
+                recordsJA.put(getReferenceObject(recordUri));
+            }
+        }
+        for (AssessmentsDigitalObjects digitalObject: record.getDigitalObjects()) {
+            DigitalObjects digitalObjectRecord = digitalObject.getDigitalObject();
+            if (digitalObjectRecord.getRepository().equals(record.getRepository())) {
+                recordUri = aspaceCopyUtil.getURIMapping(digitalObjectRecord);
+                recordsJA.put(getReferenceObject(recordUri));
+            }
+        }
+        for (AssessmentsResources resource : record.getResources()) {
+            Resources resourceRecord = resource.getResource();
+            if (resourceRecord.getRepository().equals(record.getRepository())) {
+                recordUri = aspaceCopyUtil.getURIMapping(resourceRecord);
+                recordsJA.put(getReferenceObject(recordUri));
+            }
+        }
+
+        json.put("records", recordsJA);
+
+        return json.toString();
+    }
+
+    /**
+     * adds an ASpace agent and gives a reference to it to be used as an assessment agent
+     * @param name
+     * @param assessment
+     * @return
+     * @throws Exception
+     */
+    private JSONArray addAssessmentsAgent(String name, Assessments assessment) throws Exception {
+
+        JSONObject json = new JSONObject();
+
+        JSONArray namesJA = new JSONArray();
+        JSONObject nameJSON = new JSONObject();
+
+        name = name.trim();
+        boolean unknown = false;
+        if (name == null || name.isEmpty()) {
+            //if a default name 'unknown' has already been added use that instead of adding again
+            if (unknownName != null) return unknownName;
+            name = "unknown";
+            unknown = true;
+        }
+
+        //map the name to an ASpace agent
+        nameJSON.put("primary_name", name);
+        nameJSON.put("sort_name", name);
+        nameJSON.put("source", enumUtil.getASpaceNameSource(null)[0]);
+        nameJSON.put("name_order", enumUtil.getASpaceNameOrder(null)[0]);
+        namesJA.put(nameJSON);
+        json.put("names", namesJA);
+
+        json.put("publish", false);
+        json.put("agent_type", "agent_person");
+
+        //save the agent to ASpace
+        String endpoint = "/agents/people";
+        String id = aspaceCopyUtil.saveRecord(endpoint , json.toString(), "Assessments->" + assessment.getIdentifier());
+
+        //return a JSONArray with a reference to the agent
+        String uri = endpoint + "/" + id;
+
+        JSONArray ja = new JSONArray();
+        ja.put(getReferenceObject(uri));
+        if (unknown) unknownName = ja;
+        return ja;
+    }
+
+    private void addAssessmentsAttributes(JSONObject json, Assessments record) throws Exception {
+
+        Repositories repo = record.getRepository();
+
+        //first add the formats
+        JSONArray formatsJA = new JSONArray();
+        HashMap<String, Boolean> formats = new HashMap<String, Boolean>();
+        formats.put("Architectural Materials", record.getArchitecturalMaterials());
+        formats.put("Glass", record.getGlass());
+        formats.put("Art Originals", record.getArtOriginals());
+        formats.put("Photographs", record.getPhotographs());
+        formats.put("Artifacts", record.getArtifacts());
+        formats.put("Scrapbooks", record.getScrapbooks());
+        formats.put("Audio Materials", record.getAudioMaterials());
+        formats.put("Technical Drawings & Schematics", record.getTechnicalDrawingsAndSchematics());
+        formats.put("Biological Specimens", record.getBiologicalSpecimens());
+        formats.put("Textiles", record.getTextiles());
+        formats.put("Botanical Specimens", record.getBotanicalSpecimens());
+        formats.put("Vellum & Parchment", record.getVellumAndParchment());
+        formats.put("Computer Storage Units", record.getComputerStorageUnits());
+        formats.put("Video Materials", record.getVideoMaterials());
+        formats.put("Film (negative, slide, or motion picture)", record.getFilm());
+        formats.put("Other", record.getOther());
+        formats.put("Special Format 1", record.getSpecialFormat1());
+        formats.put("Special Format 2", record.getSpecialFormat2());
+
+        for (String format : formats.keySet()) {
+            if (formats.get(format)) {
+                JSONObject formatJSON = new JSONObject();
+                int id = aspaceCopyUtil.getAssessmentAttributeID(repo, format, "format");
+                formatJSON.put("definition_id", id);
+                formatJSON.put("value", "true");
+                formatsJA.put(formatJSON);
+            }
+        }
+
+        json.put("formats", formatsJA);
+
+        //next the conservation issues
+        JSONArray conservationJA = new JSONArray();
+        HashMap<String, Boolean> conservationIssues = new HashMap<String, Boolean>();
+        conservationIssues.put("Potential Mold or Mold Damage", record.getPotentialMoldOrMoldDamage());
+        conservationIssues.put("Recent Pest Damage", record.getRecentPestDamage());
+        conservationIssues.put("Deteriorating Film Base", record.getDeterioratingFilmBase());
+        conservationIssues.put("Special Conservation Issue 1", record.getSpecialConservationIssue1());
+        conservationIssues.put("Special Conservation Issue 2", record.getSpecialConservationIssue2());
+        conservationIssues.put("Special Conservation Issue 3", record.getSpecialConservationIssue3());
+        conservationIssues.put("Brittle Paper", record.getBrittlePaper());
+        conservationIssues.put("Metal Fasteners", record.getMetalFasteners());
+        conservationIssues.put("Newspaper", record.getNewspaper());
+        conservationIssues.put("Tape", record.getTape());
+        conservationIssues.put("Thermofax Paper", record.getThermofaxPaper());
+        conservationIssues.put("Other Conservation Issue 1", record.getOtherConservationIssue1());
+        conservationIssues.put("Other Conservation Issue 2", record.getOtherConservationIssue2());
+        conservationIssues.put("Other Conservation Issue 3", record.getOtherConservationIssue3());
+
+        for (String conservationIssue : conservationIssues.keySet()) {
+            if (conservationIssues.get(conservationIssue)) {
+                JSONObject conservationJSON = new JSONObject();
+                int id = aspaceCopyUtil.getAssessmentAttributeID(repo, conservationIssue, "conservation_issue");
+                conservationJSON.put("definition_id", id);
+                conservationJSON.put("value", "true");
+                conservationJA.put(conservationJSON);
+            }
+        }
+
+        json.put("conservation_issues", conservationJA);
+
+        //finally the ratings
+        JSONArray ratingsJA = new JSONArray();
+        HashMap<String, Integer> ratings = new HashMap<String, Integer>();
+        ratings.put("Physical Condition", record.getConditionOfMaterial());
+        ratings.put("Physical Access (arrangement)", record.getPhysicalAccess());
+        ratings.put("Documentation Quality", record.getDocumentationQuality());
+        ratings.put("Housing Quality", record.getQualityOfHousing());
+        ratings.put("Intellectual Access (description)", record.getIntellectualAccess());
+        ratings.put("Interest", record.getInterest());
+        ratings.put("Numerical Rating 1", record.getUserNumericalRating1());
+        ratings.put("Numerical Rating 2", record.getUserNumericalRating2());
+
+        for (String rating : ratings.keySet()) {
+            Integer value = ratings.get(rating);
+            if (value != null) {
+                JSONObject ratingJSON = new JSONObject();
+                int id = aspaceCopyUtil.getAssessmentAttributeID(repo, rating, "rating");
+                ratingJSON.put("definition_id", id);
+                ratingJSON.put("value", value.toString());
+                ratingsJA.put(ratingJSON);
+            }
+        }
+
+        json.put("ratings", ratingsJA);
     }
 
     /**
@@ -2210,24 +2473,31 @@ public class ASpaceMapper {
         // add the container now
         JSONObject containerJS = new JSONObject();
 
+        //add the top container
         TopContainerMapper topContainer = new TopContainerMapper(analogInstance, parentRepoURI);
         topContainer.addLocationURI(locationURI);
         containerJS.put("top_container", getReferenceObject(topContainer.getRef()));
-//        containerJS.put("type_1", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer1Type()));
-//        containerJS.put("indicator_1", fixEmptyString(analogInstance.getContainer1Indicator(), "not specified"));
-//        containerJS.put("barcode_1", analogInstance.getBarcode());
 
-        if(!analogInstance.getContainer2Type().isEmpty()) {
-            containerJS.put("type_2", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer2Type())[0]);
-            String indicator2 = analogInstance.getContainer2Indicator();
-            if (indicator2 == null || indicator2.isEmpty()) indicator2 = "unknown";
+        //now for the sub-container
+        String type2 = analogInstance.getContainer2Type();
+        String indicator2 = analogInstance.getContainer2Indicator();
+        String type3 = analogInstance.getContainer3Type();
+        String indicator3 = analogInstance.getContainer3Indicator();
+
+        boolean have2 = !(type2 == null || type2.isEmpty()) || !(indicator2 == null || indicator2.isEmpty());
+        boolean have3 = !(type3 == null || type3.isEmpty()) || !(indicator3 == null || indicator3.isEmpty());
+
+        //add container 2 type and indicator - must be done if there is a container 3 because 2 is required to create 3
+        if(have2 || have3) {
+            containerJS.put("type_2", enumUtil.getASpaceSubContainerType(type2)[0]);
+            if (indicator2 == null || indicator2.isEmpty()) indicator2 = "unknown container";
             containerJS.put("indicator_2", indicator2);
         }
 
-        if(!analogInstance.getContainer3Type().isEmpty()) {
-            containerJS.put("type_3", enumUtil.getASpaceInstanceContainerType(analogInstance.getContainer3Type())[0]);
-            String indicator3 = analogInstance.getContainer3Indicator();
-            if (indicator3 == null || indicator3.isEmpty()) indicator3 = "unknown";
+        //add container 3
+        if(have3) {
+            containerJS.put("type_3", enumUtil.getASpaceSubContainerType(type3)[0]);
+            if (indicator3 == null || indicator3.isEmpty()) indicator3 = "unknown container";
             containerJS.put("indicator_3", indicator3);
         }
 
@@ -2359,7 +2629,6 @@ public class ASpaceMapper {
      * @param value
      */
     public void setReturnATValue(boolean value) {
-        enumUtil.returnATValue = value;
     }
 
     /**
@@ -2655,7 +2924,8 @@ public class ASpaceMapper {
         } else if(endpoint.equals(ASpaceClient.RESOURCE_ENDPOINT)) {
             String message = null;
 
-            if(!resourceIDs.contains(id)) {
+            //I think its fine without checking for duplicate resource IDs and this causes a problem if checked
+            if(true) {//!resourceIDs.contains(id)) {
                 resourceIDs.add(id);
             } else {
                 String fullId = "";

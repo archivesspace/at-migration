@@ -1,5 +1,6 @@
 package org.archiviststoolkit.plugin.utils.aspace;
 
+import com.mysql.jdbc.CommunicationsException;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.NameValuePair;
@@ -11,6 +12,8 @@ import org.archiviststoolkit.plugin.utils.StopWatch;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import javax.swing.*;
+import java.net.ConnectException;
 import java.util.HashMap;
 
 /**
@@ -44,6 +47,9 @@ public class ASpaceClient {
     public static final String ENUM_ENDPOINT = "/config/enumerations";
     public static final String BATCH_IMPORT_ENDPOINT = "/batch_imports?migration=ArchivistToolkit";
     public static final String INDEXER_ENDPOINT = "/aspace-indexer/";
+    public static final String ASSESSMENT_ENDPOINT = "/assessments";
+    public static final String ASSESSMENT_ATTR_DEFNS_ENDPOINT = "/assessment_attribute_definitions";
+    public static final String TOP_CONTAINER_ENDPOINT = "/top_containers";
 
     private HttpClient httpclient = new HttpClient();
     private String host = "";
@@ -106,7 +112,7 @@ public class ASpaceClient {
     /**
      * Method to get the session using the admin login
      */
-    public boolean getSession() {
+    public boolean getSession() throws IntentionalExitException {
         boolean haveSession = false;
 
         // get a session id using the admin login
@@ -132,6 +138,8 @@ public class ASpaceClient {
                 // default indexer port of 8090 was not changed
                 indexerHost = host.replace("89", "90");
             }
+        } catch (IntentionalExitException e) {
+            throw e;
         } catch (Exception e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         }
@@ -200,7 +208,34 @@ public class ASpaceClient {
         // Execute request
         try {
 
-            int statusCode = httpclient.executeMethod(post);
+            int statusCode;
+            try {
+                statusCode = httpclient.executeMethod(post);
+                if (statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR) {
+                    appendToErrorBuffer("Problem connecting to server");
+                    throw new IntentionalExitException("Could not connect to server ...\nFix connection then resume ...", atId);
+                }
+            } catch (ConnectException e) {
+                boolean ready = false;
+                String message = "Connection has been lost. Check your \n" +
+                        "connection to Archives Space and your \n" +
+                        "web server and then press 'yes' to \n" +
+                        "contiue migration. Otherwise press \n" +
+                        "'no' to save your URI maps and \n" +
+                        "continue this migration later.";
+                while (!ready) {
+                    int result = JOptionPane.showConfirmDialog(null, message, "Lost connection",
+                            JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE);
+                    if (result == JOptionPane.YES_OPTION) {
+                        ready = true;
+                    } else if (result == JOptionPane.NO_OPTION) {
+                        appendToErrorBuffer("Problem connecting to ArchivesSpace");
+                        throw new IntentionalExitException("Problem connecting to ArchivesSpace ...\nFix connection then resume ...",  atId);
+                    }
+                }
+
+                return executePost(post, idName, atId, jsonText);
+            }
 
             // Display status code
             String statusMessage = "Status code: " + statusCode +
@@ -227,6 +262,10 @@ public class ASpaceClient {
                     JSONArray responseJA = new JSONArray(responseBody);
                     response = responseJA.getJSONObject(responseJA.length() - 1);
 
+                    if (response.toString().contains("Server error: Failed to connect to the database")) {
+                        throw new IntentionalExitException("Could not connect to server ...\nFix connection then resume ...", atId);
+                    }
+
                     errorBuffer.append("Endpoint: ").append(post.getURI()).append("\n").
                             append("AT Identifier: ").append(atId).append("\n").
                             append(statusMessage).append("\n\n").append(response.toString(2)).append("\n");
@@ -239,7 +278,11 @@ public class ASpaceClient {
                     response = new JSONObject(responseBody);
                 }
 
-                id = response.getString(idName);
+                if (post.getURI().toString().contains(ASSESSMENT_ATTR_DEFNS_ENDPOINT)) {
+                    if (response.getString("status").equalsIgnoreCase("updated")) id = "ok";
+                } else {
+                    id = response.getString(idName);
+                }
 
                 if (id == null || id.trim().isEmpty()) {
                     errorBuffer.append("Endpoint: ").append(post.getURI()).append("\n").
@@ -399,7 +442,10 @@ public class ASpaceClient {
                     String uri = (String) json.get("uri");
                     repos.put(shortName, uri);
                 }
+
+                //we don't need to load the top containers if only assessments still need to be copied
                 loadExistingTopContainers(repos);
+
                 return repos;
             }
         } catch (Exception e) {
@@ -410,11 +456,22 @@ public class ASpaceClient {
 
     private void loadExistingTopContainers(HashMap<String, String> repos) throws Exception {
         for (String repoURI: repos.values()) {
-            for (int i = 1; true; i++) {
-                String container = get(repoURI + "/top_containers/" + i, null);
-                if (container == null || container.isEmpty()) {break;}
-                JSONObject containerJS = new JSONObject(container);
-                new TopContainerMapper(containerJS);
+            NameValuePair[] params = new NameValuePair[1];
+            params[0] = new NameValuePair("page", "1");
+            JSONObject page1JS = new JSONObject(get(repoURI + TOP_CONTAINER_ENDPOINT, params));
+            int lastPage = (Integer) page1JS.get("last_page");
+            for (int page = 1; page <= lastPage; page++) {
+                params[0] = new NameValuePair("page", page + "");
+                JSONObject pageJS = new JSONObject(get(repoURI + TOP_CONTAINER_ENDPOINT, params));
+                JSONArray results = (JSONArray) pageJS.get("results");
+                for (int i = 0; i < results.length(); i++) {
+                    String container = results.getString(i);
+                    if (container == null || container.isEmpty()) {
+                        break;
+                    }
+                    JSONObject containerJS = new JSONObject(container);
+                    new TopContainerMapper(containerJS);
+                }
             }
 
         }

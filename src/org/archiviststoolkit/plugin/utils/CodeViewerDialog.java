@@ -122,8 +122,8 @@ public class CodeViewerDialog extends JDialog {
             String message = "";
 
             // see whether we note posting to the aspace backend by seeing if we have http
-            if(testHost.toLowerCase().contains("http")) {
-                if(!testMultipleRecords) {
+            if (testHost.toLowerCase().contains("http")) {
+                if (!testMultipleRecords) {
                     message = recordTestServletClient.storeRecord(jsonText);
                 } else {
                     message = recordTestServletClient.storeMultipleRecords(jsonText);

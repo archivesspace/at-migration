@@ -651,6 +651,8 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
         return lookupLists;
     }
 
+    public ArrayList<Assessments> getAssessments() { return (ArrayList<Assessments>)getRecords(Assessments.class, session); }
+
     /**
      * Method to return the language code
      *
