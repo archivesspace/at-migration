@@ -1721,7 +1721,7 @@ public class ASpaceMapper {
      * @return
      * @throws Exception
      */
-    public String addAssessmentsRepoSpecificInfo(String jsonText, Assessments record) throws Exception {
+    public String addAssessmentsRepoSpecificInfo(String jsonText, Assessments record, String repoURI) throws Exception {
 
         JSONObject json = new JSONObject(jsonText);
 
@@ -1730,21 +1730,27 @@ public class ASpaceMapper {
         String recordUri;
         for (AssessmentsAccessions accession : record.getAccessions()) {
             Accessions accessionRecord = accession.getAccession();
-            if (accessionRecord.getRepository().equals(record.getRepository())) {
+            String recordRepo = aspaceCopyUtil.getRemappedRepositoryURI("accession",
+                    accessionRecord.getIdentifier(), accessionRecord.getRepository());
+            if (recordRepo.equals(repoURI)) {
                 recordUri = aspaceCopyUtil.getURIMapping(accessionRecord);
                 recordsJA.put(getReferenceObject(recordUri));
             }
         }
         for (AssessmentsDigitalObjects digitalObject: record.getDigitalObjects()) {
             DigitalObjects digitalObjectRecord = digitalObject.getDigitalObject();
-            if (digitalObjectRecord.getRepository().equals(record.getRepository())) {
+            String recordRepo = aspaceCopyUtil.getRemappedRepositoryURI("digitalObject",
+                    digitalObjectRecord.getIdentifier(), digitalObjectRecord.getRepository());
+            if (recordRepo.equals(repoURI)) {
                 recordUri = aspaceCopyUtil.getURIMapping(digitalObjectRecord);
                 recordsJA.put(getReferenceObject(recordUri));
             }
         }
         for (AssessmentsResources resource : record.getResources()) {
             Resources resourceRecord = resource.getResource();
-            if (resourceRecord.getRepository().equals(record.getRepository())) {
+            String recordRepo = aspaceCopyUtil.getRemappedRepositoryURI("resource",
+                    resourceRecord.getIdentifier(), resourceRecord.getRepository());
+            if (recordRepo.equals(repoURI)) {
                 recordUri = aspaceCopyUtil.getURIMapping(resourceRecord);
                 recordsJA.put(getReferenceObject(recordUri));
             }
@@ -1752,7 +1758,7 @@ public class ASpaceMapper {
 
         json.put("records", recordsJA);
 
-        addAssessmentsAttributes(json, record);
+        addAssessmentsAttributes(json, record, repoURI);
 
         return json.toString();
     }
@@ -1804,9 +1810,9 @@ public class ASpaceMapper {
         return ja;
     }
 
-    private void addAssessmentsAttributes(JSONObject json, Assessments record) throws Exception {
+    private void addAssessmentsAttributes(JSONObject json, Assessments record, String repo) throws Exception {
 
-        Repositories repo = record.getRepository();
+//        Repositories repo = record.getRepository();
 
         //first add the formats
         JSONArray formatsJA = new JSONArray();

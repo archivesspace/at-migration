@@ -1044,30 +1044,32 @@ public class ASpaceCopyUtil {
 
             boolean successful = true;
 
-            HashSet<Repositories> linkedRepos = new HashSet<Repositories>();
+            HashSet<String> linkedRepoURIs = new HashSet<String>();
 
             for (AssessmentsDigitalObjects digitalObject : assessment.getDigitalObjects()) {
-                linkedRepos.add(digitalObject.getDigitalObject().getRepository());
+                DigitalObjects record = digitalObject.getDigitalObject();
+                linkedRepoURIs.add(getRemappedRepositoryURI("digitalObject", record.getIdentifier(), record.getRepository()));
             }
             for (AssessmentsResources resource : assessment.getResources()) {
-                linkedRepos.add(resource.getResource().getRepository());
+                linkedRepoURIs.add(getRepositoryURI(resource.getResource().getRepository()));
             }
             for (AssessmentsAccessions accession : assessment.getAccessions()) {
-                linkedRepos.add(accession.getAccession().getRepository());
+                Accessions record = accession.getAccession();
+                linkedRepoURIs.add(getRemappedRepositoryURI("accession", record.getIdentifier(), record.getRepository()));
             }
 
             /*
             since the repositories of all records attached to an assessment must be the same as the assessment's
             repository it is necessary to add a separate assessment for each linked repository
              */
-            for (Repositories repo: linkedRepos) {
+            for (String repoURI: linkedRepoURIs) {
 
-                assessment.setRepository(repo);
+//                assessment.setRepository(repo);
 
-                String repoURI = getRemappedRepositoryURI("assessment", assessment.getIdentifier(), assessment.getRepository());
+//                String repoURI = getRemappedRepositoryURI("assessment", assessment.getIdentifier(), assessment.getRepository());
                 String uri = repoURI + ASpaceClient.ASSESSMENT_ENDPOINT;
 
-                String repoJSON = mapper.addAssessmentsRepoSpecificInfo(jsonText, assessment);
+                String repoJSON = mapper.addAssessmentsRepoSpecificInfo(jsonText, assessment, repoURI);
 //                String jsonText = (String) mapper.convert(assessment);
                 if (jsonText != null) {
                     String id = saveRecord(uri, repoJSON, "Assessment->" + assessment.getAssessmentId());
@@ -1152,12 +1154,12 @@ public class ASpaceCopyUtil {
 
     /**
      * gets the mapping for a assessment attribute definition if it already exists. Otherwise adds the definition
-     * @param repo
+     * @param repoURI
      * @param label
      * @param type
      * @return
      */
-    public Integer getAssessmentAttributeID(Repositories repo, String label, String type) throws Exception {
+    public Integer getAssessmentAttributeID(String repoURI, String label, String type) throws Exception {
         Integer id;
         String key = label + " - " + type;
 
@@ -1166,7 +1168,7 @@ public class ASpaceCopyUtil {
         if (id != null) return id;
 
         //next see if it is in the repository specific assessment attributes list
-        String repoURI = repositoryURIMap.get(repo.getShortName());
+//        String repoURI = repositoryURIMap.get(repo.getShortName());
         id = assessmentAttributeDefinitions.get(repoURI).get(key);
         if (id != null) return id;
 
@@ -2322,7 +2324,7 @@ public class ASpaceCopyUtil {
      * @param oldRepository
      * @return
      */
-    private synchronized String getRemappedRepositoryURI(String recordType, Long atId, Repositories oldRepository) {
+    public synchronized String getRemappedRepositoryURI(String recordType, Long atId, Repositories oldRepository) {
         if(repositoryMismatchMap == null) {
             return getRepositoryURI(oldRepository);
         } else {
