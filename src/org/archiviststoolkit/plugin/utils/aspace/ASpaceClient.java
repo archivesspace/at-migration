@@ -211,10 +211,11 @@ public class ASpaceClient {
             int statusCode;
             try {
                 statusCode = httpclient.executeMethod(post);
-                if (statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR) {
-                    appendToErrorBuffer("Problem connecting to server");
-                    throw new IntentionalExitException("Could not connect to server ...\nFix connection then resume ...", atId);
-                }
+//                if (statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR) {
+//                    appendToErrorBuffer("Problem connecting to server\n");
+//                    appendToErrorBuffer(post.getResponseBodyAsString());
+//                    throw new IntentionalExitException("Could not connect to server ...\nFix connection then resume ...", atId);
+//                }
             } catch (ConnectException e) {
                 boolean ready = false;
                 String message = "Connection has been lost. Check your \n" +
@@ -263,6 +264,8 @@ public class ASpaceClient {
                     response = responseJA.getJSONObject(responseJA.length() - 1);
 
                     if (response.toString().contains("Server error: Failed to connect to the database")) {
+                        appendToErrorBuffer("Problem connecting to server\n");
+                        appendToErrorBuffer(post.getResponseBodyAsString());
                         throw new IntentionalExitException("Could not connect to server ...\nFix connection then resume ...", atId);
                     }
 
@@ -318,11 +321,11 @@ public class ASpaceClient {
                 // if it a 500 error the ASpace then we may need to add the JSON text
                 if (statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR) {
                     if (responseBody.contains("PoolTimeout")) {
-                        responseBody = "Error: Sequel Pool Timeout ...";
+                        responseBody = "Error: Sequel Pool Timeout ...\nPlease Resume ...";
                     } else if (responseBody.contains("OutOfMemory")) {
-                        responseBody = "Fatal Error: ArchivesSpace Backend Crashed (OutOfMemoryError)\nPlease Restart ...";
+                        responseBody = "Fatal Error: ArchivesSpace Backend Crashed (OutOfMemoryError)\nPlease Resume Later ...";//Restart ...";
                     } else if (responseBody.contains("ThreadError")) {
-                        responseBody = "Fatal Error: ArchivesSpace Backend Crashed (OutOfStackSpaceError)\nPlease Restart ...";
+                        responseBody = "Fatal Error: ArchivesSpace Backend Crashed (OutOfStackSpaceError)\nPlease Resume Later ...";//Restart ...";
                     }
                 }
 
@@ -331,7 +334,7 @@ public class ASpaceClient {
                         append(statusMessage).append("\n").append(responseBody).append("\n\n");
 
                 post.releaseConnection();
-                throw new Exception(statusMessage);
+                throw new IntentionalExitException(statusMessage + "\n" + responseBody, atId);
             }
         } finally {
             // Release current connection to the server

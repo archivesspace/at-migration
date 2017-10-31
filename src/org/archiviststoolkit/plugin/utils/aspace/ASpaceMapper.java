@@ -1699,7 +1699,7 @@ public class ASpaceMapper {
 
         json.put("inactive", record.getInactive());
 
-        addAssessmentsAttributes(json, record);
+//        addAssessmentsAttributes(json, record);
 
         json.put("general_assessment_note", record.getGeneralNote());
         json.put("special_format_note", record.getSpecialFormatNote());
@@ -1721,7 +1721,7 @@ public class ASpaceMapper {
      * @return
      * @throws Exception
      */
-    public String addAssessmentsRecords(String jsonText, Assessments record) throws Exception {
+    public String addAssessmentsRepoSpecificInfo(String jsonText, Assessments record) throws Exception {
 
         JSONObject json = new JSONObject(jsonText);
 
@@ -1751,6 +1751,8 @@ public class ASpaceMapper {
         }
 
         json.put("records", recordsJA);
+
+        addAssessmentsAttributes(json, record);
 
         return json.toString();
     }

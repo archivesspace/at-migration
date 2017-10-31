@@ -9,7 +9,6 @@ import com.jgoodies.forms.factories.FormFactory;
 import com.jgoodies.forms.layout.*;
 import org.archiviststoolkit.ApplicationFrame;
 import org.archiviststoolkit.importer.ImportExportLogDialog;
-import org.archiviststoolkit.model.LookupList;
 import org.archiviststoolkit.plugin.beanshell.ScriptViewerDialog;
 import org.archiviststoolkit.plugin.dbdialog.RemoteDBConnectDialogLight;
 import org.archiviststoolkit.plugin.utils.CodeViewerDialog;
@@ -24,8 +23,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -36,6 +34,7 @@ import java.util.HashMap;
  */
 public class dbCopyFrame extends JFrame {
     public static final String VERSION = "Archives Space Data Migrator v2.x (10/2017)";
+    public static FileOutputStream fw;
 
     // The application when running within the AT
     private ApplicationFrame mainFrame = null;
@@ -99,6 +98,15 @@ public class dbCopyFrame extends JFrame {
         }
     }
 
+    public static void saveConsoleText(JTextArea console) {
+        if (fw != null && console != null) {
+            try {
+                fw.write((console.getText() + "\n\n").getBytes());
+            } catch (IOException e) {
+            }
+        }
+    }
+
     /**
      * Method to hide advance UI features to make it easier for users to run the tool
      */
@@ -142,6 +150,9 @@ public class dbCopyFrame extends JFrame {
      * Close this window, and only exit if we are running in stand alone mode
      */
     private void okButtonActionPerformed() {
+
+        saveConsoleText(consoleTextArea);
+
         setVisible(false);
 
         if (mainFrame == null && !isBasicUI) {
@@ -156,6 +167,7 @@ public class dbCopyFrame extends JFrame {
         // first check that the user is running update 15, or greater
         if (mainFrame != null && !mainFrame.getAtVersionNumber().contains("15") &&
                 !mainFrame.getAtVersionNumber().contains("16")) {
+            saveConsoleText(consoleTextArea);
             consoleTextArea.setText("You need AT version 2.0 Update 15, or greater for data migration ...");
             return;
         }
@@ -251,6 +263,7 @@ public class dbCopyFrame extends JFrame {
                 stopButton.setEnabled(true);
 
                 // clear text area and show progress bar
+                saveConsoleText(consoleTextArea);
                 consoleTextArea.setText("");
                 copyProgressBar.setStringPainted(true);
                 copyProgressBar.setString("Copying Records ...");
@@ -405,11 +418,13 @@ public class dbCopyFrame extends JFrame {
                     errorCountLabel.setText(errorCount);
                     migrationErrors = ascopy.getSaveErrorMessages() + "\n\nTotal errors/warnings: " + errorCount;
                 } catch (IntentionalExitException e) {
+                    saveConsoleText(consoleTextArea);
                     consoleTextArea.setText(e.getMessage());
                     consoleTextArea.append("\nWill attempt to save URI maps ...");
                     if (ascopy != null) ascopy.saveURIMaps();
                     else consoleTextArea.append("\nCould not save URI maps ...\nMigration will need to be restarted ...");
                 } catch (Exception e) {
+                    saveConsoleText(consoleTextArea);
                     consoleTextArea.setText("Unrecoverable exception, migration stopped ...\n\n");
 
                     if(ascopy != null) {
@@ -464,6 +479,7 @@ public class dbCopyFrame extends JFrame {
                 stopButton.setEnabled(true);
 
                 // clear text area and show progress bar
+                saveConsoleText(consoleTextArea);
                 consoleTextArea.setText("");
                 copyProgressBar.setStringPainted(true);
                 copyProgressBar.setString("Checking Repository Mismatches ...");
@@ -518,6 +534,7 @@ public class dbCopyFrame extends JFrame {
                     errorCountLabel.setText(errorCount);
                     repositoryMismatchErrors = ascopyREC.getCurrentRecordCheckMessage() + "\n\nTotal errors: " + errorCount;
                 } catch (Exception e) {
+                    saveConsoleText(consoleTextArea);
                     consoleTextArea.setText("Unrecoverable exception, recording checking stopped ...\n\n");
 
                     // This is null for some reason so let commit it out.
@@ -711,9 +728,11 @@ public class dbCopyFrame extends JFrame {
                 codeViewerDialog.pack();
                 codeViewerDialog.setVisible(true);
             } else {
-                consoleTextArea.setText("You need AT version 2.0 Update 15, and above for this to work");
+                saveConsoleText(consoleTextArea);
+                consoleTextArea.setText("You need AT version 2.0, and above for this to work");
             }
         } catch (Exception e) {
+            saveConsoleText(consoleTextArea);
             consoleTextArea.setText(getStackTrace(e));
         }
     }

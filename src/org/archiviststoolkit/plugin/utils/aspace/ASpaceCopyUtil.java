@@ -1067,7 +1067,7 @@ public class ASpaceCopyUtil {
                 String repoURI = getRemappedRepositoryURI("assessment", assessment.getIdentifier(), assessment.getRepository());
                 String uri = repoURI + ASpaceClient.ASSESSMENT_ENDPOINT;
 
-                String repoJSON = mapper.addAssessmentsRecords(jsonText, assessment);
+                String repoJSON = mapper.addAssessmentsRepoSpecificInfo(jsonText, assessment);
 //                String jsonText = (String) mapper.convert(assessment);
                 if (jsonText != null) {
                     String id = saveRecord(uri, repoJSON, "Assessment->" + assessment.getAssessmentId());
@@ -2428,6 +2428,7 @@ public class ASpaceCopyUtil {
                 outputConsole.append(message + "\n");
             } else {
                 messageCount = 0;
+                dbCopyFrame.saveConsoleText(outputConsole);
                 outputConsole.setText(message + "\n");
             }
         } else {
@@ -2438,6 +2439,14 @@ public class ASpaceCopyUtil {
         if(message.contains("Mapper Script --")) {
             mapperScriptRejects++;
         }
+    }
+
+    static {
+        try {
+            String userHome = System.getProperty("user.home");
+            dbCopyFrame.fw = new FileOutputStream(userHome + File.separator + "at_migration_console.log");
+        } catch (IOException e) {
+            dbCopyFrame.fw = null;}
     }
 
     /**
@@ -2689,6 +2698,7 @@ public class ASpaceCopyUtil {
         sourceRCD.refreshSession();
 
         if(outputConsole != null) {
+            dbCopyFrame.saveConsoleText(outputConsole);
             outputConsole.setText("");
         }
 
