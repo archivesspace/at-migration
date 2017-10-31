@@ -327,6 +327,8 @@ public class ASpaceClient {
                     } else if (responseBody.contains("ThreadError")) {
                         responseBody = "Fatal Error: ArchivesSpace Backend Crashed (OutOfStackSpaceError)\nPlease Resume Later ...";//Restart ...";
                     }
+
+                    throw new IntentionalExitException(statusMessage + "\n" + responseBody, atId);
                 }
 
                 errorBuffer.append("Endpoint: ").append(post.getURI()).append("\n").
@@ -334,7 +336,7 @@ public class ASpaceClient {
                         append(statusMessage).append("\n").append(responseBody).append("\n\n");
 
                 post.releaseConnection();
-                throw new IntentionalExitException(statusMessage + "\n" + responseBody, atId);
+                throw new Exception(statusMessage + "\n" + responseBody);
             }
         } finally {
             // Release current connection to the server
