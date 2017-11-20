@@ -9,6 +9,7 @@ import com.jgoodies.forms.factories.FormFactory;
 import com.jgoodies.forms.layout.*;
 import org.archiviststoolkit.ApplicationFrame;
 import org.archiviststoolkit.importer.ImportExportLogDialog;
+import org.archiviststoolkit.plugin.basic.dbCopyBasic;
 import org.archiviststoolkit.plugin.beanshell.ScriptViewerDialog;
 import org.archiviststoolkit.plugin.dbdialog.RemoteDBConnectDialogLight;
 import org.archiviststoolkit.plugin.utils.CodeViewerDialog;
@@ -67,6 +68,7 @@ public class dbCopyFrame extends JFrame {
 
     // used to find and attempt to resolve repository mismatch
     private boolean checkRepositoryMismatch = false;
+    private boolean continueMigration = false;
     private HashMap<String, String> repositoryMismatchMap = null;
 
     // used to specify that the GUI is in basic mode
@@ -358,7 +360,7 @@ public class dbCopyFrame extends JFrame {
 
 
 
-                    if (useSaveURIMapsCheckBox.isSelected() && ascopy.uriMapFileExist()) {
+                    if (continueMigration && ascopy.uriMapFileExist()) {
                         ascopy.loadURIMaps();
                     } else {
                         // first load the notes etc types and resource from the destination database if not using saved ones
@@ -522,7 +524,8 @@ public class dbCopyFrame extends JFrame {
 
                     if(!copyStopped) {
                         ascopyREC.setResourcesToCopyList(resourcesIDsList);
-                        ascopyREC.copyResourceRecords(resourcesToCopy, threads);
+                        ascopyREC.checkRepositoryMismatches(resourcesToCopy, threads);
+//                        ascopyREC.copyResourceRecords(resourcesToCopy, threads);
                     }
 
                     repositoryMismatchMap = ascopyREC.getRepositoryMismatchMap();
@@ -767,9 +770,14 @@ public class dbCopyFrame extends JFrame {
         return sw.toString();
     }
 
+    private void continueButtonActionPerformed(ActionEvent e) {
+        continueMigration = true;
+        CopyToASpaceButtonActionPerformed();
+    }
+
     private void initComponents() {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
-        // Generated using JFormDesigner Evaluation license - Sarah Morrissey
+        // Generated using JFormDesigner non-commercial license
         dialogPane = new JPanel();
         contentPanel = new JPanel();
         apiLabel = new JLabel();
@@ -783,6 +791,7 @@ public class dbCopyFrame extends JFrame {
         repositoryCheckButton = new JButton();
         copyRecordCheckBox = new JCheckBox();
         viewRepositoryCheckReportButton = new JButton();
+        continueButton = new JButton();
         tracerPanel = new JPanel();
         useTracerCheckBox = new JCheckBox();
         tracerComboBox = new JComboBox();
@@ -813,7 +822,6 @@ public class dbCopyFrame extends JFrame {
         batchImportCheckBox = new JCheckBox();
         numResourceToCopyLabel = new JLabel();
         numResourceToCopyTextField = new JTextField();
-//        deleteResourcesCheckBox = new JCheckBox();
         resourcesToCopyTextField = new JTextField();
         outputConsoleLabel = new JLabel();
         copyProgressBar = new JProgressBar();
@@ -841,14 +849,6 @@ public class dbCopyFrame extends JFrame {
         //======== dialogPane ========
         {
             dialogPane.setBorder(Borders.DIALOG_BORDER);
-
-            // JFormDesigner evaluation mark
-            dialogPane.setBorder(new javax.swing.border.CompoundBorder(
-                new javax.swing.border.TitledBorder(new javax.swing.border.EmptyBorder(0, 0, 0, 0),
-                    "JFormDesigner Evaluation", javax.swing.border.TitledBorder.CENTER,
-                    javax.swing.border.TitledBorder.BOTTOM, new java.awt.Font("Dialog", java.awt.Font.BOLD, 12),
-                    java.awt.Color.red), dialogPane.getBorder())); dialogPane.addPropertyChangeListener(new java.beans.PropertyChangeListener(){public void propertyChange(java.beans.PropertyChangeEvent e){if("border".equals(e.getPropertyName()))throw new RuntimeException();}});
-
             dialogPane.setLayout(new BorderLayout());
 
             //======== contentPanel ========
@@ -870,6 +870,8 @@ public class dbCopyFrame extends JFrame {
                         FormFactory.DEFAULT_COLSPEC
                     },
                     new RowSpec[] {
+                        FormFactory.DEFAULT_ROWSPEC,
+                        FormFactory.LINE_GAP_ROWSPEC,
                         FormFactory.DEFAULT_ROWSPEC,
                         FormFactory.LINE_GAP_ROWSPEC,
                         FormFactory.DEFAULT_ROWSPEC,
@@ -967,6 +969,16 @@ public class dbCopyFrame extends JFrame {
                 });
                 contentPanel.add(viewRepositoryCheckReportButton, cc.xywh(11, 5, 3, 1));
 
+                //---- continueButton ----
+                continueButton.setText("Continue Previous Migration");
+                continueButton.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        continueButtonActionPerformed(e);
+                    }
+                });
+                contentPanel.add(continueButton, cc.xy(1, 7));
+
                 //======== tracerPanel ========
                 {
                     tracerPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
@@ -984,60 +996,60 @@ public class dbCopyFrame extends JFrame {
                     }));
                     tracerPanel.add(tracerComboBox);
                 }
-                contentPanel.add(tracerPanel, cc.xy(1, 7));
+                contentPanel.add(tracerPanel, cc.xy(1, 9));
 
                 //---- adminLabel ----
                 adminLabel.setText("Admin");
-                contentPanel.add(adminLabel, cc.xy(3, 7));
+                contentPanel.add(adminLabel, cc.xy(3, 9));
 
                 //---- adminTextField ----
                 adminTextField.setText("asadmin");
-                contentPanel.add(adminTextField, cc.xy(5, 7));
+                contentPanel.add(adminTextField, cc.xy(5, 9));
 
                 //---- adminPasswordLabel ----
                 adminPasswordLabel.setText("Password");
-                contentPanel.add(adminPasswordLabel, cc.xy(11, 7));
+                contentPanel.add(adminPasswordLabel, cc.xy(11, 9));
 
                 //---- adminPasswordTextField ----
                 adminPasswordTextField.setText("admin");
-                contentPanel.add(adminPasswordTextField, cc.xy(13, 7));
+                contentPanel.add(adminPasswordTextField, cc.xy(13, 9));
 
                 //---- useSaveURIMapsCheckBox ----
-                useSaveURIMapsCheckBox.setText("Continue Previous Migration");
-                contentPanel.add(useSaveURIMapsCheckBox, cc.xy(1, 9));
+                useSaveURIMapsCheckBox.setText("Continue From Resource Records");
+                contentPanel.add(useSaveURIMapsCheckBox, cc.xy(1, 11));
 
                 //---- resetPassswordLabel ----
                 resetPassswordLabel.setText("Reset Password");
-                contentPanel.add(resetPassswordLabel, cc.xywh(3, 9, 5, 1));
+                contentPanel.add(resetPassswordLabel, cc.xywh(3, 11, 5, 1));
 
                 //---- resetPasswordTextField ----
                 resetPasswordTextField.setText("archive");
-                contentPanel.add(resetPasswordTextField, cc.xywh(9, 9, 5, 1));
+                contentPanel.add(resetPasswordTextField, cc.xywh(9, 11, 5, 1));
 
                 //---- typeOfExtentDataLabel ----
                 typeOfExtentDataLabel.setText("  Specify Type of Extent Data");
-                contentPanel.add(typeOfExtentDataLabel, cc.xy(1, 11));
+                contentPanel.add(typeOfExtentDataLabel, cc.xy(1, 13));
 
                 //---- normalExtentRadioButton ----
                 normalExtentRadioButton.setText("Normal or Harvard Plugin");
                 normalExtentRadioButton.setSelected(true);
-                contentPanel.add(normalExtentRadioButton, cc.xywh(3, 11, 5, 1));
+                contentPanel.add(normalExtentRadioButton, cc.xywh(3, 13, 5, 1));
 
                 //---- byuExtentRadioButton ----
                 byuExtentRadioButton.setText("BYU Plugin");
-                contentPanel.add(byuExtentRadioButton, cc.xywh(9, 11, 5, 1));
+                contentPanel.add(byuExtentRadioButton, cc.xywh(9, 13, 5, 1));
 
                 //---- ignoreUnlinkedRecordsLabel ----
                 ignoreUnlinkedRecordsLabel.setText("  Specify Unlinked Records to NOT Copy");
-                contentPanel.add(ignoreUnlinkedRecordsLabel, cc.xy(1, 13));
+                contentPanel.add(ignoreUnlinkedRecordsLabel, cc.xy(1, 15));
 
                 //---- ignoreUnlinkedNamesCheckBox ----
                 ignoreUnlinkedNamesCheckBox.setText("Name Records");
-                contentPanel.add(ignoreUnlinkedNamesCheckBox, cc.xywh(3, 13, 5, 1));
+                contentPanel.add(ignoreUnlinkedNamesCheckBox, cc.xywh(3, 15, 5, 1));
 
                 //---- ignoreUnlinkedSubjectsCheckBox ----
                 ignoreUnlinkedSubjectsCheckBox.setText("Subject Records");
-                contentPanel.add(ignoreUnlinkedSubjectsCheckBox, cc.xywh(9, 13, 5, 1));
+                contentPanel.add(ignoreUnlinkedSubjectsCheckBox, cc.xywh(9, 15, 5, 1));
 
                 //======== publishPanel ========
                 {
@@ -1090,15 +1102,15 @@ public class dbCopyFrame extends JFrame {
                     publishResourcesCheckBox.setSelected(true);
                     publishPanel.add(publishResourcesCheckBox, cc.xy(13, 1));
                 }
-                contentPanel.add(publishPanel, cc.xywh(1, 15, 13, 1));
+                contentPanel.add(publishPanel, cc.xywh(1, 17, 13, 1));
 
                 //---- simulateCheckBox ----
                 simulateCheckBox.setText("Simulate REST Calls");
-                contentPanel.add(simulateCheckBox, cc.xy(1, 17));
+                contentPanel.add(simulateCheckBox, cc.xy(1, 19));
 
                 //---- useScriptCheckBox ----
                 useScriptCheckBox.setText("Use Mapper Script");
-                contentPanel.add(useScriptCheckBox, cc.xywh(3, 17, 5, 1));
+                contentPanel.add(useScriptCheckBox, cc.xywh(3, 19, 5, 1));
 
                 //---- editScriptButton ----
                 editScriptButton.setText("Edit or Load Script");
@@ -1108,33 +1120,29 @@ public class dbCopyFrame extends JFrame {
                         editScriptButtonActionPerformed();
                     }
                 });
-                contentPanel.add(editScriptButton, cc.xywh(9, 17, 5, 1));
+                contentPanel.add(editScriptButton, cc.xywh(9, 19, 5, 1));
 
                 //---- batchImportCheckBox ----
                 batchImportCheckBox.setText("Use Batch Import for Resources");
                 batchImportCheckBox.setSelected(true);
-                contentPanel.add(batchImportCheckBox, cc.xy(1, 19));
+                contentPanel.add(batchImportCheckBox, cc.xy(1, 21));
 
                 //---- numResourceToCopyLabel ----
                 numResourceToCopyLabel.setText("Number of  Resources To Copy");
-                contentPanel.add(numResourceToCopyLabel, cc.xywh(3, 19, 5, 1));
+                contentPanel.add(numResourceToCopyLabel, cc.xywh(3, 21, 5, 1));
 
                 //---- numResourceToCopyTextField ----
                 numResourceToCopyTextField.setText("100000");
-                contentPanel.add(numResourceToCopyTextField, cc.xywh(9, 19, 5, 1));
-
-//                //---- deleteResourcesCheckBox ----
-//                deleteResourcesCheckBox.setText("Delete Previously Saved Resources");
-//                contentPanel.add(deleteResourcesCheckBox, cc.xy(1, 21));
+                contentPanel.add(numResourceToCopyTextField, cc.xywh(9, 21, 5, 1));
 
                 //---- resourcesToCopyTextField ----
                 resourcesToCopyTextField.setText("-refid_unique, -term_default");
-                contentPanel.add(resourcesToCopyTextField, cc.xywh(3, 21, 11, 1));
+                contentPanel.add(resourcesToCopyTextField, cc.xywh(3, 23, 11, 1));
 
                 //---- outputConsoleLabel ----
                 outputConsoleLabel.setText("Output Console:");
-                contentPanel.add(outputConsoleLabel, cc.xy(1, 23));
-                contentPanel.add(copyProgressBar, cc.xywh(3, 23, 11, 1));
+                contentPanel.add(outputConsoleLabel, cc.xy(1, 25));
+                contentPanel.add(copyProgressBar, cc.xywh(3, 25, 11, 1));
 
                 //======== scrollPane1 ========
                 {
@@ -1144,7 +1152,7 @@ public class dbCopyFrame extends JFrame {
                     consoleTextArea.setLineWrap(true);
                     scrollPane1.setViewportView(consoleTextArea);
                 }
-                contentPanel.add(scrollPane1, cc.xywh(1, 25, 13, 1));
+                contentPanel.add(scrollPane1, cc.xywh(1, 27, 13, 1));
 
                 //---- recordURIComboBox ----
                 recordURIComboBox.setModel(new DefaultComboBoxModel(new String[] {
@@ -1160,15 +1168,15 @@ public class dbCopyFrame extends JFrame {
                     "/config/enumerations"
                 }));
                 recordURIComboBox.setEditable(true);
-                contentPanel.add(recordURIComboBox, cc.xy(1, 27));
+                contentPanel.add(recordURIComboBox, cc.xy(1, 29));
 
                 //---- paramsLabel ----
                 paramsLabel.setText("Params");
-                contentPanel.add(paramsLabel, cc.xy(3, 27));
+                contentPanel.add(paramsLabel, cc.xy(3, 29));
 
                 //---- paramsTextField ----
                 paramsTextField.setText("page=1");
-                contentPanel.add(paramsTextField, cc.xywh(5, 27, 3, 1));
+                contentPanel.add(paramsTextField, cc.xywh(5, 29, 3, 1));
 
                 //---- viewRecordButton ----
                 viewRecordButton.setText("View");
@@ -1178,7 +1186,7 @@ public class dbCopyFrame extends JFrame {
                         viewRecordButtonActionPerformed();
                     }
                 });
-                contentPanel.add(viewRecordButton, cc.xy(11, 27));
+                contentPanel.add(viewRecordButton, cc.xy(11, 29));
 
                 //---- testRecordButton ----
                 testRecordButton.setText("Test");
@@ -1188,7 +1196,7 @@ public class dbCopyFrame extends JFrame {
                         testRecordButtonActionPerformed();
                     }
                 });
-                contentPanel.add(testRecordButton, cc.xy(13, 27));
+                contentPanel.add(testRecordButton, cc.xy(13, 29));
             }
             dialogPane.add(contentPanel, BorderLayout.CENTER);
 
@@ -1279,7 +1287,7 @@ public class dbCopyFrame extends JFrame {
 
 
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables
-    // Generated using JFormDesigner Evaluation license - Sarah Morrissey
+    // Generated using JFormDesigner non-commercial license
     private JPanel dialogPane;
     private JPanel contentPanel;
     private JLabel apiLabel;
@@ -1293,6 +1301,7 @@ public class dbCopyFrame extends JFrame {
     private JButton repositoryCheckButton;
     private JCheckBox copyRecordCheckBox;
     private JButton viewRepositoryCheckReportButton;
+    private JButton continueButton;
     private JPanel tracerPanel;
     private JCheckBox useTracerCheckBox;
     private JComboBox tracerComboBox;
@@ -1323,7 +1332,6 @@ public class dbCopyFrame extends JFrame {
     private JCheckBox batchImportCheckBox;
     private JLabel numResourceToCopyLabel;
     private JTextField numResourceToCopyTextField;
-//    private JCheckBox deleteResourcesCheckBox;
     private JTextField resourcesToCopyTextField;
     private JLabel outputConsoleLabel;
     private JProgressBar copyProgressBar;

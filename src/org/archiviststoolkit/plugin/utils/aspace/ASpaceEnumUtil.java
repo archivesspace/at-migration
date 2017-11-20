@@ -68,8 +68,11 @@ public class ASpaceEnumUtil {
      * @return
      */
     public Object[] getASpaceTermType(String atValue) {
-        if (atValue.contains("uniform")) {
-            atValue = "uniform_title";
+//        if (atValue.contains("uniform")) {
+//            atValue = "uniform_title";
+//        } else if
+        if (atValue.contains("Genre")) {
+            atValue = "genre_form";
         }
         return getASpaceEnumValue("subject_term_type", atValue, false, "topical");
     }
@@ -95,15 +98,19 @@ public class ASpaceEnumUtil {
             code = "tgn";
         } else if (atValue.contains("library of congress subject headings")) {
             code = "lcsh";
-        } else if (atValue.equals("local")) {
+        } else if (atValue.contains("local sources")) {
             code = "local";
         } else if (atValue.contains("medical subject headings")) {
             code = "mesh";
         } else if (atValue.contains("thesaurus for graphic materials")) {
             code =  "gmgpc";
         } else {
-            if (code == null || code.isEmpty()) code = "local";
-            else code = code.replace(".", "");
+            if (code == null) {
+                code = "local";
+            } else {
+                code = code.replace(".", "");
+                if (code.isEmpty()) code = "local";
+            }
         }
 
         return getASpaceEnumValue("subject_source", code);
@@ -117,7 +124,7 @@ public class ASpaceEnumUtil {
      */
     public Object[] getASpaceNameSource(String atValue) {
 
-        if (atValue == null || atValue.trim().isEmpty()) atValue = "local";
+        if (atValue == null) atValue = "";
         atValue = atValue.toLowerCase();
 
         if(atValue.contains("naco")) {
@@ -126,6 +133,8 @@ public class ASpaceEnumUtil {
             atValue = "nad";
         } else if(atValue.contains("union")) {
             atValue = "ulan";
+        } else if (atValue.contains("local sources")) {
+            atValue = "local";
         }
         return getASpaceEnumValue("name_source", atValue);
     }
@@ -154,7 +163,8 @@ public class ASpaceEnumUtil {
      * @return
      */
     public Object[] getASpaceNameRule(String atValue) {
-        if(atValue == null || atValue.isEmpty()) atValue = "local";
+//        if(atValue == null || atValue.isEmpty()) atValue = "local";
+        if (atValue == null) atValue = "";
 
         atValue = atValue.toLowerCase();
 
@@ -472,12 +482,7 @@ public class ASpaceEnumUtil {
         } else if(atValue.contains("physical facet")) {
             atValue = "physfacet";
         }
-        Object[] value = getASpaceEnumValue(enumName, atValue, false, defaultValue);
-        if (value[0].equals(defaultValue)) {
-            Object[] multiValue = getASpaceMultiPartNoteType(atValue);
-            if (!(multiValue[0] == null || multiValue[0].equals("odd"))) value = multiValue;
-        }
-        return value;
+        return getASpaceEnumValue(enumName, atValue, false, defaultValue);
     }
 
     /**

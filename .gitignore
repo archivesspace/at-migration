@@ -6,3 +6,4 @@ at-migration.iml
 /logs/*
 /out
 src/desktop.ini
+/src/org/archiviststoolkit/plugin/basic/

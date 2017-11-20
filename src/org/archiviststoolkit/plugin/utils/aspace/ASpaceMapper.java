@@ -298,13 +298,13 @@ public class ASpaceMapper {
      * @throws Exception
      */
     public JSONObject addSubjectTerm(Subjects record, JSONObject json) throws Exception {
-        JSONArray termsJA;
-        try {
-            //if there is already a list with some terms start with it
-            termsJA = (JSONArray) json.get("terms");
-        } catch (JSONException e) {
-            termsJA = new JSONArray();
-        }
+        JSONArray termsJA = new JSONArray();
+//        try {
+//            //if there is already a list with some terms start with it
+//            termsJA = (JSONArray) json.get("terms");
+//        } catch (JSONException e) {
+//            termsJA = new JSONArray();
+//        }
 
         // see if to define term type as untyped
         boolean isDefault = aspaceCopyUtil.isTermTypeDefault();
@@ -475,6 +475,10 @@ public class ASpaceMapper {
         if(record instanceof Names) {
             String nameSource = (String) enumUtil.getASpaceNameSource(((Names)record).getNameSource())[0];
             String nameRule = (String) enumUtil.getASpaceNameRule(((Names)record).getNameRule())[0];
+
+            if ((nameSource == null || nameSource.isEmpty()) && (nameRule == null || nameRule.isEmpty())) {
+                nameSource = (String) enumUtil.getASpaceNameSource("unknown")[0];
+            }
 
             namesJS.put("source", nameSource);
             namesJS.put("rules", nameRule);
@@ -712,7 +716,7 @@ public class ASpaceMapper {
         json.put("username", username);
 
         // get the full name, if it doesn't exist then just enter text with random string
-        String name = fixEmptyString(record.getFullName(), "full name not entered ##" + randomString.nextString());
+        String name = fixEmptyString(record.getFullName(), "User: " + username);//"full name not entered ##" + randomString.nextString());
         json.put("name", name);
 
         json.put("email", record.getEmail());
@@ -860,7 +864,13 @@ public class ASpaceMapper {
 
         json.put("retention_rule", record.getRetentionRule());
 
-        json.put("general_note", record.getGeneralAccessionNote());
+        // add info on who created the accession record to general note field
+        String note = "";
+        note += record.getGeneralAccessionNote();
+        note += "\n\nAT record created by: ";
+        note += record.getCreatedBy();
+
+        json.put("general_note", note);
 
         json.put("access_restrictions", record.getAccessRestrictions());
 
@@ -1675,7 +1685,9 @@ public class ASpaceMapper {
         addExternalId(record, json, "assessment");
 
         print("Adding agent record for who did survey ...");
-        json.put("surveyed_by", addAssessmentsAgent(record.getWhoDidSurvey(), record));
+        String name = record.getWhoDidSurvey();
+        if (name == null || name.isEmpty()) name = record.getCreatedBy();
+        json.put("surveyed_by", addAssessmentsAgent(name, record));
 
         Date surveyBegin = record.getDateOfSurvey();
         //use the date the assessment record was created if the date of survey is not specified
@@ -1779,17 +1791,22 @@ public class ASpaceMapper {
 
         name = name.trim();
         boolean unknown = false;
-        if (name == null || name.isEmpty()) {
+        if (name.isEmpty()) {
             //if a default name 'unknown' has already been added use that instead of adding again
             if (unknownName != null) return unknownName;
             name = "unknown";
             unknown = true;
         }
 
+        JSONObject matchingUserAgentRef = aspaceCopyUtil.getMatchingUserAgent(name);
+        if (matchingUserAgentRef != null) {
+            return new JSONArray().put(matchingUserAgentRef);
+        }
+
         //map the name to an ASpace agent
         nameJSON.put("primary_name", name);
         nameJSON.put("sort_name", name);
-        nameJSON.put("source", enumUtil.getASpaceNameSource(null)[0]);
+        nameJSON.put("source", enumUtil.getASpaceNameSource("local")[0]);
         nameJSON.put("name_order", enumUtil.getASpaceNameOrder(null)[0]);
         namesJA.put(nameJSON);
         json.put("names", namesJA);
@@ -1801,12 +1818,14 @@ public class ASpaceMapper {
         String endpoint = "/agents/people";
         String id = aspaceCopyUtil.saveRecord(endpoint , json.toString(), "Assessments->" + assessment.getIdentifier());
 
-        //return a JSONArray with a reference to the agent
-        String uri = endpoint + "/" + id;
-
         JSONArray ja = new JSONArray();
-        ja.put(getReferenceObject(uri));
-        if (unknown) unknownName = ja;
+        if (!id.equals("no id assigned")) {
+            //return a JSONArray with a reference to the agent
+            String uri = endpoint + "/" + id;
+            aspaceCopyUtil.addAssessmentsNameToUserURIMap(name, uri);
+            ja.put(getReferenceObject(uri));
+            if (unknown) unknownName = ja;
+        }
         return ja;
     }
 
@@ -2168,13 +2187,13 @@ public class ASpaceMapper {
             } else {
                 // even though it could be a single part note, based on the type it
                 // needs to be a multi part note in ASpace
-                noteType = (String) enumUtil.getASpaceSinglePartNoteType(noteType)[0];
+                String noteTypeMapped = (String) enumUtil.getASpaceSinglePartNoteType(noteType)[0];
 
-                if(noteType.equals(ASpaceEnumUtil.UNMAPPED)) {
+                if(noteTypeMapped.equals("abstract") && !noteType.toLowerCase().contains("abstract")) {
                     addMultiPartNote(noteJS, note);
                 } else {
                     noteJS.put("jsonmodel_type", "note_singlepart");
-                    noteJS.put("type", noteType);
+                    noteJS.put("type", noteTypeMapped);
                     noteJS.put("content", contentJA);
                 }
             }
@@ -2645,7 +2664,7 @@ public class ASpaceMapper {
      * @param lookupList
      * @return
      */
-    public JSONObject mapLookList(LookupList lookupList) throws Exception {
+    public JSONObject mapLookList(LookupList lookupList, ArrayList<String> additional) throws Exception {
         // first we get the correct dynamic enum based on list. If it null then we just return null
         JSONObject dynamicEnumJS = enumUtil.getDynamicEnum(lookupList.getListName());
 
@@ -2654,6 +2673,8 @@ public class ASpaceMapper {
         // add any values to this list if needed
         String enumListName = dynamicEnumJS.getString("name");
         JSONArray valuesJA = dynamicEnumJS.getJSONArray("values");
+
+        HashSet<String> values = new HashSet<String>();
 
         for (LookupListItems lookupListItem: lookupList.getListItems()) {
             String atValue = lookupListItem.getListItem();
@@ -2664,9 +2685,18 @@ public class ASpaceMapper {
 //            else toAdd = atValue.toLowerCase();
             Object[] mapped = enumUtil.mapsToASpaceEnumValue(enumListName, atValue, code);
             if(!(Boolean) mapped[1]) {
-                valuesJA.put(mapped[0]);
+                values.add((String) mapped[0]);
             }
         }
+
+        for (String value: additional) {
+            Object[] mapped = enumUtil.mapsToASpaceEnumValue(enumListName, value, "");
+            if (!(Boolean) mapped[1]) {
+                values.add((String) mapped[0]);
+            }
+        }
+
+        for (String value: values) valuesJA.put(value);
 
         return dynamicEnumJS;
     }

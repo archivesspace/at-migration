@@ -3,6 +3,7 @@ package org.archiviststoolkit.plugin.utils.aspace;
 import org.archiviststoolkit.model.Accessions;
 import org.archiviststoolkit.model.AccessionsLocations;
 import org.archiviststoolkit.model.ArchDescriptionAnalogInstances;
+import org.archiviststoolkit.model.Resources;
 import org.archiviststoolkit.mydomain.DomainObject;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -21,6 +22,7 @@ public class TopContainerMapper {
 
     //keys are containers that have been added to ASpace and values are objects that store that container's information
     private static HashMap<MiniContainer, Info> alreadyAdded = new HashMap<MiniContainer, Info>();
+    private static HashMap<MiniContainer, Info> permanentAdded = new HashMap<MiniContainer, Info>();
 
     //used for making unique identifiers for containers without indicators
     private static int unknownCount = 1;
@@ -183,7 +185,10 @@ public class TopContainerMapper {
      */
     public void addToExisting(String uri) {
         if (uri.contains("10000001") || uri.contains("no id assigned")) return;
-        alreadyAdded.put(new MiniContainer(this), new Info(uri));
+        MiniContainer mini = new MiniContainer(this);
+        Info info = new Info(uri);
+        alreadyAdded.put(mini, info);
+        if (this.barcode != null) permanentAdded.put(mini, info);
     }
 
     /**
@@ -362,10 +367,17 @@ public class TopContainerMapper {
             MiniContainer miniContainer = new MiniContainer(fromString(key));
             Info info = new Info(fromString(topContainerURIMap.get(key)));
             alreadyAdded.put(miniContainer, info);
+            if (miniContainer.barcode != null) permanentAdded.put(miniContainer, info);
         }
     }
 
     public static void clearAlreadyAdded() {
+        permanentAdded = new HashMap<MiniContainer, Info>();
+        resetAlreadyAdded();
+    }
+
+    public static void resetAlreadyAdded() {
         alreadyAdded = new HashMap<MiniContainer, Info>();
+        alreadyAdded.putAll(permanentAdded);
     }
 }

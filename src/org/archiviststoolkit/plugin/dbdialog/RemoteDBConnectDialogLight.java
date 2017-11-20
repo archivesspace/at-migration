@@ -742,7 +742,7 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
      * @param lookupList
      * @return
      */
-    public void addExtentTypes(LookupList lookupList) {
+    public void addExtentTypes(LookupList lookupList, ArrayList<String> additional) {
         Transaction tx = null;
         ArrayList recordList = null;
 
@@ -760,7 +760,8 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
             String extentType = (String)record;
 
             if(!extentType.isEmpty()) {
-                lookupList.addListItem(extentType);
+//                lookupList.addListItem(extentType);
+                additional.add(extentType);
             }
         }
     }
@@ -771,7 +772,7 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
      *
      * @param lookupList
      */
-    public void addSalutations(LookupList lookupList) {
+    public void addSalutations(LookupList lookupList, ArrayList<String> additional) {
         Transaction tx = null;
         ArrayList recordList = null;
 
@@ -789,7 +790,8 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
             String salutation = (String)record;
 
             if(!salutation.isEmpty()) {
-                lookupList.addListItem(salutation);
+//                lookupList.addListItem(salutation);
+                additional.add(salutation);
             }
         }
     }
