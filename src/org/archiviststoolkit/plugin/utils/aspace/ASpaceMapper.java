@@ -869,6 +869,7 @@ public class ASpaceMapper {
         note += record.getGeneralAccessionNote();
         note += "\n\nAT record created by: ";
         note += record.getCreatedBy();
+        note += ".\n";
 
         json.put("general_note", note);
 
