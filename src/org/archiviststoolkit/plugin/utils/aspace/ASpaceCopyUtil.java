@@ -625,7 +625,7 @@ public class ASpaceCopyUtil {
 
         // these are used to update the progress bar
         int total = records.size();
-        int count = numAttempted;//0;
+        int count = numAttempted;
         int success = numSuccessful;
 
         records = new ArrayList<Repositories>(records.subList(numAttempted, total));
@@ -657,8 +657,7 @@ public class ASpaceCopyUtil {
                     repositoryAgentURIMap.put(uri, agentURI);
 
                     print("Copied Repository: " + repository.getShortName() + " :: " + id);
-//                    print("Mapping repository user group records for " + repository.getShortName() + "...");
-//                    mapRepositoryGroups(uri);
+
                     success++;
                     numSuccessful++;
                 } else {
@@ -1355,10 +1354,6 @@ public class ASpaceCopyUtil {
 
         ArrayList<Accessions> records = sourceRCD.getAccessions();
 
-//        if (recordsToCopy.peek().equals("Accessions")) {
-//            records = new ArrayList<Accessions>(records.subList(numAttempted, records.size()));
-//        }
-
         // these are used to update the progress bar
         int total = records.size();
         int count = numAttempted;
@@ -1366,7 +1361,7 @@ public class ASpaceCopyUtil {
 
         records = new ArrayList<Accessions>(records.subList(numAttempted, total));
 
-//        updateProgress("Accessions", total, count);
+        TopContainerMapper.resetAlreadyAdded(-1);
 
         for (Accessions accession : records) {
             if(stopCopy) return;
@@ -1746,7 +1741,7 @@ public class ASpaceCopyUtil {
 
             count++;
 
-            TopContainerMapper.resetAlreadyAdded();
+            TopContainerMapper.resetAlreadyAdded(resource.getIdentifier());
 
             // check if to stop copy process
             if(stopCopy) {

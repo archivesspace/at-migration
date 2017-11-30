@@ -570,15 +570,16 @@ public class ASpaceMapper {
         JSONArray contactsJA = new JSONArray();
         JSONObject contactsJS = new JSONObject();
 
-        contactsJS.put("name", repository.getShortName());
+        contactsJS.put("name", fixEmptyString(repository.getRepositoryName(), repository.getShortName()));
         contactsJS.put("address_1", repository.getAddress1());
         contactsJS.put("address_2", repository.getAddress2());
         contactsJS.put("address_3", repository.getAddress3());
         contactsJS.put("city", repository.getCity());
+        contactsJS.put("region", repository.getRegion());
 
         // add the country and country code together
-        String country = repository.getCountry() + " "  + repository.getCountryCode();
-        contactsJS.put("country", country.trim());
+//        String country = repository.getCountry() + " "  + repository.getCountryCode();
+        contactsJS.put("country", repository.getCountry().trim());//country.trim());
 
         contactsJS.put("post_code", repository.getMailCode());
         contactsJS.put("email", repository.getEmail());
@@ -648,6 +649,8 @@ public class ASpaceMapper {
         json.put("repo_code", record.getShortName());
         json.put("name", fixEmptyString(record.getRepositoryName()));
         json.put("org_code", record.getAgencyCode());
+        String countryCode = (String) enumUtil.getASpaceCountryID(record.getCountryCode())[0];
+        if (countryCode != null) json.put("country", countryCode);
         json.put("parent_institution_name", record.getInstitutionName());
         json.put("url", fixUrl(record.getUrl()));
         json.put("publish", publishHashMap.get("repositories"));

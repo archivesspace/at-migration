@@ -249,9 +249,6 @@ public class ASpaceEnumUtil {
         if(archDescriptionDate != null && archDescriptionDate.getCertainty() != null &&  !archDescriptionDate.getCertainty()) {
             atValue = "approximate";
         }
-//        } else {
-//            atValue = "questionable";
-//        }
         return getASpaceEnumValue("date_certainty", atValue, false, null);
     }
 
@@ -629,9 +626,24 @@ public class ASpaceEnumUtil {
         return getASpaceEnumValue("accession_resource_type", atValue);
     }
 
+    /**
+     * method to get the ASpace rights basis
+     * @param atValue
+     * @return
+     */
     public Object[] getASpaceRightsBasis(String atValue) {
         if (atValue == null || atValue.isEmpty()) atValue = "archivists_toolkit";
         return getASpaceEnumValue("rights_statement_other_rights_basis", atValue);
+    }
+
+    /**
+     * Method to get the ASpace country ID
+     * @param atValue
+     * @return
+     */
+    public Object[] getASpaceCountryID(String atValue) {
+        if (atValue != null && atValue.trim().length() != 2) atValue = null;
+        return getASpaceEnumValue("country_iso_3166", atValue, false, null);
     }
 
     /**
@@ -737,7 +749,7 @@ public class ASpaceEnumUtil {
         //this really shouldn't occur but is here as a safety measure
         if (dynamicEnums == null) {
             return new Object[]{null, false};
-            }
+        }
 
         //if value is null go ahead and return it
         if (atValue == null) {
@@ -747,6 +759,8 @@ public class ASpaceEnumUtil {
         //convert AT value to typical ASpace enum format
         atValue = atValue.trim().toLowerCase();
         atValue = atValue.replace(" ", "_");
+
+        if (atValue.isEmpty()) atValue = defaultValue;
 
         try {
             //if there is a value in ASpace that matches return this and true

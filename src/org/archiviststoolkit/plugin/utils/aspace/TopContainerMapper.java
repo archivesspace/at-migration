@@ -1,5 +1,6 @@
 package org.archiviststoolkit.plugin.utils.aspace;
 
+import net.sf.jasperreports.engine.xml.JRPenFactory;
 import org.archiviststoolkit.model.Accessions;
 import org.archiviststoolkit.model.AccessionsLocations;
 import org.archiviststoolkit.model.ArchDescriptionAnalogInstances;
@@ -23,6 +24,7 @@ public class TopContainerMapper {
     //keys are containers that have been added to ASpace and values are objects that store that container's information
     private static HashMap<MiniContainer, Info> alreadyAdded = new HashMap<MiniContainer, Info>();
     private static HashMap<MiniContainer, Info> permanentAdded = new HashMap<MiniContainer, Info>();
+    private static long resourceID = -1;
 
     //used for making unique identifiers for containers without indicators
     private static int unknownCount = 1;
@@ -188,7 +190,7 @@ public class TopContainerMapper {
         MiniContainer mini = new MiniContainer(this);
         Info info = new Info(uri);
         alreadyAdded.put(mini, info);
-        if (this.barcode != null) permanentAdded.put(mini, info);
+        if (this.barcode != null && !this.barcode.isEmpty()) permanentAdded.put(mini, info);
     }
 
     /**
@@ -274,29 +276,32 @@ public class TopContainerMapper {
         private String indicator;
         private String type;
         private String barcode;
+        private long resourceID;
 
         MiniContainer(TopContainerMapper container) {
             this.parentRepoURI = container.parentRepoURI;
             this.indicator = container.indicator;
             this.type = container.type;
             this.barcode = container.barcode;
+            this.resourceID = TopContainerMapper.resourceID;
         }
 
         MiniContainer(String ... args) {
             this.parentRepoURI = args[0];
-            this.indicator = args[1];
-            if (args.length > 2) {
-                if (args[2].contains("type: ")) {
-                    this.type = args[2].substring(6);
-                    if (args.length > 3) this.barcode = args[3];
+            this.resourceID = Long.parseLong(args[1]);
+            this.indicator = args[2];
+            if (args.length > 3) {
+                if (args[3].contains("type: ")) {
+                    this.type = args[3].substring(6);
+                    if (args.length > 4) this.barcode = args[4];
                 }
-                else this.barcode = args[2];
+                else this.barcode = args[3];
             }
         }
 
         @Override
         public String toString() {
-            return parentRepoURI + SEPARATOR + indicator + SEPARATOR + "type: " + type + SEPARATOR + barcode;
+            return parentRepoURI + SEPARATOR + resourceID + SEPARATOR + indicator + SEPARATOR + "type: " + type + SEPARATOR + barcode;
         }
 
         @Override
@@ -304,12 +309,21 @@ public class TopContainerMapper {
             if (this == o) return true;
             if (o == null || !(o instanceof MiniContainer)) return false;
             MiniContainer other = (MiniContainer) o;
+
+            // records from different repositories can not be in the same top container
             if (!(this.parentRepoURI.equals(other.parentRepoURI))) return false;
+
+            // if two containers have the same non-empty barcode, they are the same
             if (!(this.barcode == null || this.barcode.isEmpty() || other.barcode == null || other.barcode.isEmpty())) {
                 if (this.barcode.trim().equalsIgnoreCase(other.barcode.trim())) return true;
             }
+
+            // unless barcode shows otherwise, different resources are assumed to be in different containers
+            if (this.resourceID != other.resourceID) return false;
+
+            // finally if they have the same type and indicator, they are the same container
             Boolean sameType = true;
-            if (!(this.type == null || this.type.isEmpty() || other.type == null || other.type.isEmpty())) {
+            if (!(this.type == null || other.type == null)) {
                 sameType = this.type.equals(other.type);
             }
             return (this.indicator.equalsIgnoreCase(other.indicator) && sameType);
@@ -317,6 +331,7 @@ public class TopContainerMapper {
 
         @Override
         public int hashCode() {
+            // can't do too much here - repository is the only thing guaranteed to be the same for equivalent containers
             return parentRepoURI.hashCode();
         }
     }
@@ -367,16 +382,17 @@ public class TopContainerMapper {
             MiniContainer miniContainer = new MiniContainer(fromString(key));
             Info info = new Info(fromString(topContainerURIMap.get(key)));
             alreadyAdded.put(miniContainer, info);
-            if (miniContainer.barcode != null) permanentAdded.put(miniContainer, info);
+            if (miniContainer.barcode != null && !miniContainer.barcode.isEmpty()) permanentAdded.put(miniContainer, info);
         }
     }
 
     public static void clearAlreadyAdded() {
         permanentAdded = new HashMap<MiniContainer, Info>();
-        resetAlreadyAdded();
+        resetAlreadyAdded(-1);
     }
 
-    public static void resetAlreadyAdded() {
+    public static void resetAlreadyAdded(long resourceID) {
+        TopContainerMapper.resourceID = resourceID;
         alreadyAdded = new HashMap<MiniContainer, Info>();
         alreadyAdded.putAll(permanentAdded);
     }
