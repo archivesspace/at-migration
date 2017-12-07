@@ -150,6 +150,7 @@ public class ScriptManagerDialog extends JDialog {
                     //---- scriptList ----
                     scriptList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
                     scriptList.addListSelectionListener(new ListSelectionListener() {
+                        @Override
                         public void valueChanged(ListSelectionEvent e) {
                             scriptListValueChanged(e);
                         }
@@ -185,6 +186,7 @@ public class ScriptManagerDialog extends JDialog {
                 //---- storeButton ----
                 storeButton.setText("Store/Update");
                 storeButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         storeButtonActionPerformed();
                     }
@@ -196,6 +198,7 @@ public class ScriptManagerDialog extends JDialog {
                 //---- viewButton ----
                 viewButton.setText("View");
                 viewButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         viewButtonActionPerformed();
                     }
@@ -207,6 +210,7 @@ public class ScriptManagerDialog extends JDialog {
                 //---- deleteButton ----
                 deleteButton.setText("Delete");
                 deleteButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         deleteButtonActionPerformed();
                     }
@@ -218,6 +222,7 @@ public class ScriptManagerDialog extends JDialog {
                 //---- okButton ----
                 okButton.setText("OK");
                 okButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         okButtonActionPerformed();
                     }
