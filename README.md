@@ -22,6 +22,22 @@ IDE of choice. The current source needs to be compiled with JDK 1.6, or later. T
 Note: If you intend to modify user interface code, then you will need to use JFormdesigner to open
 the *.jfd files. Consult the JFormDesigner documentation on how to install and use it.
 
+NOTES FOR DEVELOPERS
+
+The majority of development work will probably take place in a few classes, primarily in the package
+C:\Users\morrissey\Desktop\at-migration\src\org\archiviststoolkit\plugin\utils\aspace
+A description of some of the classes is given below.
+
+1. dbCopyFrame is the user interface for the migration tool. It mostly calls methods in ASpaceCopyUtil.
+2. dbCopyCLI mainly does the same thing as dbCopyFrame but is for command line mode.
+3. ASpaceCopyUtil has a method for copying each record type. Each of these is called by dbCopyFrame/dbCopyCLI. It 
+   gets records from AT, calls on ASpaceMapper to map them to the ASpace model, then calls on ASpaceClient to save 
+   them to ASpace.
+4. ASpaceMapper takes AT model records and converts them to the appropriate ASpace JSON model.
+5. TopContainerMapper serves the same function as ASpaceMapper but is specialized for top containers, which present 
+   some special challenges.
+6. ASpaceClient saves records to ASpace and gets records from ASpace.
+
 NOTES ON TESTING
 
 When writing tests you should always place them in the test directory. To write a test:
@@ -30,7 +46,7 @@ When writing tests you should always place them in the test directory. To write 
 2. Import junit.framework.JUnit4TestAdapter, org.junit.Assert, and org.junit.Test.
 3. Write tests with annotation @Test in this class.
 4. Add the following method:
-    public static junit.framework.Test suite() {return new JUnit4TestAdapter(*Name of your class here*.class);}
+   public static junit.framework.Test suite() {return new JUnit4TestAdapter(*Name of your class here*.class);}
 5. You can now run your test by calling a constructor for your class from the testing main method then running the 
    Testing main method.
 
@@ -81,7 +97,7 @@ HOW TOP CONTAINER UNIQUENESS IS DETERMINED
 Archivist's Toolkit does not include the concept of distinct top containers but rather the same container may 
 be entered many times for multiple instances. For this reason it was necessary to determine a set of rules for 
 determining what constitutes a unique top container. For top containers created from instances, they are considered 
-to be the same if either the repository and barcode match or if the repository, indicator, and container type 
+to be the same if either the repository and barcode match or if the repository, resource, indicator, and container type 
 match. As for accessions, no instances exist in Archivist's Toolkit. In stead, a top container is created for each 
 location the accession is linked to.
 

@@ -12,10 +12,9 @@ import java.util.HashMap;
  * This is util class used to mapped ASpace enum list to AR lookup list items
  *
  * Created by IntelliJ IDEA.
- * User: nathan
- * Date: 12/7/12
- * Time: 9:52 AM
- * Updated by sarah morrissey 9/2017
+ * @author nathan
+ * Updated by sarah morrissey 12/2017
+ * @version 2.2
  */
 public class ASpaceEnumUtil {
     private HashMap<String, String> languageCodes;
@@ -68,9 +67,7 @@ public class ASpaceEnumUtil {
      * @return
      */
     public Object[] getASpaceTermType(String atValue) {
-//        if (atValue.contains("uniform")) {
-//            atValue = "uniform_title";
-//        } else if
+
         if (atValue.contains("Genre")) {
             atValue = "genre_form";
         }
@@ -163,7 +160,7 @@ public class ASpaceEnumUtil {
      * @return
      */
     public Object[] getASpaceNameRule(String atValue) {
-//        if(atValue == null || atValue.isEmpty()) atValue = "local";
+
         if (atValue == null) atValue = "";
 
         atValue = atValue.toLowerCase();
@@ -288,7 +285,7 @@ public class ASpaceEnumUtil {
     }
 
     /**
-     *
+     * gets ASpace agent role
      * @param atValue
      * @return
      */
@@ -622,7 +619,7 @@ public class ASpaceEnumUtil {
      * @return
      */
     public Object[] getASpaceAccessionResourceType(String atValue) {
-        if(atValue == null || atValue.isEmpty()) atValue = "collection";
+        if(atValue == null || atValue.trim().isEmpty()) atValue = "collection";
         return getASpaceEnumValue("accession_resource_type", atValue);
     }
 
@@ -632,7 +629,7 @@ public class ASpaceEnumUtil {
      * @return
      */
     public Object[] getASpaceRightsBasis(String atValue) {
-        if (atValue == null || atValue.isEmpty()) atValue = "archivists_toolkit";
+        if (atValue == null || atValue.trim().isEmpty()) atValue = "archivists_toolkit";
         return getASpaceEnumValue("rights_statement_other_rights_basis", atValue);
     }
 
@@ -760,7 +757,10 @@ public class ASpaceEnumUtil {
         atValue = atValue.trim().toLowerCase();
         atValue = atValue.replace(" ", "_");
 
-        if (atValue.isEmpty()) atValue = defaultValue;
+        if (atValue.isEmpty()) {
+            atValue = defaultValue;
+            if (defaultValue == null) return new Object[]{null, false};
+        }
 
         try {
             //if there is a value in ASpace that matches return this and true
@@ -811,8 +811,6 @@ public class ASpaceEnumUtil {
             mappedValue = getASpaceNameSource(atValue);
         } else if(enumListName.equals("name_rule")) {
             mappedValue = getASpaceNameRule(atValue);
-//        } else if(enumListName.equals("name_description_type")) {
-//            mappedValue = getASpaceNameDescriptionType(atValue);
         } else if(enumListName.equals("accession_acquisition_type")) {
             mappedValue = getASpaceAcquisitionType(atValue);
         } else if(enumListName.equals("accession_resource_type")) {

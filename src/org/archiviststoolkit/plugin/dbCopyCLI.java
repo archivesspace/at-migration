@@ -15,9 +15,9 @@ import java.util.Properties;
  * A class which allows the migration tool to be run from the command line
  *
  * Created by IntelliJ IDEA.
- * User: nathan
- * Date: 4/21/14
- * Time: 2:58 PM
+ * @author nathan
+ * Updated by Sarah Morrissey 12/17
+ * @version 2.2
  */
 public class dbCopyCLI {
     // these fields are read in from the properties file
@@ -237,16 +237,15 @@ public class dbCopyCLI {
             } else {
                 System.out.println("Administrator authenticated ...\n");
             }
-//
-//            // first load the notes etc types and resource from the destination database
-//            ascopy.loadRepositories();
+
+            // first load the notes etc types and resource from the destination database
 
             if (continueFromURIMaps && ascopy.uriMapFileExist()) {
                 ascopy.loadURIMaps();
             } else {
                 ascopy.loadRepositories();
             }
-//                if(!copyOnlyResources) {
+
             ascopy.copyLookupList();
             ascopy.copyRepositoryRecords();
             ascopy.mapRepositoryGroups();
@@ -259,11 +258,6 @@ public class dbCopyCLI {
             ascopy.copyAccessionRecords();
             ascopy.copyDigitalObjectRecords();
 
-            // save the record maps for possible future use
-//            ascopy.saveURIMaps();
-//                }
-//            }
-
             // set the number of resources to copy
             int numberOfResourcesToCopy = 1000000;
 
@@ -273,8 +267,6 @@ public class dbCopyCLI {
             ascopy.setUseBatchImport(true);
 
             ascopy.copyResourceRecords(numberOfResourcesToCopy, clientThreads);
-
-//            ascopy.addContainerData();
 
             ascopy.addAssessments();
 

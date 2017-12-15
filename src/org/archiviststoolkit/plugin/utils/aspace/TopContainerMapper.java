@@ -17,29 +17,37 @@ import java.util.*;
  * class to add and manage top containers
  *
  * @author sarah morrissey
- * date: 9/2017
+ * date: 12/2017
+ * @version 2.2
  */
 public class TopContainerMapper {
 
-    //keys are containers that have been added to ASpace and values are objects that store that container's information
+    // keys are containers that have been added to ASpace and values are objects that store that container's information
     private static HashMap<MiniContainer, Info> alreadyAdded = new HashMap<MiniContainer, Info>();
+
+    // these are the containers with barcodes that we need to keep track of even if we are done copying the current resoruce
     private static HashMap<MiniContainer, Info> permanentAdded = new HashMap<MiniContainer, Info>();
+
+    // this gets set each time we begin copying a new resource
+    // its -1 if copying an accession
     private static long resourceID = -1;
 
-    //used for making unique identifiers for containers without indicators
+    // used for making unique identifiers for containers without indicators
     private static int unknownCount = 1;
 
     private ASpaceEnumUtil enumUtil = new ASpaceEnumUtil();
     private static ASpaceCopyUtil aSpaceCopyUtil;
 
-    //analog instance or accession location the container was created for
+    // analog instance or accession location the container was created for
     private DomainObject instance;
+    private Accessions accession;
+
+    // the stuff that is needed to save the container
     private String atID;
     private String parentRepoURI;
     private String indicator;
     private String type;
     private String barcode;
-    private Accessions accession;
 
     public DomainObject getInstance() {
         return instance;
@@ -278,6 +286,10 @@ public class TopContainerMapper {
         private String barcode;
         private long resourceID;
 
+        /**
+         * constructs a mini container version of a top container object
+         * @param container the top container we are creating the mini container for
+         */
         MiniContainer(TopContainerMapper container) {
             this.parentRepoURI = container.parentRepoURI;
             this.indicator = container.indicator;
@@ -286,6 +298,10 @@ public class TopContainerMapper {
             this.resourceID = TopContainerMapper.resourceID;
         }
 
+        /**
+         * reconstructs a mini container from a saved string
+         * @param args the string splint into its components
+         */
         MiniContainer(String ... args) {
             this.parentRepoURI = args[0];
             this.resourceID = Long.parseLong(args[1]);
@@ -347,6 +363,10 @@ public class TopContainerMapper {
             this.uri = uri;
         }
 
+        /**
+         * recreates the info from a string
+         * @param args string split into its components
+         */
         public Info(String ... args) {
             this.uri = args[0];
             for (int i = 1; i < args.length; i++) locationURIs.add(args[i]);
@@ -363,12 +383,22 @@ public class TopContainerMapper {
         }
     }
 
+    /**
+     * splits a saved string for a mini container or info object into its components
+     * @param stringForm the saved string
+     * @return the saved string split according to the separator
+     */
     private static String[] fromString(String stringForm) {
         return stringForm.split(SEPARATOR);
     }
 
+    // the separator that is used when making string forms of thing for saving
     private static final String SEPARATOR = "! . . . !";
 
+    /**
+     * turns the already added map into a string to string map that can be saved
+     * @return a string to string hashmap that can be saved to a file
+     */
     public static HashMap<String, String> getAlreadyAddedStringForm() {
         HashMap<String, String> alreadyAddedStringForm = new HashMap<String, String>();
         for (MiniContainer container : alreadyAdded.keySet()) {
@@ -377,6 +407,10 @@ public class TopContainerMapper {
         return alreadyAddedStringForm;
     }
 
+    /**
+     * take a saved string to string map and processes the data to make the already added map
+     * @param topContainerURIMap the string to string version of already added
+     */
     public static void setAlreadyAdded(HashMap<String, String> topContainerURIMap) {
         for (String key: topContainerURIMap.keySet()) {
             MiniContainer miniContainer = new MiniContainer(fromString(key));
@@ -386,11 +420,18 @@ public class TopContainerMapper {
         }
     }
 
+    /**
+     * clears everything from the list of containers that have been added
+     */
     public static void clearAlreadyAdded() {
         permanentAdded = new HashMap<MiniContainer, Info>();
         resetAlreadyAdded(-1);
     }
 
+    /**
+     * clears all the containers that do not have barcodes from already added and sets the current resource ID
+     * @param resourceID the resource that is being copied now
+     */
     public static void resetAlreadyAdded(long resourceID) {
         TopContainerMapper.resourceID = resourceID;
         alreadyAdded = new HashMap<MiniContainer, Info>();

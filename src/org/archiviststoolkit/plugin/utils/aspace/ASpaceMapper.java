@@ -14,9 +14,9 @@ import java.util.*;
 
 /**
  * Created by IntelliJ IDEA.
- * User: nathan
- * Date: 9/5/12
- * Time: 1:41 PM
+ * @author nathan
+ * Updated by Sarah Morrissey 12/2017
+ * @version 2.2
  *
  * Class to map AT data model to ASPace JSON data model
  */
@@ -299,12 +299,6 @@ public class ASpaceMapper {
      */
     public JSONObject addSubjectTerm(Subjects record, JSONObject json) throws Exception {
         JSONArray termsJA = new JSONArray();
-//        try {
-//            //if there is already a list with some terms start with it
-//            termsJA = (JSONArray) json.get("terms");
-//        } catch (JSONException e) {
-//            termsJA = new JSONArray();
-//        }
 
         // see if to define term type as untyped
         boolean isDefault = aspaceCopyUtil.isTermTypeDefault();
@@ -476,6 +470,7 @@ public class ASpaceMapper {
             String nameSource = (String) enumUtil.getASpaceNameSource(((Names)record).getNameSource())[0];
             String nameRule = (String) enumUtil.getASpaceNameRule(((Names)record).getNameRule())[0];
 
+            // we must have either a source or rules in ASpace so set source to unknown if both are empty in AT
             if ((nameSource == null || nameSource.isEmpty()) && (nameRule == null || nameRule.isEmpty())) {
                 nameSource = (String) enumUtil.getASpaceNameSource("unknown")[0];
             }
@@ -577,9 +572,8 @@ public class ASpaceMapper {
         contactsJS.put("city", repository.getCity());
         contactsJS.put("region", repository.getRegion());
 
-        // add the country and country code together
-//        String country = repository.getCountry() + " "  + repository.getCountryCode();
-        contactsJS.put("country", repository.getCountry().trim());//country.trim());
+        // add the country, country code is added to the repository itself
+        contactsJS.put("country", repository.getCountry().trim());
 
         contactsJS.put("post_code", repository.getMailCode());
         contactsJS.put("email", repository.getEmail());
@@ -787,9 +781,8 @@ public class ASpaceMapper {
         //json.put("disposition", record.?);
         json.put("inventory",record.getInventory());
 
-        //json.put("provenance",record.?);
 
-        /* add linked records (extents, dates, rights statement) */
+        // add linked records (extents, dates, rights statement)
 
         // add the extent array containing one object or many depending if we using multiple extents
         JSONArray extentJA = new JSONArray();
@@ -1312,7 +1305,7 @@ public class ASpaceMapper {
             json.put("dates", dateJA);
         }
 
-        /* add the fields required digital_object.rb */
+        // add the fields required digital_object.rb
 
         JSONArray fileVersionsJA = new JSONArray();
         convertFileVersions(fileVersionsJA, record.getFileVersions());
@@ -1475,7 +1468,7 @@ public class ASpaceMapper {
             json.put("external_documents", externalDocumentsJA);
         }
 
-        /* Add fields needed for resource.rb */
+        // Add fields needed for resource.rb
 
         // get the ids and make them unique if we in DEBUG mode
         String[] cleanIds = cleanUpIds(ASpaceClient.RESOURCE_ENDPOINT, record.getResourceIdentifier1().trim(),
@@ -1520,7 +1513,6 @@ public class ASpaceMapper {
         json.put("ead_location", record.getEadFaLocation());
 
         // TODO 5/12/2015 -- breakout finding aid title and subtitle into separate fields in the ASpace record
-        //json.put("finding_aid_title", record.getFindingAidTitle() + "\n" + record.getFindingAidSubtitle());
         json.put("finding_aid_title", record.getFindingAidTitle());
         json.put("finding_aid_subtitle", record.getFindingAidSubtitle());
         json.put("finding_aid_filing_title", record.getFindingAidFilingTitle());
@@ -1602,7 +1594,7 @@ public class ASpaceMapper {
             json.put("title", "unspecified");
         }
 
-        /* add field required for archival_object.rb */
+        // add field required for archival_object.rb
 
         // see if to make the ref id unique, leave blank, or just use the original (default)
         String refId;
@@ -1688,6 +1680,7 @@ public class ASpaceMapper {
 
         addExternalId(record, json, "assessment");
 
+        // add the name for who did the survey. If empty use name of user who created record
         print("Adding agent record for who did survey ...");
         String name = record.getWhoDidSurvey();
         if (name == null || name.isEmpty()) name = record.getCreatedBy();
@@ -1715,8 +1708,6 @@ public class ASpaceMapper {
 
         json.put("inactive", record.getInactive());
 
-//        addAssessmentsAttributes(json, record);
-
         json.put("general_assessment_note", record.getGeneralNote());
         json.put("special_format_note", record.getSpecialFormatNote());
         json.put("exhibition_value_note", record.getExhibitionValueNote());
@@ -1731,7 +1722,7 @@ public class ASpaceMapper {
     }
 
     /**
-     * method to add the linked records with matching repository to an assessment
+     * method to add the linked records with matching repository to an assessment as well as add the assessment attributes
      * @param jsonText
      * @param record
      * @return
@@ -1744,6 +1735,8 @@ public class ASpaceMapper {
         JSONArray recordsJA = new JSONArray();
 
         String recordUri;
+
+        // add linked accessions from the correct repository
         for (AssessmentsAccessions accession : record.getAccessions()) {
             Accessions accessionRecord = accession.getAccession();
             String recordRepo = aspaceCopyUtil.getRemappedRepositoryURI("accession",
@@ -1753,6 +1746,8 @@ public class ASpaceMapper {
                 recordsJA.put(getReferenceObject(recordUri));
             }
         }
+
+        // add linked digital objects from correct repository
         for (AssessmentsDigitalObjects digitalObject: record.getDigitalObjects()) {
             DigitalObjects digitalObjectRecord = digitalObject.getDigitalObject();
             String recordRepo = aspaceCopyUtil.getRemappedRepositoryURI("digitalObject",
@@ -1762,6 +1757,8 @@ public class ASpaceMapper {
                 recordsJA.put(getReferenceObject(recordUri));
             }
         }
+
+        // add resources from the correct repository
         for (AssessmentsResources resource : record.getResources()) {
             Resources resourceRecord = resource.getResource();
             String recordRepo = aspaceCopyUtil.getRemappedRepositoryURI("resource",
@@ -1774,6 +1771,7 @@ public class ASpaceMapper {
 
         json.put("records", recordsJA);
 
+        // also add the assessment attributes since they also must be scoped by repository
         addAssessmentsAttributes(json, record, repoURI);
 
         return json.toString();
@@ -1833,9 +1831,14 @@ public class ASpaceMapper {
         return ja;
     }
 
+    /**
+     * add assessment attributes to an assessment
+     * @param json
+     * @param record
+     * @param repo
+     * @throws Exception
+     */
     private void addAssessmentsAttributes(JSONObject json, Assessments record, String repo) throws Exception {
-
-//        Repositories repo = record.getRepository();
 
         //first add the formats
         JSONArray formatsJA = new JSONArray();
@@ -2111,8 +2114,6 @@ public class ASpaceMapper {
         JSONObject noteJS = new JSONObject();
 
         noteJS.put("jsonmodel_type", "note_bioghist");
-//        noteJS.put("publish", publishHashMap.get("names"));
-//        noteJS.put("label", enumUtil.getASpaceNameDescriptionType(record.getDescriptionType()));
 
         JSONArray subnotesJA = new JSONArray();
 
@@ -2432,9 +2433,7 @@ public class ASpaceMapper {
             itemJS.put("value", indexItem.getItemValue());
             itemJS.put("type", enumUtil.getASpaceIndexItemType(indexItem.getItemType())[0]);
             itemJS.put("reference", indexItem.getReference());
-            //itemJS.put("reference", fixEmptyString(indexItem.getReference(), null));
             itemJS.put("reference_text", indexItem.getReferenceText());
-            //itemJS.put("reference_text", fixEmptyString(indexItem.getReferenceText(), null));
 
             itemsJA.put(itemJS);
         }
@@ -2532,21 +2531,6 @@ public class ASpaceMapper {
             containerJS.put("indicator_3", indicator3);
         }
 
-//        // add the location now if needed
-//        if(locationURI != null && !locationURI.isEmpty()) {
-//            Date date = new Date(); // this is need to have valid container_location json record
-//
-//            JSONArray locationsJA = new JSONArray();
-//
-//            JSONObject locationJS = new JSONObject();
-//            locationJS.put("status", "current");
-//            locationJS.put("start_date", date);
-//            locationJS.put("ref", locationURI);
-//
-//            locationsJA.put(locationJS);
-//            containerJS.put("container_locations", locationsJA);
-//        }
-
         // TODO 4/16/2013 add the user defined fields
         //addUserDefinedFields(containerJS, analogInstance);
 
@@ -2574,8 +2558,7 @@ public class ASpaceMapper {
     }
 
     /**
-     * Method to create a dummy instance to old the location information
-     *
+     * Method to create a dummy instance to hold the location information for an accession
      *
      * @param locationNote
      * @return
@@ -2591,22 +2574,11 @@ public class ASpaceMapper {
         // add the container now
         JSONObject containerJS = new JSONObject();
 
+        // create a top container or get it if a equivalent one exists
         TopContainerMapper topContainer = new TopContainerMapper(location, accession, parentRepoURI);
         topContainer.addLocationURI(locationURI, locationNote);
         containerJS.put("top_container", getReferenceObject(topContainer.getRef()));
 
-//        Date date = new Date(); // this is need to have valid container_location json record
-//        JSONArray locationsJA = new JSONArray();
-//
-//        JSONObject locationJS = new JSONObject();
-//        locationJS.put("status", "current");
-//        locationJS.put("start_date", date);
-//        locationJS.put("ref", locationURI);
-//        locationJS.put("note", locationNote);
-//
-//        locationsJA.put(locationJS);
-//
-//        containerJS.put("container_locations", locationsJA);
         instanceJS.put("sub_container", containerJS);
 
         return instanceJS;
@@ -2684,15 +2656,17 @@ public class ASpaceMapper {
             String atValue = lookupListItem.getListItem();
             String code = lookupListItem.getCode();
 
-//            String toAdd;
-//            if (enumListName.equals("subject_source")) toAdd = code;
-//            else toAdd = atValue.toLowerCase();
+            // get the value it maps to and whether or not that value is already in ASpace
             Object[] mapped = enumUtil.mapsToASpaceEnumValue(enumListName, atValue, code);
+
+            // if its not already in ASpace, add it
             if(!(Boolean) mapped[1]) {
                 values.add((String) mapped[0]);
             }
         }
 
+        // we may have additional items we want in ASpace as defaults that aren't in AT
+        // add these values as needed
         for (String value: additional) {
             Object[] mapped = enumUtil.mapsToASpaceEnumValue(enumListName, value, "");
             if (!(Boolean) mapped[1]) {
@@ -2964,24 +2938,8 @@ public class ASpaceMapper {
             // is being used to to store the new id
             return "not used";
         } else if(endpoint.equals(ASpaceClient.RESOURCE_ENDPOINT)) {
-            String message = null;
 
-            //I think its fine without checking for duplicate resource IDs and this causes a problem if checked
-            if(true) {//!resourceIDs.contains(id)) {
-                resourceIDs.add(id);
-            } else {
-                String fullId = "";
-
-                do {
-                    idParts[0] += " ##" + randomString.nextString();
-                    fullId = concatIdParts(idParts);
-                } while(resourceIDs.contains(fullId));
-
-                resourceIDs.add(fullId);
-
-                message = "Duplicate Resource Id: "  + id  + " Changed to: " + fullId + "\n";
-                aspaceCopyUtil.addErrorMessage(message);
-            }
+            resourceIDs.add(id);
 
             // we don't need to return the new id here, since the idParts array
             // is being used to to store the new id

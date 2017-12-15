@@ -31,6 +31,8 @@ import java.util.HashMap;
  * Simple class to test the database transfer code without starting of the AT client application
  *
  * @author Nathan Stevens
+ * updated by Sarah Morrissey 12/2017
+ * @version 2.2
  */
 public class dbCopyFrame extends JFrame {
     public static final String VERSION = "Archives Space Data Migrator v2.x (10/2017)";
@@ -112,31 +114,18 @@ public class dbCopyFrame extends JFrame {
      * Method to hide advance UI features to make it easier for users to run the tool
      */
     private void hideAdvanceFeatures() {
-        //apiLabel.setVisible(false);
         sourceLabel.setVisible(false);
         sourceTextField.setVisible(false);
-        //threadLabel.setVisible(false);
         threadsTextField.setEnabled(false);
-        //repositoryCheckButton.setVisible(false);
-        //copyRecordCheckBox.setVisible(false);
-        //viewRepositoryCheckReportButton.setVisible(false);
         adminLabel.setVisible(false);
         adminTextField.setVisible(false);
         tracerPanel.setVisible(false);
-        //useSaveURIMapsCheckBox.setVisible(false);
         simulateCheckBox.setVisible(false);
         useScriptCheckBox.setVisible(false);
         editScriptButton.setVisible(false);
-        //ignoreUnlinkedRecordsLabel.setVisible(false);
-        //ignoreUnlinkedNamesCheckBox.setVisible(false);
-        //ignoreUnlinkedSubjectsCheckBox.setVisible(false);
-        //publishPanel.setVisible(false);
         batchImportCheckBox.setVisible(false);
-//        deleteResourcesCheckBox.setVisible(false);
         numResourceToCopyLabel.setVisible(false);
         numResourceToCopyTextField.setVisible(false);
-//        deleteResourcesCheckBox.setVisible(false);
-        //resourcesToCopyTextField.setVisible(false);
         recordURIComboBox.setVisible(false);
         paramsLabel.setVisible(false);
         paramsTextField.setVisible(false);
@@ -203,7 +192,13 @@ public class dbCopyFrame extends JFrame {
         }
     }
 
-    // Method to open the dialog that gets a session
+    /**
+     * Method to open the dialog that gets a session
+     * @param title
+     * @param urlIndex
+     * @param reuse
+     * @return
+     */
     public Session displayRemoteConnectionDialog(String title, int urlIndex, boolean reuse) {
         if (reuse && storedRCDS.get(title) != null) {
             RemoteDBConnectDialogLight rcd = storedRCDS.get(title);
@@ -387,9 +382,7 @@ public class dbCopyFrame extends JFrame {
 
                     try {
                         boolean useBatchImport = batchImportCheckBox.isSelected();
-//                        boolean deleteSavedResources = deleteResourcesCheckBox.isSelected();
                         ascopy.setUseBatchImport(useBatchImport);
-//                        ascopy.setDeleteSavedResources(deleteSavedResources);
 
                         // get the number of threads to run the copy process in
                         threads = Integer.parseInt(threadsTextField.getText());
@@ -436,7 +429,7 @@ public class dbCopyFrame extends JFrame {
                     }
 
                     consoleTextArea.append(getStackTrace(e));
-                    //e.printStackTrace();
+
                 } finally {
                     sourceRCD.closeSession();
                 }
@@ -476,7 +469,6 @@ public class dbCopyFrame extends JFrame {
                 // first disable/enable the relevant buttons
                 copyToASpaceButton.setEnabled(false);
                 repositoryCheckButton.setEnabled(false);
-                //errorLogButton.setEnabled(false);
                 stopButton.setEnabled(true);
 
                 // clear text area and show progress bar
@@ -524,7 +516,6 @@ public class dbCopyFrame extends JFrame {
                     if(!copyStopped) {
                         ascopyREC.setResourcesToCopyList(resourcesIDsList);
                         ascopyREC.checkRepositoryMismatches(resourcesToCopy, threads);
-//                        ascopyREC.copyResourceRecords(resourcesToCopy, threads);
                     }
 
                     repositoryMismatchMap = ascopyREC.getRepositoryMismatchMap();
@@ -571,7 +562,6 @@ public class dbCopyFrame extends JFrame {
         // re-enable the buttons the relevant buttons
         copyToASpaceButton.setEnabled(true);
         repositoryCheckButton.setEnabled(true);
-        //errorLogButton.setEnabled(true);
         copyProgressBar.setValue(0);
 
         if (copyStopped) {

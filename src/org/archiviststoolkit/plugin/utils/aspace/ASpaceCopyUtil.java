@@ -8,7 +8,6 @@ import org.archiviststoolkit.plugin.dbCopyFrame;
 import org.archiviststoolkit.plugin.dbdialog.RemoteDBConnectDialogLight;
 import org.archiviststoolkit.plugin.utils.ScriptDataUtils;
 import org.archiviststoolkit.plugin.utils.StopWatch;
-import org.hsqldb.rights.User;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -19,9 +18,10 @@ import java.util.*;
 
 /**
  * Created by IntelliJ IDEA.
- * User: nathan
- * Date: 9/5/12
- * Time: 1:48 PM
+ * @author nathan
+ * updated by Sarah Morrissey 12/2017
+ * @version 2.2
+ *
  * Utility class for copying data from the AT to Archive Space
  */
 public class ASpaceCopyUtil {
@@ -71,8 +71,6 @@ public class ASpaceCopyUtil {
     // hashmap that maps subjects from old database with copy in new database
     private HashMap<Long, String> subjectURIMap = new HashMap<Long, String>();
 
-//    private HashMap<String, String> otherSubjectURIMap = new HashMap<String, String>();
-
     // hashmap that maps names from old database with copy in new database
     private HashMap<Long, String> nameURIMap = new HashMap<Long, String>();
 
@@ -101,7 +99,12 @@ public class ASpaceCopyUtil {
     // used to safeguard against overwriting URI maps before they have been loaded
     private boolean shouldSave = false;
 
-    // returns the uri of a record in ASpace - works with most record types
+    /**
+     * returns the uri of a record in ASpace - works with most record types
+     *
+     * @param record AT record
+     * @return uri of equivalent ASpace record
+     */
     public String getURIMapping(DomainObject record) {
 
         Long recordIdentifier = record.getIdentifier();
@@ -126,6 +129,13 @@ public class ASpaceCopyUtil {
         }
     }
 
+    /**
+     * get the uri of an agent that matches what is in an Assessment field
+     *
+     * @param content
+     * @return
+     * @throws Exception
+     */
     public JSONObject getMatchingUserAgent(String content) throws Exception {
 
         // if its a record added for the assessments it will be an agent uri
@@ -146,6 +156,12 @@ public class ASpaceCopyUtil {
         return null;
     }
 
+    /**
+     * adds the name of an agent created for an assessment to the map so it can be used again
+     *
+     * @param name content of a field in assessments
+     * @param uri
+     */
     public void addAssessmentsNameToUserURIMap(String name, String uri) {
         userURIMap.put("assessments_" + name, uri);
     }
@@ -198,7 +214,7 @@ public class ASpaceCopyUtil {
     private int mismatchesFixed = 0;
     private int mismatchesNotFixed = 0;
 
-    /* Variables used to save URI mapping to file to make data transfer more efficient */
+    // Variables used to save URI mapping to file to make data transfer more efficient
 
     // file where the uri maps is saved
     private static File uriMapFile = null;
@@ -208,7 +224,6 @@ public class ASpaceCopyUtil {
     private final String LOCATION_KEY = "locationURIMap";
     private final String USER_KEY = "userURIMap";
     private final String SUBJECT_KEY = "subjectURIMap";
-    private final String OTHER_SUBJECT_KEY = "otherSubjectURIMap";
     private final String NAME_KEY = "nameURIMap";
     private final String ACCESSION_KEY = "accessionURIMap";
     private final String DIGITAL_OBJECT_KEY = "digitalObjectURIMap";
@@ -521,7 +536,7 @@ public class ASpaceCopyUtil {
 
         ArrayList<LookupList> records = sourceRCD.getLookupLists();
 
-        /* add a dummy lookup list to hold new event fields */
+        // add a dummy lookup list to hold new event fields
         LookupList eventList = new LookupList();
         eventList.setListName("Events");
         eventList.addListItem("processing_started");
@@ -537,21 +552,18 @@ public class ASpaceCopyUtil {
         // these are used to update the progress bar
         int total = records.size();
         int count = numAttempted;
-        int success = numSuccessful;
 
-//        if (recordsToCopy.peek().equals("Lookup List")) {
         records = new ArrayList<LookupList>(records.subList(numAttempted, total));
-//        }
 
         for (LookupList lookupList: records) {
             String listName = lookupList.getListName();
             ArrayList<String> additional = new ArrayList<String>();
 
-            // we may need to add additional values to some lookup list now
+            // we may need to add additional values in some cases
+            // don't add items to the actual lookuplist because this actually modifies data in AT
             if(listName.equalsIgnoreCase("Extent type")) {
                 sourceRCD.addExtentTypes(lookupList, additional);
                 additional.add("unknown");
-//                lookupList.addListItem("unknown");
             } else if(listName.equals("Salutation")) {
                 sourceRCD.addSalutations(lookupList, additional);
             } else if(listName.equals("Name source")) {
@@ -573,7 +585,6 @@ public class ASpaceCopyUtil {
 
                 if (!id.equalsIgnoreCase(NO_ID)) {
                     print("Copied Lookup List Values: " + lookupList.getListName() + " :: " + id);
-                    success++;
                     numSuccessful++;
                 }
             }
@@ -805,10 +816,6 @@ public class ASpaceCopyUtil {
 
         ArrayList<Users> records = sourceRCD.getUsers();
 
-//        if (recordsToCopy.peek().equals("Users")) {
-//            records = new ArrayList<Users>(records.subList(numAttempted, records.size()));
-//        }
-
         // these are used to update the progress bar
         int total = records.size();
         int count = numAttempted;
@@ -864,14 +871,18 @@ public class ASpaceCopyUtil {
         freeMemory();
     }
 
+    /**
+     * adds 2 mappings - username to user uri and user full name to user uri
+     *
+     * @param user
+     * @param uri
+     */
     private void addUserToURIMap(Users user, String uri) {
         String username = user.getUserName().trim().toLowerCase();
         String name = user.getFullName().trim().toLowerCase();
         userURIMap.put(username, uri);
         userURIMap.put(name, uri);
     }
-
-    public static final String SEPARATOR = " - - - ";
 
     /**
      * Method to copy a test user to the ASpace backend
@@ -963,10 +974,6 @@ public class ASpaceCopyUtil {
 
         ArrayList<Names> records = sourceRCD.getNames();
 
-//        if (recordsToCopy.peek().equals("Names")) {
-//            records = new ArrayList<Names>(records.subList(numAttempted, records.size()));
-//        }
-
         // these are used to update the progress bar
         int total = records.size();
         int count = numAttempted;
@@ -1048,10 +1055,15 @@ public class ASpaceCopyUtil {
         freeMemory();
     }
 
+    /**
+     * copys the assessments if ASpace version is 2.2 or later
+     * @throws Exception
+     */
     public void addAssessments() throws Exception {
 
         if (!recordsToCopy.contains("Assessments")) return;
 
+        // first figure out if the version of ASpace allows for assessments
         if (aspaceVersion.contains("2.2")) {
             System.out.println("Copying assessments ...");
         } else if (aspaceVersion.isEmpty()) {
@@ -1071,6 +1083,7 @@ public class ASpaceCopyUtil {
             return;
         }
 
+        // load the assessment attributes that are already in ASpace
         loadAssessmentAtributeDefinitions();
 
         ArrayList<Assessments> records = sourceRCD.getAssessments();
@@ -1089,6 +1102,7 @@ public class ASpaceCopyUtil {
 
             boolean successful = true;
 
+            // get all the repositories that the assessment's linked records are in
             HashSet<String> linkedRepoURIs = new HashSet<String>();
 
             for (AssessmentsDigitalObjects digitalObject : assessment.getDigitalObjects()) {
@@ -1109,13 +1123,11 @@ public class ASpaceCopyUtil {
              */
             for (String repoURI: linkedRepoURIs) {
 
-//                assessment.setRepository(repo);
-
-//                String repoURI = getRemappedRepositoryURI("assessment", assessment.getIdentifier(), assessment.getRepository());
                 String uri = repoURI + ASpaceClient.ASSESSMENT_ENDPOINT;
 
+                // add linked records and assessment attributes
                 String repoJSON = mapper.addAssessmentsRepoSpecificInfo(jsonText, assessment, repoURI);
-//                String jsonText = (String) mapper.convert(assessment);
+
                 if (jsonText != null) {
                     String id = saveRecord(uri, repoJSON, "Assessment->" + assessment.getAssessmentId());
 
@@ -1123,8 +1135,6 @@ public class ASpaceCopyUtil {
                         uri = uri + "/" + id;
                         assessmentURIMap.put(assessment.getIdentifier(), uri);
                         print("Copied Assessment: " + assessment + " :: " + id);
-//                        success++;
-//                        numSuccessful++;
                     } else {
                         print("Fail -- Assessment: " + assessment);
                         successful = false;
@@ -1209,11 +1219,10 @@ public class ASpaceCopyUtil {
         String key = label + " - " + type;
 
         //first see if it is in the global assessment attributes list
-        id = assessmentAttributeDefinitions.get(aspaceClient.ADMIN_REPOSITORY_ENDPOINT).get(key);
+        id = assessmentAttributeDefinitions.get(ASpaceClient.ADMIN_REPOSITORY_ENDPOINT).get(key);
         if (id != null) return id;
 
         //next see if it is in the repository specific assessment attributes list
-//        String repoURI = repositoryURIMap.get(repo.getShortName());
         id = assessmentAttributeDefinitions.get(repoURI).get(key);
         if (id != null) return id;
 
@@ -1221,14 +1230,14 @@ public class ASpaceCopyUtil {
         JSONObject defn = new JSONObject();
         defn.put("label", label);
         defn.put("type", type);
-        JSONObject previous = new JSONObject(aspaceClient.get(repoURI + aspaceClient.ASSESSMENT_ATTR_DEFNS_ENDPOINT,
+        JSONObject previous = new JSONObject(aspaceClient.get(repoURI + ASpaceClient.ASSESSMENT_ATTR_DEFNS_ENDPOINT,
                 null));
         JSONArray previousJA = (JSONArray) previous.get("definitions");
         id = nextAssesAttrDefnID++;
         previousJA.put(defn);
         JSONObject json = new JSONObject();
         json.put("definitions", previousJA);
-        saveRecord(repoURI + aspaceClient.ASSESSMENT_ATTR_DEFNS_ENDPOINT, json.toString(),
+        saveRecord(repoURI + ASpaceClient.ASSESSMENT_ATTR_DEFNS_ENDPOINT, json.toString(),
                 "Assessment Attributes->" + type);
         assessmentAttributeDefinitions.get(repoURI).put(key, id);
         return id;
@@ -1246,10 +1255,6 @@ public class ASpaceCopyUtil {
         print("Copying Subject records ...");
 
         ArrayList<Subjects> records = sourceRCD.getSubjects();
-
-//        if (recordsToCopy.peek().equals("Subjects")) {
-//            records = new ArrayList<Subjects>(records.subList(numAttempted, records.size()));
-//        }
 
         // these are used to update the progress bar
         int total = records.size();
@@ -1279,33 +1284,18 @@ public class ASpaceCopyUtil {
             }
 
             String jsonText;
-            String otherURIMapKey = subject.getSubjectTerm() + " " + enumUtil.getASpaceSubjectSource(subject.getSubjectSource())[0];
             String uri;
-//            boolean alreadyExists = otherSubjectURIMap.containsKey(otherURIMapKey);
 
-//            if (false) {//alreadyExists) {
-//                uri = otherSubjectURIMap.get(otherURIMapKey);
-//                try {
-//                    JSONObject json = getRecord(uri);
-//                    json = mapper.addSubjectTerm(subject, json);
-//                    jsonText = json.toString();
-//                } catch (NullPointerException e) {
-//                    jsonText = (String) mapper.convert(subject);
-//                    uri = ASpaceClient.SUBJECT_ENDPOINT;
-//                }
-//            } else {
                 jsonText = (String) mapper.convert(subject);
                 uri = ASpaceClient.SUBJECT_ENDPOINT;
-//            }
 
             if (jsonText != null) {
+
                 String id = saveRecord(uri, jsonText, "Subject->" + subject.getSubjectTerm());
 
                 if(!id.equalsIgnoreCase(NO_ID)) {
-//                    if (!alreadyExists)
-                        uri = ASpaceClient.SUBJECT_ENDPOINT + "/" + id;
+                    uri = ASpaceClient.SUBJECT_ENDPOINT + "/" + id;
                     subjectURIMap.put(subject.getIdentifier(), uri);
-//                    if (!alreadyExists) otherSubjectURIMap.put(otherURIMapKey, uri);
                     print("Copied Subject: " + subject + " :: " + id);
                     success++;
                     numSuccessful++;
@@ -1313,7 +1303,6 @@ public class ASpaceCopyUtil {
                     print("Fail -- Subject: " + subject);
                 }
             } else {
-
                 print("Fail -- Subject to JSON: " + subject);
             }
 
@@ -1437,7 +1426,6 @@ public class ASpaceCopyUtil {
 
         for (JSONObject eventJS: eventList) {
             String id = saveRecord(uri, eventJS.toString(), "Accession Event->" + accession.getAccessionNumber());
-            //System.out.println("Aspace Event ID:" + id);
         }
     }
 
@@ -1483,10 +1471,6 @@ public class ASpaceCopyUtil {
         print("Copying Digital Object records ...");
 
         ArrayList<DigitalObjects> records = sourceRCD.getDigitalObjects();
-
-//        if (recordsToCopy.peek().equals("Digital Objects")) {
-//            records = new ArrayList<DigitalObjects>(records.subList(numAttempted, records.size()));
-//        }
 
         // these are used to update the progress bar
         int total = records.size();
@@ -1692,6 +1676,12 @@ public class ASpaceCopyUtil {
         }
     }
 
+    /**
+     * method to make sure none of the resource components have mismatches with their linked digital objects
+     * @param component
+     * @param repository
+     * @throws Exception
+     */
     private void checkComponentRepoMismatches(ResourcesComponents component, Repositories repository) throws Exception {
         addInstances(null, component, repository, null);
         for (ResourcesComponents subComponent: component.getResourcesComponents()) {
@@ -1713,11 +1703,6 @@ public class ASpaceCopyUtil {
         enumsSet = true;
 
         currentRecordType = "Resource Record";
-
-        // first delete previously saved resource records if that option was selected by user
-//        if(deleteSavedResources) {
-//            deleteSavedResources();
-//        }
 
         if (!recordsToCopy.contains("Resource Records")) return;
 
@@ -2839,7 +2824,6 @@ public class ASpaceCopyUtil {
         // or we not generating from ASpace backend data
         uriMap.put(LOCATION_KEY, locationURIMap);
         uriMap.put(SUBJECT_KEY, subjectURIMap);
-//        uriMap.put(OTHER_SUBJECT_KEY, otherSubjectURIMap);
         uriMap.put(NAME_KEY, nameURIMap);
         uriMap.put(ACCESSION_KEY, accessionURIMap);
         uriMap.put(DIGITAL_OBJECT_KEY, digitalObjectURIMap);
@@ -2886,7 +2870,6 @@ public class ASpaceCopyUtil {
 
             locationURIMap = (HashMap<Long,String>)uriMap.get(LOCATION_KEY);
             subjectURIMap = (HashMap<Long,String>)uriMap.get(SUBJECT_KEY);
-//            otherSubjectURIMap = (HashMap<String, String>)uriMap.get(OTHER_SUBJECT_KEY);
             nameURIMap = (HashMap<Long,String>)uriMap.get(NAME_KEY);
             accessionURIMap = (HashMap<Long,String>)uriMap.get(ACCESSION_KEY);
             digitalObjectURIMap = (HashMap<Long,String>)uriMap.get(DIGITAL_OBJECT_KEY);
