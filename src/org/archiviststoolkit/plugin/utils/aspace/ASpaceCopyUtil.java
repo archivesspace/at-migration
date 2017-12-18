@@ -562,10 +562,10 @@ public class ASpaceCopyUtil {
             // we may need to add additional values in some cases
             // don't add items to the actual lookuplist because this actually modifies data in AT
             if(listName.equalsIgnoreCase("Extent type")) {
-                sourceRCD.addExtentTypes(lookupList, additional);
+                sourceRCD.addExtentTypes(additional);
                 additional.add("unknown");
             } else if(listName.equals("Salutation")) {
-                sourceRCD.addSalutations(lookupList, additional);
+                sourceRCD.addSalutations(additional);
             } else if(listName.equals("Name source")) {
                 additional.add("unknown");
             } else if(listName.equals("Container types")) {

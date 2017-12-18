@@ -153,7 +153,7 @@ public class dbCopyFrame extends JFrame {
     /**
      * Method to copy data from AT to archive space. NO longer Used
      */
-    public void CopyToASpaceButtonActionPerformed() {
+    private void CopyToASpaceButtonActionPerformed() {
         // first check that the user is running update 15, or greater
         if (mainFrame != null && !mainFrame.getAtVersionNumber().contains("15") &&
                 !mainFrame.getAtVersionNumber().contains("16")) {

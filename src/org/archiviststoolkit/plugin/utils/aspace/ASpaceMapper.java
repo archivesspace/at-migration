@@ -713,7 +713,7 @@ public class ASpaceMapper {
         json.put("username", username);
 
         // get the full name, if it doesn't exist then just enter text with random string
-        String name = fixEmptyString(record.getFullName(), "User: " + username);//"full name not entered ##" + randomString.nextString());
+        String name = fixEmptyString(record.getFullName(), "User: " + username);
         json.put("name", name);
 
         json.put("email", record.getEmail());

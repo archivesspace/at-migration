@@ -1,10 +1,8 @@
 package org.archiviststoolkit.plugin.utils.aspace;
 
-import net.sf.jasperreports.engine.xml.JRPenFactory;
 import org.archiviststoolkit.model.Accessions;
 import org.archiviststoolkit.model.AccessionsLocations;
 import org.archiviststoolkit.model.ArchDescriptionAnalogInstances;
-import org.archiviststoolkit.model.Resources;
 import org.archiviststoolkit.mydomain.DomainObject;
 import org.json.JSONArray;
 import org.json.JSONException;
