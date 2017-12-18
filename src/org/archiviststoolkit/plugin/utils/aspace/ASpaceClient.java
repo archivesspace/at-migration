@@ -18,10 +18,10 @@ import java.util.HashMap;
 
 /**
  * Created by IntelliJ IDEA.
- * User: nathan
- * Date: 9/6/12
- * Time: 3:59 PM
- * <p/>
+ * @author nathan
+ * updated by Sarah Morrissey 12/2017
+ * @version 2.2
+ *
  * This class handles all posting and reading from the ASpace project
  */
 public class ASpaceClient {
@@ -211,11 +211,8 @@ public class ASpaceClient {
             int statusCode;
             try {
                 statusCode = httpclient.executeMethod(post);
-                if (statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR) {
-                    appendToErrorBuffer("Problem connecting to server");
-                    throw new IntentionalExitException("Could not connect to server ...\nFix connection then resume ...", atId);
-                }
             } catch (ConnectException e) {
+                // if the connection is lost we want to pause the migration to fix it
                 boolean ready = false;
                 String message = "Connection has been lost. Check your \n" +
                         "connection to Archives Space and your \n" +
@@ -223,6 +220,8 @@ public class ASpaceClient {
                         "contiue migration. Otherwise press \n" +
                         "'no' to save your URI maps and \n" +
                         "continue this migration later.";
+
+                // the user chooses to fix the connection and continue immediately or save the URI maps and continue later
                 while (!ready) {
                     int result = JOptionPane.showConfirmDialog(null, message, "Lost connection",
                             JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE);
@@ -262,7 +261,10 @@ public class ASpaceClient {
                     JSONArray responseJA = new JSONArray(responseBody);
                     response = responseJA.getJSONObject(responseJA.length() - 1);
 
+                    // if there is a server error stop migration and save place
                     if (response.toString().contains("Server error: Failed to connect to the database")) {
+                        appendToErrorBuffer("Problem connecting to server\n");
+                        appendToErrorBuffer(post.getResponseBodyAsString());
                         throw new IntentionalExitException("Could not connect to server ...\nFix connection then resume ...", atId);
                     }
 
@@ -279,6 +281,7 @@ public class ASpaceClient {
                 }
 
                 if (post.getURI().toString().contains(ASSESSMENT_ATTR_DEFNS_ENDPOINT)) {
+                    // these aren't assigned IDs but we don't want to treat it as an error
                     if (response.getString("status").equalsIgnoreCase("updated")) id = "ok";
                 } else {
                     id = response.getString(idName);
@@ -318,12 +321,15 @@ public class ASpaceClient {
                 // if it a 500 error the ASpace then we may need to add the JSON text
                 if (statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR) {
                     if (responseBody.contains("PoolTimeout")) {
-                        responseBody = "Error: Sequel Pool Timeout ...";
+                        responseBody = "Error: Sequel Pool Timeout ...\nPlease Resume ...";
                     } else if (responseBody.contains("OutOfMemory")) {
-                        responseBody = "Fatal Error: ArchivesSpace Backend Crashed (OutOfMemoryError)\nPlease Restart ...";
+                        responseBody = "Fatal Error: ArchivesSpace Backend Crashed (OutOfMemoryError)\nPlease Resume Later ...";
                     } else if (responseBody.contains("ThreadError")) {
-                        responseBody = "Fatal Error: ArchivesSpace Backend Crashed (OutOfStackSpaceError)\nPlease Restart ...";
+                        responseBody = "Fatal Error: ArchivesSpace Backend Crashed (OutOfStackSpaceError)\nPlease Resume Later ...";
                     }
+
+                    // if there's a server error, stop migration and save place
+                    throw new IntentionalExitException(statusMessage + "\n" + responseBody, atId);
                 }
 
                 errorBuffer.append("Endpoint: ").append(post.getURI()).append("\n").
@@ -331,7 +337,7 @@ public class ASpaceClient {
                         append(statusMessage).append("\n").append(responseBody).append("\n\n");
 
                 post.releaseConnection();
-                throw new Exception(statusMessage);
+                throw new Exception(statusMessage + "\n" + responseBody);
             }
         } finally {
             // Release current connection to the server
@@ -443,7 +449,7 @@ public class ASpaceClient {
                     repos.put(shortName, uri);
                 }
 
-                //we don't need to load the top containers if only assessments still need to be copied
+                // we don't need to load the top containers if only assessments still need to be copied
                 loadExistingTopContainers(repos);
 
                 return repos;
@@ -454,6 +460,13 @@ public class ASpaceClient {
         return null;
     }
 
+    /**
+     * loads any top containers that are in ASpace before the migration starts
+     * this shouldn't be necessary but is done anyway to avoid fatal issues
+     *
+     * @param repos
+     * @throws Exception
+     */
     private void loadExistingTopContainers(HashMap<String, String> repos) throws Exception {
         for (String repoURI: repos.values()) {
             NameValuePair[] params = new NameValuePair[1];

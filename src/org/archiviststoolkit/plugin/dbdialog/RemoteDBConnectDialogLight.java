@@ -739,10 +739,9 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
      * Method to add more extent types to the AT lookup list in case the user made additions
      * to the backend
      *
-     * @param lookupList
      * @return
      */
-    public void addExtentTypes(LookupList lookupList) {
+    public void addExtentTypes(ArrayList<String> additional) {
         Transaction tx = null;
         ArrayList recordList = null;
 
@@ -760,7 +759,7 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
             String extentType = (String)record;
 
             if(!extentType.isEmpty()) {
-                lookupList.addListItem(extentType);
+                additional.add(extentType);
             }
         }
     }
@@ -769,9 +768,8 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
      * Method to add salutations to a dummy lookup list in order to add them to the ASpace
      * enum for this
      *
-     * @param lookupList
      */
-    public void addSalutations(LookupList lookupList) {
+    public void addSalutations(ArrayList<String> additional) {
         Transaction tx = null;
         ArrayList recordList = null;
 
@@ -789,7 +787,7 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
             String salutation = (String)record;
 
             if(!salutation.isEmpty()) {
-                lookupList.addListItem(salutation);
+                additional.add(salutation);
             }
         }
     }

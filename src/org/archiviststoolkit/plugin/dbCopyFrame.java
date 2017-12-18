@@ -9,7 +9,6 @@ import com.jgoodies.forms.factories.FormFactory;
 import com.jgoodies.forms.layout.*;
 import org.archiviststoolkit.ApplicationFrame;
 import org.archiviststoolkit.importer.ImportExportLogDialog;
-import org.archiviststoolkit.model.LookupList;
 import org.archiviststoolkit.plugin.beanshell.ScriptViewerDialog;
 import org.archiviststoolkit.plugin.dbdialog.RemoteDBConnectDialogLight;
 import org.archiviststoolkit.plugin.utils.CodeViewerDialog;
@@ -24,8 +23,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -33,9 +31,12 @@ import java.util.HashMap;
  * Simple class to test the database transfer code without starting of the AT client application
  *
  * @author Nathan Stevens
+ * updated by Sarah Morrissey 12/2017
+ * @version 2.2
  */
 public class dbCopyFrame extends JFrame {
     public static final String VERSION = "Archives Space Data Migrator v2.x (10/2017)";
+    public static FileOutputStream fw;
 
     // The application when running within the AT
     private ApplicationFrame mainFrame = null;
@@ -68,6 +69,7 @@ public class dbCopyFrame extends JFrame {
 
     // used to find and attempt to resolve repository mismatch
     private boolean checkRepositoryMismatch = false;
+    private boolean continueMigration = false;
     private HashMap<String, String> repositoryMismatchMap = null;
 
     // used to specify that the GUI is in basic mode
@@ -99,35 +101,31 @@ public class dbCopyFrame extends JFrame {
         }
     }
 
+    public static void saveConsoleText(JTextArea console) {
+        if (fw != null && console != null) {
+            try {
+                fw.write((console.getText() + "\n\n").getBytes());
+            } catch (IOException e) {
+            }
+        }
+    }
+
     /**
      * Method to hide advance UI features to make it easier for users to run the tool
      */
     private void hideAdvanceFeatures() {
-        //apiLabel.setVisible(false);
         sourceLabel.setVisible(false);
         sourceTextField.setVisible(false);
-        //threadLabel.setVisible(false);
         threadsTextField.setEnabled(false);
-        //repositoryCheckButton.setVisible(false);
-        //copyRecordCheckBox.setVisible(false);
-        //viewRepositoryCheckReportButton.setVisible(false);
         adminLabel.setVisible(false);
         adminTextField.setVisible(false);
         tracerPanel.setVisible(false);
-        //useSaveURIMapsCheckBox.setVisible(false);
         simulateCheckBox.setVisible(false);
         useScriptCheckBox.setVisible(false);
         editScriptButton.setVisible(false);
-        //ignoreUnlinkedRecordsLabel.setVisible(false);
-        //ignoreUnlinkedNamesCheckBox.setVisible(false);
-        //ignoreUnlinkedSubjectsCheckBox.setVisible(false);
-        //publishPanel.setVisible(false);
         batchImportCheckBox.setVisible(false);
-//        deleteResourcesCheckBox.setVisible(false);
         numResourceToCopyLabel.setVisible(false);
         numResourceToCopyTextField.setVisible(false);
-//        deleteResourcesCheckBox.setVisible(false);
-        //resourcesToCopyTextField.setVisible(false);
         recordURIComboBox.setVisible(false);
         paramsLabel.setVisible(false);
         paramsTextField.setVisible(false);
@@ -142,6 +140,9 @@ public class dbCopyFrame extends JFrame {
      * Close this window, and only exit if we are running in stand alone mode
      */
     private void okButtonActionPerformed() {
+
+        saveConsoleText(consoleTextArea);
+
         setVisible(false);
 
         if (mainFrame == null && !isBasicUI) {
@@ -156,6 +157,7 @@ public class dbCopyFrame extends JFrame {
         // first check that the user is running update 15, or greater
         if (mainFrame != null && !mainFrame.getAtVersionNumber().contains("15") &&
                 !mainFrame.getAtVersionNumber().contains("16")) {
+            saveConsoleText(consoleTextArea);
             consoleTextArea.setText("You need AT version 2.0 Update 15, or greater for data migration ...");
             return;
         }
@@ -190,7 +192,13 @@ public class dbCopyFrame extends JFrame {
         }
     }
 
-    // Method to open the dialog that gets a session
+    /**
+     * Method to open the dialog that gets a session
+     * @param title
+     * @param urlIndex
+     * @param reuse
+     * @return
+     */
     public Session displayRemoteConnectionDialog(String title, int urlIndex, boolean reuse) {
         if (reuse && storedRCDS.get(title) != null) {
             RemoteDBConnectDialogLight rcd = storedRCDS.get(title);
@@ -251,6 +259,7 @@ public class dbCopyFrame extends JFrame {
                 stopButton.setEnabled(true);
 
                 // clear text area and show progress bar
+                saveConsoleText(consoleTextArea);
                 consoleTextArea.setText("");
                 copyProgressBar.setStringPainted(true);
                 copyProgressBar.setString("Copying Records ...");
@@ -345,7 +354,7 @@ public class dbCopyFrame extends JFrame {
 
 
 
-                    if (useSaveURIMapsCheckBox.isSelected() && ascopy.uriMapFileExist()) {
+                    if (continueMigration && ascopy.uriMapFileExist()) {
                         ascopy.loadURIMaps();
                     } else {
                         // first load the notes etc types and resource from the destination database if not using saved ones
@@ -373,9 +382,7 @@ public class dbCopyFrame extends JFrame {
 
                     try {
                         boolean useBatchImport = batchImportCheckBox.isSelected();
-//                        boolean deleteSavedResources = deleteResourcesCheckBox.isSelected();
                         ascopy.setUseBatchImport(useBatchImport);
-//                        ascopy.setDeleteSavedResources(deleteSavedResources);
 
                         // get the number of threads to run the copy process in
                         threads = Integer.parseInt(threadsTextField.getText());
@@ -405,11 +412,13 @@ public class dbCopyFrame extends JFrame {
                     errorCountLabel.setText(errorCount);
                     migrationErrors = ascopy.getSaveErrorMessages() + "\n\nTotal errors/warnings: " + errorCount;
                 } catch (IntentionalExitException e) {
+                    saveConsoleText(consoleTextArea);
                     consoleTextArea.setText(e.getMessage());
                     consoleTextArea.append("\nWill attempt to save URI maps ...");
                     if (ascopy != null) ascopy.saveURIMaps();
                     else consoleTextArea.append("\nCould not save URI maps ...\nMigration will need to be restarted ...");
                 } catch (Exception e) {
+                    saveConsoleText(consoleTextArea);
                     consoleTextArea.setText("Unrecoverable exception, migration stopped ...\n\n");
 
                     if(ascopy != null) {
@@ -420,7 +429,7 @@ public class dbCopyFrame extends JFrame {
                     }
 
                     consoleTextArea.append(getStackTrace(e));
-                    //e.printStackTrace();
+
                 } finally {
                     sourceRCD.closeSession();
                 }
@@ -460,10 +469,10 @@ public class dbCopyFrame extends JFrame {
                 // first disable/enable the relevant buttons
                 copyToASpaceButton.setEnabled(false);
                 repositoryCheckButton.setEnabled(false);
-                //errorLogButton.setEnabled(false);
                 stopButton.setEnabled(true);
 
                 // clear text area and show progress bar
+                saveConsoleText(consoleTextArea);
                 consoleTextArea.setText("");
                 copyProgressBar.setStringPainted(true);
                 copyProgressBar.setString("Checking Repository Mismatches ...");
@@ -506,7 +515,7 @@ public class dbCopyFrame extends JFrame {
 
                     if(!copyStopped) {
                         ascopyREC.setResourcesToCopyList(resourcesIDsList);
-                        ascopyREC.copyResourceRecords(resourcesToCopy, threads);
+                        ascopyREC.checkRepositoryMismatches(resourcesToCopy, threads);
                     }
 
                     repositoryMismatchMap = ascopyREC.getRepositoryMismatchMap();
@@ -518,6 +527,7 @@ public class dbCopyFrame extends JFrame {
                     errorCountLabel.setText(errorCount);
                     repositoryMismatchErrors = ascopyREC.getCurrentRecordCheckMessage() + "\n\nTotal errors: " + errorCount;
                 } catch (Exception e) {
+                    saveConsoleText(consoleTextArea);
                     consoleTextArea.setText("Unrecoverable exception, recording checking stopped ...\n\n");
 
                     // This is null for some reason so let commit it out.
@@ -552,7 +562,6 @@ public class dbCopyFrame extends JFrame {
         // re-enable the buttons the relevant buttons
         copyToASpaceButton.setEnabled(true);
         repositoryCheckButton.setEnabled(true);
-        //errorLogButton.setEnabled(true);
         copyProgressBar.setValue(0);
 
         if (copyStopped) {
@@ -711,9 +720,11 @@ public class dbCopyFrame extends JFrame {
                 codeViewerDialog.pack();
                 codeViewerDialog.setVisible(true);
             } else {
-                consoleTextArea.setText("You need AT version 2.0 Update 15, and above for this to work");
+                saveConsoleText(consoleTextArea);
+                consoleTextArea.setText("You need AT version 2.0, and above for this to work");
             }
         } catch (Exception e) {
+            saveConsoleText(consoleTextArea);
             consoleTextArea.setText(getStackTrace(e));
         }
     }
@@ -748,9 +759,14 @@ public class dbCopyFrame extends JFrame {
         return sw.toString();
     }
 
+    private void continueButtonActionPerformed() {
+        continueMigration = true;
+        CopyToASpaceButtonActionPerformed();
+    }
+
     private void initComponents() {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
-        // Generated using JFormDesigner Evaluation license - Sarah Morrissey
+        // Generated using JFormDesigner non-commercial license
         dialogPane = new JPanel();
         contentPanel = new JPanel();
         apiLabel = new JLabel();
@@ -764,14 +780,14 @@ public class dbCopyFrame extends JFrame {
         repositoryCheckButton = new JButton();
         copyRecordCheckBox = new JCheckBox();
         viewRepositoryCheckReportButton = new JButton();
-        tracerPanel = new JPanel();
-        useTracerCheckBox = new JCheckBox();
-        tracerComboBox = new JComboBox();
+        continueButton = new JButton();
         adminLabel = new JLabel();
         adminTextField = new JTextField();
         adminPasswordLabel = new JLabel();
         adminPasswordTextField = new JTextField();
-        useSaveURIMapsCheckBox = new JCheckBox();
+        tracerPanel = new JPanel();
+        useTracerCheckBox = new JCheckBox();
+        tracerComboBox = new JComboBox();
         resetPassswordLabel = new JLabel();
         resetPasswordTextField = new JTextField();
         typeOfExtentDataLabel = new JLabel();
@@ -794,7 +810,6 @@ public class dbCopyFrame extends JFrame {
         batchImportCheckBox = new JCheckBox();
         numResourceToCopyLabel = new JLabel();
         numResourceToCopyTextField = new JTextField();
-//        deleteResourcesCheckBox = new JCheckBox();
         resourcesToCopyTextField = new JTextField();
         outputConsoleLabel = new JLabel();
         copyProgressBar = new JProgressBar();
@@ -822,14 +837,6 @@ public class dbCopyFrame extends JFrame {
         //======== dialogPane ========
         {
             dialogPane.setBorder(Borders.DIALOG_BORDER);
-
-            // JFormDesigner evaluation mark
-            dialogPane.setBorder(new javax.swing.border.CompoundBorder(
-                new javax.swing.border.TitledBorder(new javax.swing.border.EmptyBorder(0, 0, 0, 0),
-                    "JFormDesigner Evaluation", javax.swing.border.TitledBorder.CENTER,
-                    javax.swing.border.TitledBorder.BOTTOM, new java.awt.Font("Dialog", java.awt.Font.BOLD, 12),
-                    java.awt.Color.red), dialogPane.getBorder())); dialogPane.addPropertyChangeListener(new java.beans.PropertyChangeListener(){public void propertyChange(java.beans.PropertyChangeEvent e){if("border".equals(e.getPropertyName()))throw new RuntimeException();}});
-
             dialogPane.setLayout(new BorderLayout());
 
             //======== contentPanel ========
@@ -948,24 +955,15 @@ public class dbCopyFrame extends JFrame {
                 });
                 contentPanel.add(viewRepositoryCheckReportButton, cc.xywh(11, 5, 3, 1));
 
-                //======== tracerPanel ========
-                {
-                    tracerPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-
-                    //---- useTracerCheckBox ----
-                    useTracerCheckBox.setText("Use Tracer Database");
-                    tracerPanel.add(useTracerCheckBox);
-
-                    //---- tracerComboBox ----
-                    tracerComboBox.setModel(new DefaultComboBoxModel(new String[] {
-                        "1",
-                        "2",
-                        "3",
-                        "SB"
-                    }));
-                    tracerPanel.add(tracerComboBox);
-                }
-                contentPanel.add(tracerPanel, cc.xy(1, 7));
+                //---- continueButton ----
+                continueButton.setText("Continue Previous Migration");
+                continueButton.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        continueButtonActionPerformed();
+                    }
+                });
+                contentPanel.add(continueButton, cc.xy(1, 7));
 
                 //---- adminLabel ----
                 adminLabel.setText("Admin");
@@ -983,9 +981,24 @@ public class dbCopyFrame extends JFrame {
                 adminPasswordTextField.setText("admin");
                 contentPanel.add(adminPasswordTextField, cc.xy(13, 7));
 
-                //---- useSaveURIMapsCheckBox ----
-                useSaveURIMapsCheckBox.setText("Continue Previous Migration");
-                contentPanel.add(useSaveURIMapsCheckBox, cc.xy(1, 9));
+                //======== tracerPanel ========
+                {
+                    tracerPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+
+                    //---- useTracerCheckBox ----
+                    useTracerCheckBox.setText("Use Tracer Database");
+                    tracerPanel.add(useTracerCheckBox);
+
+                    //---- tracerComboBox ----
+                    tracerComboBox.setModel(new DefaultComboBoxModel(new String[] {
+                        "1",
+                        "2",
+                        "3",
+                        "SB"
+                    }));
+                    tracerPanel.add(tracerComboBox);
+                }
+                contentPanel.add(tracerPanel, cc.xy(1, 9));
 
                 //---- resetPassswordLabel ----
                 resetPassswordLabel.setText("Reset Password");
@@ -1103,10 +1116,6 @@ public class dbCopyFrame extends JFrame {
                 //---- numResourceToCopyTextField ----
                 numResourceToCopyTextField.setText("100000");
                 contentPanel.add(numResourceToCopyTextField, cc.xywh(9, 19, 5, 1));
-
-//                //---- deleteResourcesCheckBox ----
-//                deleteResourcesCheckBox.setText("Delete Previously Saved Resources");
-//                contentPanel.add(deleteResourcesCheckBox, cc.xy(1, 21));
 
                 //---- resourcesToCopyTextField ----
                 resourcesToCopyTextField.setText("-refid_unique, -term_default");
@@ -1260,7 +1269,7 @@ public class dbCopyFrame extends JFrame {
 
 
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables
-    // Generated using JFormDesigner Evaluation license - Sarah Morrissey
+    // Generated using JFormDesigner non-commercial license
     private JPanel dialogPane;
     private JPanel contentPanel;
     private JLabel apiLabel;
@@ -1274,14 +1283,14 @@ public class dbCopyFrame extends JFrame {
     private JButton repositoryCheckButton;
     private JCheckBox copyRecordCheckBox;
     private JButton viewRepositoryCheckReportButton;
-    private JPanel tracerPanel;
-    private JCheckBox useTracerCheckBox;
-    private JComboBox tracerComboBox;
+    private JButton continueButton;
     private JLabel adminLabel;
     private JTextField adminTextField;
     private JLabel adminPasswordLabel;
     private JTextField adminPasswordTextField;
-    private JCheckBox useSaveURIMapsCheckBox;
+    private JPanel tracerPanel;
+    private JCheckBox useTracerCheckBox;
+    private JComboBox tracerComboBox;
     private JLabel resetPassswordLabel;
     private JTextField resetPasswordTextField;
     private JLabel typeOfExtentDataLabel;
@@ -1304,7 +1313,6 @@ public class dbCopyFrame extends JFrame {
     private JCheckBox batchImportCheckBox;
     private JLabel numResourceToCopyLabel;
     private JTextField numResourceToCopyTextField;
-//    private JCheckBox deleteResourcesCheckBox;
     private JTextField resourcesToCopyTextField;
     private JLabel outputConsoleLabel;
     private JProgressBar copyProgressBar;

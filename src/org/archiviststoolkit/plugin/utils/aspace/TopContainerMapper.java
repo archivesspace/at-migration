@@ -15,27 +15,37 @@ import java.util.*;
  * class to add and manage top containers
  *
  * @author sarah morrissey
- * date: 9/2017
+ * date: 12/2017
+ * @version 2.2
  */
 public class TopContainerMapper {
 
-    //keys are containers that have been added to ASpace and values are objects that store that container's information
+    // keys are containers that have been added to ASpace and values are objects that store that container's information
     private static HashMap<MiniContainer, Info> alreadyAdded = new HashMap<MiniContainer, Info>();
 
-    //used for making unique identifiers for containers without indicators
+    // these are the containers with barcodes that we need to keep track of even if we are done copying the current resoruce
+    private static HashMap<MiniContainer, Info> permanentAdded = new HashMap<MiniContainer, Info>();
+
+    // this gets set each time we begin copying a new resource
+    // its -1 if copying an accession
+    private static long resourceID = -1;
+
+    // used for making unique identifiers for containers without indicators
     private static int unknownCount = 1;
 
     private ASpaceEnumUtil enumUtil = new ASpaceEnumUtil();
     private static ASpaceCopyUtil aSpaceCopyUtil;
 
-    //analog instance or accession location the container was created for
+    // analog instance or accession location the container was created for
     private DomainObject instance;
+    private Accessions accession;
+
+    // the stuff that is needed to save the container
     private String atID;
     private String parentRepoURI;
     private String indicator;
     private String type;
     private String barcode;
-    private Accessions accession;
 
     public DomainObject getInstance() {
         return instance;
@@ -183,7 +193,10 @@ public class TopContainerMapper {
      */
     public void addToExisting(String uri) {
         if (uri.contains("10000001") || uri.contains("no id assigned")) return;
-        alreadyAdded.put(new MiniContainer(this), new Info(uri));
+        MiniContainer mini = new MiniContainer(this);
+        Info info = new Info(uri);
+        alreadyAdded.put(mini, info);
+        if (this.barcode != null && !this.barcode.isEmpty()) permanentAdded.put(mini, info);
     }
 
     /**
@@ -269,29 +282,40 @@ public class TopContainerMapper {
         private String indicator;
         private String type;
         private String barcode;
+        private long resourceID;
 
+        /**
+         * constructs a mini container version of a top container object
+         * @param container the top container we are creating the mini container for
+         */
         MiniContainer(TopContainerMapper container) {
             this.parentRepoURI = container.parentRepoURI;
             this.indicator = container.indicator;
             this.type = container.type;
             this.barcode = container.barcode;
+            this.resourceID = TopContainerMapper.resourceID;
         }
 
+        /**
+         * reconstructs a mini container from a saved string
+         * @param args the string splint into its components
+         */
         MiniContainer(String ... args) {
             this.parentRepoURI = args[0];
-            this.indicator = args[1];
-            if (args.length > 2) {
-                if (args[2].contains("type: ")) {
-                    this.type = args[2].substring(6);
-                    if (args.length > 3) this.barcode = args[3];
+            this.resourceID = Long.parseLong(args[1]);
+            this.indicator = args[2];
+            if (args.length > 3) {
+                if (args[3].contains("type: ")) {
+                    this.type = args[3].substring(6);
+                    if (args.length > 4) this.barcode = args[4];
                 }
-                else this.barcode = args[2];
+                else this.barcode = args[3];
             }
         }
 
         @Override
         public String toString() {
-            return parentRepoURI + SEPARATOR + indicator + SEPARATOR + "type: " + type + SEPARATOR + barcode;
+            return parentRepoURI + SEPARATOR + resourceID + SEPARATOR + indicator + SEPARATOR + "type: " + type + SEPARATOR + barcode;
         }
 
         @Override
@@ -299,12 +323,21 @@ public class TopContainerMapper {
             if (this == o) return true;
             if (o == null || !(o instanceof MiniContainer)) return false;
             MiniContainer other = (MiniContainer) o;
+
+            // records from different repositories can not be in the same top container
             if (!(this.parentRepoURI.equals(other.parentRepoURI))) return false;
+
+            // if two containers have the same non-empty barcode, they are the same
             if (!(this.barcode == null || this.barcode.isEmpty() || other.barcode == null || other.barcode.isEmpty())) {
                 if (this.barcode.trim().equalsIgnoreCase(other.barcode.trim())) return true;
             }
+
+            // unless barcode shows otherwise, different resources are assumed to be in different containers
+            if (this.resourceID != other.resourceID) return false;
+
+            // finally if they have the same type and indicator, they are the same container
             Boolean sameType = true;
-            if (!(this.type == null || this.type.isEmpty() || other.type == null || other.type.isEmpty())) {
+            if (!(this.type == null || other.type == null)) {
                 sameType = this.type.equals(other.type);
             }
             return (this.indicator.equalsIgnoreCase(other.indicator) && sameType);
@@ -312,6 +345,7 @@ public class TopContainerMapper {
 
         @Override
         public int hashCode() {
+            // can't do too much here - repository is the only thing guaranteed to be the same for equivalent containers
             return parentRepoURI.hashCode();
         }
     }
@@ -327,6 +361,10 @@ public class TopContainerMapper {
             this.uri = uri;
         }
 
+        /**
+         * recreates the info from a string
+         * @param args string split into its components
+         */
         public Info(String ... args) {
             this.uri = args[0];
             for (int i = 1; i < args.length; i++) locationURIs.add(args[i]);
@@ -343,12 +381,22 @@ public class TopContainerMapper {
         }
     }
 
+    /**
+     * splits a saved string for a mini container or info object into its components
+     * @param stringForm the saved string
+     * @return the saved string split according to the separator
+     */
     private static String[] fromString(String stringForm) {
         return stringForm.split(SEPARATOR);
     }
 
+    // the separator that is used when making string forms of thing for saving
     private static final String SEPARATOR = "! . . . !";
 
+    /**
+     * turns the already added map into a string to string map that can be saved
+     * @return a string to string hashmap that can be saved to a file
+     */
     public static HashMap<String, String> getAlreadyAddedStringForm() {
         HashMap<String, String> alreadyAddedStringForm = new HashMap<String, String>();
         for (MiniContainer container : alreadyAdded.keySet()) {
@@ -357,15 +405,34 @@ public class TopContainerMapper {
         return alreadyAddedStringForm;
     }
 
+    /**
+     * take a saved string to string map and processes the data to make the already added map
+     * @param topContainerURIMap the string to string version of already added
+     */
     public static void setAlreadyAdded(HashMap<String, String> topContainerURIMap) {
         for (String key: topContainerURIMap.keySet()) {
             MiniContainer miniContainer = new MiniContainer(fromString(key));
             Info info = new Info(fromString(topContainerURIMap.get(key)));
             alreadyAdded.put(miniContainer, info);
+            if (miniContainer.barcode != null && !miniContainer.barcode.isEmpty()) permanentAdded.put(miniContainer, info);
         }
     }
 
+    /**
+     * clears everything from the list of containers that have been added
+     */
     public static void clearAlreadyAdded() {
+        permanentAdded = new HashMap<MiniContainer, Info>();
+        resetAlreadyAdded(-1);
+    }
+
+    /**
+     * clears all the containers that do not have barcodes from already added and sets the current resource ID
+     * @param resourceID the resource that is being copied now
+     */
+    public static void resetAlreadyAdded(long resourceID) {
+        TopContainerMapper.resourceID = resourceID;
         alreadyAdded = new HashMap<MiniContainer, Info>();
+        alreadyAdded.putAll(permanentAdded);
     }
 }
