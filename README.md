@@ -24,8 +24,8 @@ the *.jfd files. Consult the JFormDesigner documentation on how to install and u
 
 NOTES FOR DEVELOPERS
 
-The majority of development work will probably take place in a few classes, primarily in the package
-C:\Users\morrissey\Desktop\at-migration\src\org\archiviststoolkit\plugin\utils\aspace
+The majority of development work will probably take place in a few classes, primarily in the package 
+at-migration\src\org\archiviststoolkit\plugin\utils\aspace
 A description of some of the classes is given below.
 
 1. dbCopyFrame is the user interface for the migration tool. It mostly calls methods in ASpaceCopyUtil.
