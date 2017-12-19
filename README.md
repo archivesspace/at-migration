@@ -25,7 +25,7 @@ If a problem occurs during migration, or if you manually cancel a migration, URI
 ## NOTE ON CPU AND MEMORY USAGE
 Data migration is a memory intensive task due to the large number of objects being created. As such, it’s recommended to run the plugin on a machine with at least 2 GB memory, and setting the max heap space to 1024 mb.
 
-## NOTES ON RUNNING N STANDALONE MODE
+## NOTES ON RUNNING IN STANDALONE MODE
 Though intended to run as a plugin within the AT application, the migration tool can run in standalone mode for testing purposes. To run in standalone mode:
 1.	Create a directory call "logs" in the project directory if it is not already there.
 2.	Run the "dbCopyFrame" class making sure all the *.jar files in "lib" are in the Classpath.
