@@ -43,8 +43,7 @@ This repo contains the source code for the ScriptAT plugin which contains the AT
 5.	TopContainerMapper serves the same function as ASpaceMapper but is specialized for top containers, which present some special challenges.
 6.	ASpaceClient saves records to ASpace and gets records from ASpace.
 
-## NOTES ON COMPILING THE PLUGIN FROM SOURCE CODE:
-
+## NOTES ON COMPILING THE PLUGIN FROM SOURCE CODE
 This assumes you already have basic knowledge of how to compile and run Java programs using your IDE of choice. The current source needs to be compiled with JDK 1.6, or later. To build:
 
 1. Clone this repo.
