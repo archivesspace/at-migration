@@ -320,14 +320,14 @@ public class dbCopyFrame extends JFrame {
 
                     // check the current aspace version to make sure
                     String aspaceVersion = ascopy.getASpaceVersion();
+                    double aspaceVersionDouble = new Double(aspaceVersion.replaceAll("[^0-9.]", ""));
 
                     //Check if working
                     System.out.println("Version: " + aspaceVersion);
 
                     if (aspaceVersion.isEmpty()) ascopy.setCopyAssessments();
-                    if (!aspaceVersion.isEmpty() && !ASpaceCopyUtil.SUPPORTED_ASPACE_VERSION.contains(aspaceVersion)) {
-                        String message = "Unsupported Archivesspace Version\nSupport Versions: " +
-                                ASpaceCopyUtil.SUPPORTED_ASPACE_VERSION + " ...\n";
+                    if (!aspaceVersion.isEmpty() && aspaceVersionDouble < 2.1) {
+                        String message = "Unsupported Archivesspace Version\nSupport Versions: v2.1 and higher ...\n";
 
                         consoleTextArea.append(message);
                         reEnableCopyButtons();
