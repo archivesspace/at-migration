@@ -26,8 +26,6 @@ import java.util.*;
  */
 public class ASpaceCopyUtil {
 
-    public static final String SUPPORTED_ASPACE_VERSION = "v2.1 & v2.2";
-
     // used to get session from the source and destination databases
     private RemoteDBConnectDialogLight sourceRCD;
 
@@ -491,7 +489,7 @@ public class ASpaceCopyUtil {
     public void setCopyAssessments() {
          if (aspaceVersion.isEmpty()) {
              String message = "Cannot determine your version of ArchivesSpace. Do you want to attempt to\n" +
-                     "copy assessments to ArchivesSpace? (This will only work with version 2.2.)";
+                     "copy assessments to ArchivesSpace? (This will only work with versions starting with 2.2.)";
              while (copyAssessments == null) {
                  int result = JOptionPane.showConfirmDialog(null, message, "Copy assessments?",
                          JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
@@ -1064,7 +1062,9 @@ public class ASpaceCopyUtil {
         if (!recordsToCopy.contains("Assessments")) return;
 
         // first figure out if the version of ASpace allows for assessments
-        if (aspaceVersion.contains("2.2")) {
+        double aspaceVersionDouble = new Double(aspaceVersion.replaceAll("[^0-9.]", ""));
+
+        if (aspaceVersionDouble >= 2.2) {
             System.out.println("Copying assessments ...");
         } else if (aspaceVersion.isEmpty()) {
             if (copyAssessments == null) setCopyAssessments();
