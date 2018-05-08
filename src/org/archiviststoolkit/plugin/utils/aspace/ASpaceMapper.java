@@ -2053,16 +2053,18 @@ public class ASpaceMapper {
             Integer dateBegin = Integer.parseInt(sa[0]);
             Integer dateEnd = Integer.parseInt(sa[1]);
 
-            dateJS.put("date_type", "inclusive");
+            dateJS.put("date_type", "range");
 
             dateJS.put("begin", dateBegin.toString());
 
             if (dateEnd >= dateBegin) {
                 dateJS.put("end", dateEnd.toString());
             } else {
+                dateJS.put("begin", dateEnd.toString());
                 dateJS.put("end", dateBegin.toString());
 
-                String message = "End date: " + dateEnd + " before begin date: " + dateBegin + ", ignoring end date\nRecord:: " + record.getSortName() + "\n";
+                String message = "End date: " + dateEnd + " before begin date: " + dateBegin
+                        + ", swapping begin and end.\nRecord:: " + record.getSortName() + "\n";
                 aspaceCopyUtil.addErrorMessage(message);
             }
         } else {

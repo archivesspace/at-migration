@@ -543,28 +543,28 @@ public class RemoteDBConnectDialog extends JDialog {
             //======== contentPanel ========
             {
                 contentPanel.setLayout(new FormLayout(
-                        new ColumnSpec[] {
-                                FormFactory.DEFAULT_COLSPEC,
-                                FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
-                                new ColumnSpec(ColumnSpec.FILL, Sizes.DEFAULT, FormSpec.DEFAULT_GROW)
-                        },
-                        new RowSpec[] {
-                                FormFactory.DEFAULT_ROWSPEC,
-                                FormFactory.LINE_GAP_ROWSPEC,
-                                FormFactory.DEFAULT_ROWSPEC,
-                                FormFactory.LINE_GAP_ROWSPEC,
-                                FormFactory.DEFAULT_ROWSPEC,
-                                FormFactory.LINE_GAP_ROWSPEC,
-                                FormFactory.DEFAULT_ROWSPEC,
-                                FormFactory.LINE_GAP_ROWSPEC,
-                                FormFactory.DEFAULT_ROWSPEC,
-                                FormFactory.LINE_GAP_ROWSPEC,
-                                FormFactory.DEFAULT_ROWSPEC,
-                                FormFactory.LINE_GAP_ROWSPEC,
-                                FormFactory.DEFAULT_ROWSPEC,
-                                FormFactory.LINE_GAP_ROWSPEC,
-                                FormFactory.DEFAULT_ROWSPEC
-                        }));
+                    new ColumnSpec[] {
+                        FormFactory.DEFAULT_COLSPEC,
+                        FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
+                        new ColumnSpec(ColumnSpec.FILL, Sizes.DEFAULT, FormSpec.DEFAULT_GROW)
+                    },
+                    new RowSpec[] {
+                        FormFactory.DEFAULT_ROWSPEC,
+                        FormFactory.LINE_GAP_ROWSPEC,
+                        FormFactory.DEFAULT_ROWSPEC,
+                        FormFactory.LINE_GAP_ROWSPEC,
+                        FormFactory.DEFAULT_ROWSPEC,
+                        FormFactory.LINE_GAP_ROWSPEC,
+                        FormFactory.DEFAULT_ROWSPEC,
+                        FormFactory.LINE_GAP_ROWSPEC,
+                        FormFactory.DEFAULT_ROWSPEC,
+                        FormFactory.LINE_GAP_ROWSPEC,
+                        FormFactory.DEFAULT_ROWSPEC,
+                        FormFactory.LINE_GAP_ROWSPEC,
+                        FormFactory.DEFAULT_ROWSPEC,
+                        FormFactory.LINE_GAP_ROWSPEC,
+                        FormFactory.DEFAULT_ROWSPEC
+                    }));
 
                 //---- label1 ----
                 label1.setText("Connection URL");
@@ -573,6 +573,7 @@ public class RemoteDBConnectDialog extends JDialog {
                 //---- connectionUrl ----
                 connectionUrl.setEditable(true);
                 connectionUrl.addItemListener(new ItemListener() {
+                    @Override
                     public void itemStateChanged(ItemEvent e) {
                         updateConnectionUrlInformation();
                     }
@@ -598,10 +599,10 @@ public class RemoteDBConnectDialog extends JDialog {
 
                 //---- comboBox2 ----
                 comboBox2.setModel(new DefaultComboBoxModel(new String[] {
-                        "MySQL",
-                        "Oracle",
-                        "Microsoft SQL Server",
-                        "Internal Database"
+                    "MySQL",
+                    "Oracle",
+                    "Microsoft SQL Server",
+                    "Internal Database"
                 }));
                 contentPanel.add(comboBox2, cc.xy(3, 7));
 
@@ -611,11 +612,11 @@ public class RemoteDBConnectDialog extends JDialog {
 
                 //---- comboBox1 ----
                 comboBox1.setModel(new DefaultComboBoxModel(new String[] {
-                        "Resource Records",
-                        "Digital Object Records",
-                        "Accession Records",
-                        "Name Records",
-                        "Subject Records"
+                    "Resource Records",
+                    "Digital Object Records",
+                    "Accession Records",
+                    "Name Records",
+                    "Subject Records"
                 }));
                 contentPanel.add(comboBox1, cc.xy(3, 9));
 
@@ -641,21 +642,22 @@ public class RemoteDBConnectDialog extends JDialog {
             {
                 buttonBar.setBorder(Borders.BUTTON_BAR_GAP_BORDER);
                 buttonBar.setLayout(new FormLayout(
-                        new ColumnSpec[] {
-                                FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
-                                FormFactory.DEFAULT_COLSPEC,
-                                FormFactory.GLUE_COLSPEC,
-                                FormFactory.DEFAULT_COLSPEC,
-                                FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
-                                FormFactory.DEFAULT_COLSPEC,
-                                FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
-                                FormFactory.BUTTON_COLSPEC
-                        },
-                        RowSpec.decodeSpecs("pref")));
+                    new ColumnSpec[] {
+                        FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
+                        FormFactory.DEFAULT_COLSPEC,
+                        FormFactory.GLUE_COLSPEC,
+                        FormFactory.DEFAULT_COLSPEC,
+                        FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
+                        FormFactory.DEFAULT_COLSPEC,
+                        FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
+                        FormFactory.BUTTON_COLSPEC
+                    },
+                    RowSpec.decodeSpecs("pref")));
 
                 //---- button1 ----
                 button1.setText("Connect");
                 button1.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         connectToDatabase();
                     }
@@ -668,13 +670,14 @@ public class RemoteDBConnectDialog extends JDialog {
 
                 //---- userComboBox ----
                 userComboBox.setModel(new DefaultComboBoxModel(new String[] {
-                        "No Users Loaded"
+                    "No Users Loaded"
                 }));
                 buttonBar.add(userComboBox, cc.xy(6, 1));
 
                 //---- okButton ----
                 okButton.setText("OK");
                 okButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
                         okButtonActionPerformed();
                     }
