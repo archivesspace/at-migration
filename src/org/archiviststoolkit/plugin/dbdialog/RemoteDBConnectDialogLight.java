@@ -807,7 +807,7 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
 
     private void initComponents() {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
-        // Generated using JFormDesigner Evaluation license - Sarah Morrissey
+        // Generated using JFormDesigner non-commercial license
         dialogPane = new JPanel();
         contentPanel = new JPanel();
         label1 = new JLabel();
@@ -835,14 +835,6 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
         //======== dialogPane ========
         {
             dialogPane.setBorder(Borders.DIALOG_BORDER);
-
-            // JFormDesigner evaluation mark
-            dialogPane.setBorder(new javax.swing.border.CompoundBorder(
-                new javax.swing.border.TitledBorder(new javax.swing.border.EmptyBorder(0, 0, 0, 0),
-                    "JFormDesigner Evaluation", javax.swing.border.TitledBorder.CENTER,
-                    javax.swing.border.TitledBorder.BOTTOM, new java.awt.Font("Dialog", java.awt.Font.BOLD, 12),
-                    java.awt.Color.red), dialogPane.getBorder())); dialogPane.addPropertyChangeListener(new java.beans.PropertyChangeListener(){public void propertyChange(java.beans.PropertyChangeEvent e){if("border".equals(e.getPropertyName()))throw new RuntimeException();}});
-
             dialogPane.setLayout(new BorderLayout());
 
             //======== contentPanel ========
@@ -928,7 +920,7 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
                         FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
                         FormFactory.BUTTON_COLSPEC
                     },
-                    RowSpec.decodeSpecs("pref")));
+                    RowSpec.decodeSpecs("default, default, pref")));
 
                 //---- button1 ----
                 button1.setText("Connect");
@@ -938,23 +930,23 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
                         connectToDatabase();
                     }
                 });
-                buttonBar.add(button1, cc.xy(2, 1));
+                buttonBar.add(button1, cc.xy(2, 3));
 
                 //---- statusLabel ----
                 statusLabel.setText("Not connected ...");
-                buttonBar.add(statusLabel, cc.xy(4, 1));
+                buttonBar.add(statusLabel, cc.xy(4, 3));
 
                 //---- label8 ----
                 label8.setText("Select User");
                 label8.setVisible(false);
-                buttonBar.add(label8, cc.xy(6, 1));
+                buttonBar.add(label8, cc.xy(6, 3));
 
                 //---- userComboBox ----
                 userComboBox.setModel(new DefaultComboBoxModel(new String[] {
                     "No Users Loaded"
                 }));
                 userComboBox.setVisible(false);
-                buttonBar.add(userComboBox, cc.xy(8, 1));
+                buttonBar.add(userComboBox, cc.xy(8, 3));
 
                 //---- okButton ----
                 okButton.setText("OK");
@@ -964,7 +956,7 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
                         okButtonActionPerformed();
                     }
                 });
-                buttonBar.add(okButton, cc.xy(10, 1));
+                buttonBar.add(okButton, cc.xy(10, 3));
             }
             dialogPane.add(buttonBar, BorderLayout.SOUTH);
         }
@@ -975,7 +967,7 @@ public class RemoteDBConnectDialogLight extends JDialog implements DomainAccessL
     }
 
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables
-    // Generated using JFormDesigner Evaluation license - Sarah Morrissey
+    // Generated using JFormDesigner non-commercial license
     private JPanel dialogPane;
     private JPanel contentPanel;
     private JLabel label1;
