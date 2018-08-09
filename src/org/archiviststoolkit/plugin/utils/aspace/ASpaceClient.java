@@ -163,7 +163,7 @@ public class ASpaceClient {
         // Prepare HTTP post method.
         String fullUrl = host + route;
         PostMethod post = new PostMethod(fullUrl);
-        post.setRequestEntity(new StringRequestEntity(jsonText, "application/json", null));
+        post.setRequestEntity(new StringRequestEntity(jsonText, "application/json", "utf-8"));
 
         // set any parameters
         if (params != null) {
