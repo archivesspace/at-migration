@@ -1296,6 +1296,7 @@ public class ASpaceMapper {
         json.put("title", fixEmptyString(title));
 
         addLanguageCode(json, record.getLanguageCode());
+        addLangMaterials(json, record.getLanguageCode(), false);
 
         // add the date object
         JSONArray dateJA = new JSONArray();
@@ -1347,6 +1348,7 @@ public class ASpaceMapper {
         json.put("publish", publishHashMap.get("digitalObjects"));
 
         addLanguageCode(json, record.getLanguageCode());
+        addLangMaterials(json, record.getLanguageCode(), false);
 
         /* add fields required for digital object component*/
         JSONArray fileVersionsJA = new JSONArray();
@@ -1418,6 +1420,7 @@ public class ASpaceMapper {
 
         // add the language code
         addLanguageCode(json, record.getLanguageCode());
+        addLangMaterials(json, record.getLanguageCode(), true);
 
         // add the extent array containing one object or many depending if we using multiple extents
         JSONArray extentJA = new JSONArray();
@@ -1578,6 +1581,7 @@ public class ASpaceMapper {
 
         // add the language code
         addLanguageCode(json, record.getLanguageCode());
+        addLangMaterials(json, record.getLanguageCode(), false);
 
         // add the date array containing the date json objects
         JSONArray dateJA = new JSONArray();
@@ -1940,6 +1944,28 @@ public class ASpaceMapper {
     public void addLanguageCode(JSONObject json, String languageCode) throws Exception {
         if(languageCode != null && !languageCode.isEmpty()) {
             json.put("language", enumUtil.getASpaceLanguageCode(languageCode));
+        }
+    }
+
+    /**
+     * Method to set the lang_materials for a json record if it is required
+     * or applicable.
+     *
+     * @param json
+     * @param languageCode
+     * @param required
+     * @throws Exception
+     */
+    public void addLangMaterials(JSONObject json, String languageCode, boolean required) throws Exception {
+        if (required || (languageCode != null && !languageCode.isEmpty())) {
+            JSONArray langMaterialsJA = new JSONArray();
+            JSONObject langMaterialsJS = new JSONObject();
+            JSONObject languageAndScriptJS = new JSONObject();
+
+            languageAndScriptJS.put("language", enumUtil.getASpaceLanguageCode(languageCode));
+            langMaterialsJS.put("language_and_script", languageAndScriptJS);
+            langMaterialsJA.put(langMaterialsJS);
+            json.put("lang_materials", langMaterialsJA);
         }
     }
 
