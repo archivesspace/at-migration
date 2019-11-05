@@ -1526,7 +1526,9 @@ public class ASpaceMapper {
             json.put("finding_aid_description_rules", enumUtil.getASpaceFindingAidDescriptionRule(record.getDescriptionRules())[0]);
         }
 
-        json.put("finding_aid_language", record.getLanguageOfFindingAid());
+        json.put("finding_aid_language", enumUtil.getASpaceLanguageCode(record.getLanguageCode()));
+        json.put("finding_aid_script", "Latn");
+        json.put("finding_aid_language_note", record.getLanguageOfFindingAid());
         json.put("finding_aid_sponsor", record.getSponsorNote());
         json.put("finding_aid_edition_statement", record.getEditionStatement());
         json.put("finding_aid_series_statement", record.getSeries());
