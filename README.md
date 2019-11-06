@@ -4,7 +4,7 @@ The Archivists’ Toolkit to ArchivesSpace migration tool enables migration of d
 
 The migration tool is intended to run as a plugin within Archivists’ Toolkit. Instructions and a data mapping are available at on the ArchivesSpace migration tools and data mapping page at http://archivesspace.org/using-archivesspace/migration-tools-and-data-mapping/.
 
-We recommend migrating to the latest version of ArchivesSpace when possible. Archivists’ Toolkit users who are ready to move to the latest version of ArchivesSpace should use version 2.3.x of the tool. Archivists’ Toolkit users who wish to move into a pre-1.5.0 version of ArchivesSpace due to the container management changes should use version 1.4.2 of the tool. 
+We recommend migrating to the latest version of ArchivesSpace when possible. Multiple versions of the migration tool available here: https://github.com/archivesspace/at-migration/releases. The ArchivesSpace version numbers supported by a particular release of the migration tool are noted in the release notes. Make sure you select the migration tool version that supports the ArchivesSpace version you are migrating into.
 
 ## NOTES ON DATA MIGRATION AND DEFAULTS
 1.	If a date is missing in AT but is required for AS the default date will be set to 1/1/1900 or 0 for integer dates.
