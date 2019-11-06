@@ -325,9 +325,9 @@ public class ASpaceEnumUtil {
             } else {
                 return "und";
             }
-        } else {
-            return UNMAPPED;
         }
+
+        return "und";
     }
 
     /**
