@@ -1295,7 +1295,6 @@ public class ASpaceMapper {
         String title = record.getObjectLabel();
         json.put("title", fixEmptyString(title));
 
-        addLanguageCode(json, record.getLanguageCode());
         addLangMaterials(json, record.getLanguageCode(), false);
 
         // add the date object
@@ -1347,7 +1346,6 @@ public class ASpaceMapper {
 
         json.put("publish", publishHashMap.get("digitalObjects"));
 
-        addLanguageCode(json, record.getLanguageCode());
         addLangMaterials(json, record.getLanguageCode(), false);
 
         /* add fields required for digital object component*/
@@ -1418,8 +1416,6 @@ public class ASpaceMapper {
         String title = fixEmptyString(record.getTitle());
         json.put("title", title);
 
-        // add the language code
-        addLanguageCode(json, record.getLanguageCode());
         addLangMaterials(json, record.getLanguageCode(), true);
 
         // add the extent array containing one object or many depending if we using multiple extents
@@ -1581,8 +1577,6 @@ public class ASpaceMapper {
 
         json.put("repository_processing_note", record.getRepositoryProcessingNote());
 
-        // add the language code
-        addLanguageCode(json, record.getLanguageCode());
         addLangMaterials(json, record.getLanguageCode(), false);
 
         // add the date array containing the date json objects
@@ -1934,19 +1928,6 @@ public class ASpaceMapper {
         }
 
         json.put("ratings", ratingsJA);
-    }
-
-    /**
-     * Method to set the language code for a json record
-     *
-     * @param json
-     * @param languageCode
-     * @throws Exception
-     */
-    public void addLanguageCode(JSONObject json, String languageCode) throws Exception {
-        if(languageCode != null && !languageCode.isEmpty()) {
-            json.put("language", enumUtil.getASpaceLanguageCode(languageCode));
-        }
     }
 
     /**
