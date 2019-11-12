@@ -1295,7 +1295,7 @@ public class ASpaceMapper {
         String title = record.getObjectLabel();
         json.put("title", fixEmptyString(title));
 
-        addLanguageCode(json, record.getLanguageCode());
+        addLangMaterials(json, record.getLanguageCode(), false);
 
         // add the date object
         JSONArray dateJA = new JSONArray();
@@ -1346,7 +1346,7 @@ public class ASpaceMapper {
 
         json.put("publish", publishHashMap.get("digitalObjects"));
 
-        addLanguageCode(json, record.getLanguageCode());
+        addLangMaterials(json, record.getLanguageCode(), false);
 
         /* add fields required for digital object component*/
         JSONArray fileVersionsJA = new JSONArray();
@@ -1416,8 +1416,7 @@ public class ASpaceMapper {
         String title = fixEmptyString(record.getTitle());
         json.put("title", title);
 
-        // add the language code
-        addLanguageCode(json, record.getLanguageCode());
+        addLangMaterials(json, record.getLanguageCode(), true);
 
         // add the extent array containing one object or many depending if we using multiple extents
         JSONArray extentJA = new JSONArray();
@@ -1523,7 +1522,9 @@ public class ASpaceMapper {
             json.put("finding_aid_description_rules", enumUtil.getASpaceFindingAidDescriptionRule(record.getDescriptionRules())[0]);
         }
 
-        json.put("finding_aid_language", record.getLanguageOfFindingAid());
+        json.put("finding_aid_language", enumUtil.getASpaceLanguageCode(record.getLanguageCode()));
+        json.put("finding_aid_script", "Zyyy");
+        json.put("finding_aid_language_note", record.getLanguageOfFindingAid());
         json.put("finding_aid_sponsor", record.getSponsorNote());
         json.put("finding_aid_edition_statement", record.getEditionStatement());
         json.put("finding_aid_series_statement", record.getSeries());
@@ -1576,8 +1577,7 @@ public class ASpaceMapper {
 
         json.put("repository_processing_note", record.getRepositoryProcessingNote());
 
-        // add the language code
-        addLanguageCode(json, record.getLanguageCode());
+        addLangMaterials(json, record.getLanguageCode(), false);
 
         // add the date array containing the date json objects
         JSONArray dateJA = new JSONArray();
@@ -1931,15 +1931,24 @@ public class ASpaceMapper {
     }
 
     /**
-     * Method to set the language code for a json record
+     * Method to set the lang_materials for a json record if it is required
+     * or applicable.
      *
      * @param json
      * @param languageCode
+     * @param required
      * @throws Exception
      */
-    public void addLanguageCode(JSONObject json, String languageCode) throws Exception {
-        if(languageCode != null && !languageCode.isEmpty()) {
-            json.put("language", enumUtil.getASpaceLanguageCode(languageCode));
+    public void addLangMaterials(JSONObject json, String languageCode, boolean required) throws Exception {
+        if (required || (languageCode != null && !languageCode.isEmpty())) {
+            JSONArray langMaterialsJA = new JSONArray();
+            JSONObject langMaterialsJS = new JSONObject();
+            JSONObject languageAndScriptJS = new JSONObject();
+
+            languageAndScriptJS.put("language", enumUtil.getASpaceLanguageCode(languageCode));
+            langMaterialsJS.put("language_and_script", languageAndScriptJS);
+            langMaterialsJA.put(langMaterialsJS);
+            json.put("lang_materials", langMaterialsJA);
         }
     }
 

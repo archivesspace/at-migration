@@ -1,5 +1,3 @@
-## NOTE: The AT migration tool will only work up to ArchivesSpace version 2.6.0. So, if you want to go to a version higher than 2.6.0, do the migration into version 2.6.0 and then upgrade from there.
-
 The Archivists’ Toolkit to ArchivesSpace migration tool enables migration of data from an Archivists’ Toolkit instance to an ArchivesSpace instance. It is the most comprehensive and efficient option for people who have not previously migrated and want to migrate all of their AT data to ArchivesSpace.
 
 The migration tool is intended to run as a plugin within Archivists’ Toolkit. Instructions and a data mapping are available at on the ArchivesSpace migration tools and data mapping page at http://archivesspace.org/using-archivesspace/migration-tools-and-data-mapping/.
